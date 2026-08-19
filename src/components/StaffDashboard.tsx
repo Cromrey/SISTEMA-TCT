@@ -14,24 +14,29 @@ import {
   Eye,
   TrendingUp,
   User,
-  Paperclip
+  Paperclip,
+  QrCode
 } from 'lucide-react';
 import { CalendarView } from './CalendarView';
+import { ProjectQrCheckinModal } from './ProjectQrCheckinModal';
 
 interface StaffDashboardProps {
   projects: ProductionProject[];
   currentStaff: StaffMember;
   onOpenProject: (project: ProductionProject) => void;
   onOpenAnalytics: () => void;
+  onUpdateProject?: (project: ProductionProject) => void;
 }
 
 export const StaffDashboard: React.FC<StaffDashboardProps> = ({
   projects,
   currentStaff,
   onOpenProject,
-  onOpenAnalytics
+  onOpenAnalytics,
+  onUpdateProject
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<'events' | 'calendar'>('events');
+  const [qrProject, setQrProject] = useState<ProductionProject | null>(null);
 
   // Filter projects where this technician is assigned
   const myProjects = projects.filter(p => {
@@ -324,13 +329,24 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
                           Presupuesto: <strong className="text-slate-900">S/. {project.totalBudget.toLocaleString()}</strong>
                         </span>
 
-                        <button
-                          onClick={() => onOpenProject(project)}
-                          className="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-amber-400 text-xs font-black transition-all flex items-center justify-center gap-1.5 shadow-xs"
-                        >
-                          <Eye className="w-4 h-4" />
-                          <span>Gestionar 12 Pasos</span>
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => setQrProject(project)}
+                            className="px-3 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-black transition-all flex items-center justify-center gap-1.5 shadow-xs"
+                            title="Escanear o Registrar Llegada a Locación"
+                          >
+                            <QrCode className="w-4 h-4" />
+                            <span>QR Check-in</span>
+                          </button>
+
+                          <button
+                            onClick={() => onOpenProject(project)}
+                            className="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-amber-400 text-xs font-black transition-all flex items-center justify-center gap-1.5 shadow-xs"
+                          >
+                            <Eye className="w-4 h-4" />
+                            <span>Gestionar 12 Pasos</span>
+                          </button>
+                        </div>
                       </div>
                     </div>
 
@@ -348,6 +364,21 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
           projects={projects}
           currentStaffId={currentStaff.id}
           onOpenProject={onOpenProject}
+        />
+      )}
+
+      {/* QR Code Check-in Modal */}
+      {qrProject && (
+        <ProjectQrCheckinModal
+          project={qrProject}
+          isOpen={Boolean(qrProject)}
+          onClose={() => setQrProject(null)}
+          onUpdateProject={(updated) => {
+            if (onUpdateProject) {
+              onUpdateProject(updated);
+            }
+            setQrProject(updated);
+          }}
         />
       )}
 

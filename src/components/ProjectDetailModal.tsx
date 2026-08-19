@@ -5,6 +5,7 @@ import { StepExecutionModal } from './StepExecutionModal';
 import { ProjectAuditLogView } from './ProjectAuditLogView';
 import { createAuditEntry, appendAuditLog } from '../utils/auditLogger';
 import { TCTLogo } from './TCTLogo';
+import { ProjectQrCheckinModal } from './ProjectQrCheckinModal';
 import { 
   X, 
   Printer, 
@@ -31,7 +32,8 @@ import {
   Mail,
   MapPin,
   Clock,
-  Save
+  Save,
+  QrCode
 } from 'lucide-react';
 
 interface ProjectDetailModalProps {
@@ -55,6 +57,7 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
   const [selectedStepCoord, setSelectedStepCoord] = useState<{ phaseIndex: number; stepIndex: number } | null>(null);
   const [isEditingCommercial, setIsEditingCommercial] = useState(false);
   const [showProformaPreview, setShowProformaPreview] = useState(false);
+  const [isQrModalOpen, setIsQrModalOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Edit Commercial State
@@ -231,6 +234,16 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
           </div>
 
           <div className="flex items-center space-x-1.5 sm:space-x-2">
+            <button
+              type="button"
+              onClick={() => setIsQrModalOpen(true)}
+              className="px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 font-black text-xs flex items-center gap-1.5 shadow-md transition-all shrink-0"
+              title="Generar QR de Check-in y Asistencia en Sitio"
+            >
+              <QrCode className="w-3.5 h-3.5 text-amber-400" />
+              <span className="hidden sm:inline">QR Check-in</span>
+            </button>
+
             {onOpenContractExport && (
               <button
                 type="button"
@@ -1058,6 +1071,18 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
             </div>
           </div>
         </div>
+      )}
+
+      {/* QR Check-in Modal */}
+      {isQrModalOpen && (
+        <ProjectQrCheckinModal
+          project={project}
+          isOpen={isQrModalOpen}
+          onClose={() => setIsQrModalOpen(false)}
+          onUpdateProject={(updated) => {
+            onUpdateProject(updated);
+          }}
+        />
       )}
 
       {/* Embedded Step Execution Modal if a step is clicked */}

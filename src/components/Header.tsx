@@ -70,117 +70,54 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           {/* Right Actions & User Controls */}
-          <div className="flex items-center space-x-1.5 sm:space-x-2.5">
+          <div className="flex items-center space-x-2 sm:space-x-3">
             
-            {/* Sync & Connectivity Status Indicator */}
-            <SyncStatusIndicator />
-
-            {/* Admin-only: Manage Users Button */}
-            {currentRole === 'admin' && (
-              <button
-                id="btn-open-users-mgmt"
-                onClick={onOpenUsersManagement}
-                className="px-2.5 sm:px-3 py-1.5 rounded-xl bg-blue-500/20 hover:bg-blue-500 text-blue-300 hover:text-white border border-blue-400/40 transition-all flex items-center gap-1.5 text-xs font-black shadow-xs shrink-0"
-                title="Gestionar Cuentas de Usuarios: Administradores y Empleados (Crear, Editar, Passwords)"
-              >
-                <Users className="w-4 h-4 text-blue-400" />
-                <span className="hidden sm:inline">Usuarios</span>
-              </button>
-            )}
-
-            {/* "Reglas" Master Rules Button */}
+            {/* "Reglas" Master Rules Button (Access to Rules, Users, System View, Shortcuts, and Sync status) */}
             <button
               id="btn-open-rules-config"
               onClick={onOpenRulesModal}
-              className="px-2.5 sm:px-3 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500 text-amber-300 hover:text-slate-950 border border-amber-400/40 transition-all flex items-center gap-1.5 text-xs font-black shadow-xs shrink-0"
-              title="Configurar Reglas Maestras TCT: Checklists, Equipos, Paquetes, Proformas y Formatos"
+              className="px-3 sm:px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-750 text-amber-300 hover:text-amber-200 border border-slate-700 hover:border-amber-500/60 transition-all flex items-center gap-2 text-xs font-black shadow-xs shrink-0 cursor-pointer"
+              title="Configurar Reglas Maestras TCT, Usuarios, Vista de Sistema y Atajos"
             >
               <Sliders className="w-4 h-4 text-amber-400" />
-              <span className="hidden md:inline">Reglas</span>
+              <span className="font-black">Reglas & Sistema</span>
             </button>
-
-            {/* Role Switcher Pill */}
-            <div className="flex items-center bg-slate-800 p-1 rounded-xl border border-slate-700 shadow-inner shrink-0">
-              <button
-                id="btn-role-admin"
-                onClick={() => onRoleChange('admin')}
-                className={`flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
-                  currentRole === 'admin'
-                    ? 'bg-amber-500 text-slate-950 shadow-md font-black'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
-                }`}
-                title="Cambiar a Vista de Administrador"
-              >
-                <ShieldCheck className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Admin</span>
-              </button>
-              
-              <button
-                id="btn-role-employee"
-                onClick={() => onRoleChange('employee')}
-                className={`flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
-                  currentRole === 'employee'
-                    ? 'bg-blue-500 text-white shadow-md font-black'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
-                }`}
-                title="Cambiar a Vista de Técnico"
-              >
-                <UserCheck className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Técnico</span>
-              </button>
-            </div>
-
-            {/* Staff Switcher for employee role */}
-            {currentRole === 'employee' && (
-              <select
-                value={currentStaff.id}
-                onChange={(e) => {
-                  const found = allStaff.find(s => s.id === e.target.value);
-                  if (found) onStaffChange(found);
-                }}
-                className="hidden lg:block text-xs bg-slate-800 text-amber-300 font-bold border border-slate-700 rounded-xl p-1.5 cursor-pointer max-w-[130px] truncate"
-                title="Cambiar técnico actual"
-              >
-                {allStaff.map(st => (
-                  <option key={st.id} value={st.id}>
-                    👤 {st.name.split(' ')[0]} ({st.role.split(' ')[0]})
-                  </option>
-                ))}
-              </select>
-            )}
 
             {/* New Project CTA (Only for Admin) */}
             {currentRole === 'admin' && (
               <button
                 id="btn-new-project-header"
                 onClick={onOpenNewProject}
-                className="flex items-center gap-1 px-2.5 sm:px-3 py-1.5 sm:py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 text-xs font-black rounded-xl shadow-md hover:shadow-lg transition-all shrink-0"
-                title="Registrar nueva producción y emitir contrato"
+                className="flex items-center gap-1.5 px-3 sm:px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 text-xs font-black rounded-xl shadow-md hover:shadow-lg transition-all shrink-0 cursor-pointer"
+                title="Registrar nueva producción y emitir contrato (Ctrl+N)"
               >
                 <PlusCircle className="w-4 h-4" />
-                <span className="hidden sm:inline">+ Producción</span>
+                <span className="hidden sm:inline">+ Nueva Producción</span>
+                <span className="text-[10px] bg-slate-950/20 px-1 py-0.2 rounded font-mono font-bold hidden lg:inline">
+                  Ctrl+N
+                </span>
               </button>
             )}
 
-            {/* Logged User Info & Logout Button (Icon only) */}
+            {/* Logged User Info displaying who is using the system on this machine */}
             <div className="flex items-center pl-1 sm:pl-2 border-l border-slate-800 space-x-1.5 shrink-0">
-              {currentUser && (
-                <div className="hidden xl:flex items-center space-x-2 bg-slate-800/80 px-2.5 py-1 rounded-xl border border-slate-700 text-left">
-                  <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-black ${
-                    currentUser.role === 'admin' ? 'bg-amber-500 text-slate-950' : 'bg-blue-500 text-white'
-                  }`}>
-                    {currentUser.username.slice(0, 2).toUpperCase()}
-                  </div>
-                  <div className="min-w-0 leading-tight">
-                    <p className="text-[11px] font-black text-white truncate max-w-[90px]">
-                      {currentUser.username}
-                    </p>
-                    <p className="text-[9px] text-slate-400 truncate max-w-[90px]">
-                      {currentUser.role === 'admin' ? 'Admin' : currentUser.jobTitle?.split(' ')[0] || 'Técnico'}
-                    </p>
-                  </div>
+              <div className="flex items-center space-x-2 bg-slate-800/90 hover:bg-slate-800 px-2.5 sm:px-3 py-1 rounded-xl border border-slate-700 text-left">
+                <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-black shrink-0 ${
+                  currentUser?.role === 'admin' || currentRole === 'admin'
+                    ? 'bg-amber-500 text-slate-950' 
+                    : 'bg-blue-500 text-white'
+                }`}>
+                  {(currentUser?.username || 'TC').slice(0, 2).toUpperCase()}
                 </div>
-              )}
+                <div className="min-w-0 leading-tight">
+                  <p className="text-[11px] font-black text-white truncate max-w-[130px]" title={currentUser?.username || 'Usuario TCT'}>
+                    👤 {currentUser?.username || 'Ing. Roberto Acuña'}
+                  </p>
+                  <p className="text-[9px] text-slate-400 truncate max-w-[130px]">
+                    {currentUser?.role === 'admin' ? '🛡️ Admin • Equipo Local' : `👷 ${currentUser?.jobTitle || 'Técnico'} • Terminal`}
+                  </p>
+                </div>
+              </div>
 
               {/* Logout Button (Icon only) */}
               <button

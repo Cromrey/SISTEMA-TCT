@@ -8,7 +8,8 @@ import {
   EventType,
   UserRole,
   AuthUser,
-  ProductionProject
+  ProductionProject,
+  StaffMember
 } from '../types';
 import { 
   getStoredRules, 
@@ -27,6 +28,14 @@ import {
   saveProjects, 
   getLastSyncTime 
 } from '../utils/storage';
+import { 
+  KeyboardShortcutConfig, 
+  getStoredShortcuts, 
+  saveStoredShortcuts, 
+  resetShortcutsToDefault, 
+  SHORTCUT_ACTIONS 
+} from '../utils/shortcutsStorage';
+import { formatDateDDMMAA } from '../utils/dateFormatter';
 import { SyncStatusIndicator } from './SyncStatusIndicator';
 import { TCTLogo } from './TCTLogo';
 import { 
@@ -68,10 +77,13 @@ import {
   Lock,
   Phone,
   Mail,
-  Briefcase
+  Briefcase,
+  Keyboard,
+  Command,
+  Zap
 } from 'lucide-react';
 
-export type SettingsTab = 'checklists' | 'equipment' | 'packages' | 'services' | 'formats' | 'users' | 'system';
+export type SettingsTab = 'checklists' | 'equipment' | 'packages' | 'services' | 'formats' | 'users' | 'shortcuts' | 'system';
 
 interface AdminSettingsModalProps {
   onClose: () => void;
@@ -82,6 +94,9 @@ interface AdminSettingsModalProps {
   onUsersChanged?: (users: AuthUser[]) => void;
   onResetDemoData?: () => void;
   initialTab?: SettingsTab;
+  currentStaff?: StaffMember;
+  allStaff?: StaffMember[];
+  onStaffChange?: (staff: StaffMember) => void;
 }
 
 const JOB_TITLE_PRESETS = [
@@ -98,12 +113,15 @@ const JOB_TITLE_PRESETS = [
 export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({ 
   onClose, 
   onRulesUpdated,
-  currentRole,
+  currentRole = 'admin',
   onRoleChange,
   currentUser,
   onUsersChanged,
   onResetDemoData,
-  initialTab = 'checklists'
+  initialTab = 'checklists',
+  currentStaff,
+  allStaff = [],
+  onStaffChange
 }) => {
   const [rules, setRules] = useState<TCTMasterRules>(getStoredRules());
   const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab);
@@ -153,12 +171,68 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
   const [showPassword, setShowPassword] = useState(false);
   const [userFormError, setUserFormError] = useState<string | null>(null);
 
+  // --- Keyboard Shortcuts State ---
+  const [shortcutsList, setShortcutsList] = useState<KeyboardShortcutConfig[]>(getStoredShortcuts());
+  const [selectedShortcutAction, setSelectedShortcutAction] = useState<string>(SHORTCUT_ACTIONS[0].actionId);
+  const [customShortcutKeys, setCustomShortcutKeys] = useState<string>('ctrl+b');
+
   // File input ref for JSON restore
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const notifySuccess = (msg: string) => {
     setSuccessMessage(msg);
     setTimeout(() => setSuccessMessage(null), 3500);
+  };
+
+  const handleToggleShortcut = (id: string) => {
+    const updated = shortcutsList.map(sc => sc.id === id ? { ...sc, enabled: !sc.enabled } : sc);
+    setShortcutsList(updated);
+    saveStoredShortcuts(updated);
+    notifySuccess('Estado de atajo actualizado');
+  };
+
+  const handleUpdateShortcutKeys = (id: string, newKeys: string) => {
+    const updated = shortcutsList.map(sc => sc.id === id ? { ...sc, keys: newKeys.trim().toLowerCase() } : sc);
+    setShortcutsList(updated);
+    saveStoredShortcuts(updated);
+  };
+
+  const handleAddCustomShortcut = () => {
+    const actionDef = SHORTCUT_ACTIONS.find(a => a.actionId === selectedShortcutAction);
+    if (!actionDef || !customShortcutKeys.trim()) return;
+
+    const existingIdx = shortcutsList.findIndex(sc => sc.actionId === selectedShortcutAction);
+    let updated: KeyboardShortcutConfig[];
+
+    if (existingIdx >= 0) {
+      updated = shortcutsList.map((sc, idx) => idx === existingIdx ? {
+        ...sc,
+        keys: customShortcutKeys.trim().toLowerCase(),
+        enabled: true
+      } : sc);
+    } else {
+      const newSc: KeyboardShortcutConfig = {
+        id: `sc_${selectedShortcutAction}_${Date.now()}`,
+        actionId: selectedShortcutAction,
+        name: actionDef.name,
+        description: actionDef.description,
+        category: actionDef.category,
+        keys: customShortcutKeys.trim().toLowerCase(),
+        enabled: true,
+        isCustom: true
+      };
+      updated = [...shortcutsList, newSc];
+    }
+
+    setShortcutsList(updated);
+    saveStoredShortcuts(updated);
+    notifySuccess(`✓ Atajo guardado: ${actionDef.name} -> ${customShortcutKeys.toUpperCase()}`);
+  };
+
+  const handleResetShortcuts = () => {
+    const defaults = resetShortcutsToDefault();
+    setShortcutsList(defaults);
+    notifySuccess('Atajos de teclado restablecidos a la configuración de fábrica');
   };
 
   const handleSaveAll = () => {
@@ -257,6 +331,7 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
       name: newEquipmentName.trim(),
       category: newEquipmentCategory,
       serialNumber: newEquipmentSerial.trim() || undefined,
+      checkedOut: false,
       isAvailable: true,
       condition: 'good',
       maintenanceRequired: false
@@ -321,7 +396,14 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
     const newPack: TCTMasterPackage = {
       id: `pkg-${Date.now()}`,
       name: 'Nuevo Paquete ' + (rules.packages.length + 1),
+      basePrice: 1500,
       price: 1500,
+      standardHours: 8,
+      includesDrone: false,
+      includesPhotobook: false,
+      recommendedEquipment: [],
+      slaDaysVideo: 15,
+      slaDaysPhotobook: 30,
       description: 'Descripción del paquete personalizado',
       eventType: 'Evento Corporativo',
       includedServices: [
@@ -648,6 +730,98 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
           </div>
         )}
 
+        {/* REQUERIMIENTO OFICIAL: Cuadro "Vista de Sistema" para conmutar Admin / Técnico o escoger cualquier empleado */}
+        {onRoleChange && (
+          <div className="bg-slate-900 px-6 py-3 border-b border-slate-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 text-xs">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/40 shrink-0">
+                <ShieldCheck className="w-4 h-4" />
+              </div>
+              <div>
+                <div className="flex items-center space-x-2">
+                  <h4 className="font-black text-white text-xs uppercase tracking-wider">
+                    Vista de Sistema & Modo de Navegación
+                  </h4>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                    currentRole === 'admin'
+                      ? 'bg-amber-500 text-slate-950 shadow-xs'
+                      : 'bg-blue-500 text-white shadow-xs'
+                  }`}>
+                    {currentRole === 'admin' ? '🛡️ Administrador General' : `👷 Vista Empleado: ${currentStaff?.name || 'Técnico'}`}
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-400">
+                  {currentRole === 'admin'
+                    ? 'Supervisión global de todos los proyectos, balances financieros y asignación de personal.'
+                    : `Visualización restringida a las tareas y expedientes asignados a ${currentStaff?.name}.`}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-2 flex-wrap gap-y-1.5 shrink-0 w-full md:w-auto">
+              {/* Toggle Admin / Técnico */}
+              <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => {
+                    onRoleChange('admin');
+                    notifySuccess('Cambiando a Vista de Administrador General');
+                  }}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
+                    currentRole === 'admin'
+                      ? 'bg-amber-500 text-slate-950 shadow-md'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  <span>Admin</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onRoleChange('employee');
+                    notifySuccess(`Cambiando a Vista de Técnico (${currentStaff?.name || 'Personal'})`);
+                  }}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
+                    currentRole === 'employee'
+                      ? 'bg-blue-500 text-white shadow-md'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <UserCheck className="w-3.5 h-3.5" />
+                  <span>Técnico</span>
+                </button>
+              </div>
+
+              {/* Employee selector for viewing as any technician */}
+              {onStaffChange && allStaff.length > 0 && (
+                <div className="flex items-center space-x-1.5 bg-slate-950 px-2.5 py-1 rounded-xl border border-slate-800">
+                  <Users className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                  <span className="text-[10px] text-slate-400 font-bold hidden sm:inline">Ver como:</span>
+                  <select
+                    value={currentStaff?.id || allStaff[0]?.id}
+                    onChange={(e) => {
+                      const found = allStaff.find(s => s.id === e.target.value);
+                      if (found) {
+                        onStaffChange(found);
+                        onRoleChange('employee');
+                        notifySuccess(`✓ Viendo sistema como: ${found.name} (${found.role})`);
+                      }
+                    }}
+                    className="bg-transparent text-xs font-bold text-amber-300 focus:outline-none cursor-pointer pr-1"
+                  >
+                    {allStaff.map(st => (
+                      <option key={st.id} value={st.id} className="bg-slate-900 text-white">
+                        {st.name} ({st.role.split(' ')[0]})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Tab Navigation */}
         <div className="bg-slate-100 px-4 sm:px-6 py-2 border-b border-slate-200 flex items-center space-x-2 overflow-x-auto shrink-0 scrollbar-none">
           <button
@@ -719,7 +893,7 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
           {/* TAB 6: USUARIOS */}
           <button
             onClick={() => setActiveTab('users')}
-            className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 whitespace-nowrap ${
+            className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
               activeTab === 'users'
                 ? 'bg-blue-600 text-white shadow-sm'
                 : 'text-blue-700 bg-blue-50 hover:bg-blue-100'
@@ -732,17 +906,33 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
             </span>
           </button>
 
-          {/* TAB 7: SISTEMA & AUTOGUARDADO */}
+          {/* TAB 7: ATAJOS DE TECLADO */}
+          <button
+            onClick={() => setActiveTab('shortcuts')}
+            className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+              activeTab === 'shortcuts'
+                ? 'bg-amber-600 text-white shadow-sm'
+                : 'text-amber-800 bg-amber-50 hover:bg-amber-100'
+            }`}
+          >
+            <Keyboard className="w-4 h-4" />
+            <span>7. Atajos de Teclado</span>
+            <span className="px-1.5 py-0.2 rounded-full bg-amber-900 text-[10px] text-amber-200">
+              {shortcutsList.filter(s => s.enabled).length} Activos
+            </span>
+          </button>
+
+          {/* TAB 8: SISTEMA & AUTOGUARDADO */}
           <button
             onClick={() => setActiveTab('system')}
-            className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 whitespace-nowrap ${
+            className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
               activeTab === 'system'
                 ? 'bg-emerald-700 text-white shadow-sm'
                 : 'text-emerald-800 bg-emerald-50 hover:bg-emerald-100'
             }`}
           >
             <Database className="w-4 h-4" />
-            <span>7. Sistema & Demo</span>
+            <span>8. Sistema & Demo</span>
           </button>
         </div>
 
@@ -1049,7 +1239,7 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
                     >
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-black text-slate-900">{pkg.name}</span>
-                        <span className="text-xs font-black text-amber-600">S/. {pkg.price}</span>
+                        <span className="text-xs font-black text-amber-600">S/. {pkg.basePrice ?? pkg.price}</span>
                       </div>
                       <div className="flex items-center justify-between mt-1 text-[10px] text-slate-500">
                         <span>{pkg.eventType}</span>
@@ -1091,8 +1281,12 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
                       <label className="text-[11px] font-bold text-slate-600 block mb-1">Precio Oficial (S/.)</label>
                       <input
                         type="number"
-                        value={editingPackage.price}
-                        onChange={(e) => handleUpdateEditingPackage('price', Number(e.target.value))}
+                        value={editingPackage.basePrice ?? editingPackage.price ?? 0}
+                        onChange={(e) => {
+                          const val = Number(e.target.value);
+                          handleUpdateEditingPackage('basePrice', val);
+                          handleUpdateEditingPackage('price', val);
+                        }}
                         className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:bg-white focus:ring-2 focus:ring-amber-500 focus:outline-none"
                       />
                     </div>
@@ -1628,7 +1822,179 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
           )}
 
           {/* ========================================================= */}
-          {/* TAB 7: SISTEMA, DEMO & AUTOGUARDADO LOCAL */}
+          {/* TAB 7: GESTOR DE ATAJOS DE TECLADO PERSONALIZADOS */}
+          {/* ========================================================= */}
+          {activeTab === 'shortcuts' && (
+            <div className="space-y-6">
+              
+              {/* Header card for shortcuts */}
+              <div className="bg-gradient-to-r from-slate-900 via-slate-950 to-slate-900 text-white p-6 rounded-3xl border border-slate-800 shadow-xl space-y-4">
+                <div className="flex items-center justify-between flex-wrap gap-3">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400">
+                      <Keyboard className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h4 className="text-base font-black">
+                          Gestor de Atajos de Teclado Globales (Shortcuts)
+                        </h4>
+                        <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[10px] font-black border border-amber-500/40">
+                          {shortcutsList.filter(s => s.enabled).length} Activos
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-400 mt-0.5">
+                        Presiona combinaciones de teclas desde cualquier pantalla para acceder velozmente a funciones del sistema.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleResetShortcuts}
+                      className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold border border-slate-700 flex items-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      <span>Restablecer Fábrica</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Quick Add / Edit Custom Shortcut Banner */}
+                <div className="bg-slate-800/80 p-4 rounded-2xl border border-slate-700/80 space-y-3">
+                  <h5 className="text-xs font-black text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
+                    <Zap className="w-4 h-4 text-amber-400" />
+                    <span>Personalizar o Asignar Nuevo Atajo</span>
+                  </h5>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
+                    <div className="sm:col-span-6 space-y-1">
+                      <label className="text-[11px] font-bold text-slate-300">Seleccionar Función del Sistema:</label>
+                      <select
+                        value={selectedShortcutAction}
+                        onChange={(e) => setSelectedShortcutAction(e.target.value)}
+                        className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs font-bold text-white focus:outline-none focus:border-amber-400"
+                      >
+                        {SHORTCUT_ACTIONS.map(action => (
+                          <option key={action.actionId} value={action.actionId}>
+                            {action.name} ({action.category.toUpperCase()})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="sm:col-span-4 space-y-1">
+                      <label className="text-[11px] font-bold text-slate-300">Combinación de Teclas:</label>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          value={customShortcutKeys}
+                          onChange={(e) => setCustomShortcutKeys(e.target.value)}
+                          placeholder="Ej: ctrl+n, alt+c, ctrl+shift+p"
+                          className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs font-mono font-bold text-amber-300 uppercase focus:outline-none focus:border-amber-400"
+                        />
+                        <Command className="w-3.5 h-3.5 text-slate-500 absolute right-3 top-2.5" />
+                      </div>
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <button
+                        type="button"
+                        onClick={handleAddCustomShortcut}
+                        className="w-full py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-black rounded-xl shadow-md transition-all flex items-center justify-center gap-1 cursor-pointer"
+                      >
+                        <Save className="w-3.5 h-3.5" />
+                        <span>Guardar</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Shortcuts Table */}
+              <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-xs">
+                <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                  <div>
+                    <h5 className="font-black text-slate-900 text-sm">
+                      Lista de Atajos Configurados
+                    </h5>
+                    <p className="text-xs text-slate-500">
+                      Marca para activar o desactiva cualquier atajo. Puedes editar directamente las teclas en la casilla.
+                    </p>
+                  </div>
+                  <span className="text-xs font-bold text-slate-400">
+                    {shortcutsList.length} funciones mapeadas
+                  </span>
+                </div>
+
+                <div className="divide-y divide-slate-100">
+                  {shortcutsList.map((sc) => (
+                    <div key={sc.id} className="p-4 sm:px-6 flex items-center justify-between gap-4 hover:bg-slate-50/80 transition-colors">
+                      <div className="flex items-center space-x-3.5 min-w-0">
+                        {/* Checkbox */}
+                        <input
+                          type="checkbox"
+                          checked={sc.enabled}
+                          onChange={() => handleToggleShortcut(sc.id)}
+                          className="w-4 h-4 rounded text-amber-500 focus:ring-amber-400 cursor-pointer"
+                        />
+
+                        <div className="min-w-0">
+                          <div className="flex items-center space-x-2">
+                            <span className={`text-xs font-black ${sc.enabled ? 'text-slate-900' : 'text-slate-400 line-through'}`}>
+                              {sc.name}
+                            </span>
+                            <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[10px] font-bold uppercase">
+                              {sc.category}
+                            </span>
+                            {sc.isCustom && (
+                              <span className="px-1.5 py-0.2 rounded-md bg-amber-100 text-amber-800 text-[9px] font-bold">
+                                Personalizado
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-slate-500 truncate">
+                            {sc.description}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Keys input pill */}
+                      <div className="flex items-center space-x-2 shrink-0">
+                        <input
+                          type="text"
+                          value={sc.keys}
+                          onChange={(e) => handleUpdateShortcutKeys(sc.id, e.target.value)}
+                          className={`w-32 px-2.5 py-1 text-center font-mono text-xs font-black rounded-lg border focus:outline-none transition-all uppercase ${
+                            sc.enabled
+                              ? 'bg-slate-900 text-amber-300 border-slate-700 focus:border-amber-400'
+                              : 'bg-slate-100 text-slate-400 border-slate-200'
+                          }`}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleToggleShortcut(sc.id)}
+                          className={`p-1.5 rounded-lg border text-xs font-bold transition-colors ${
+                            sc.enabled
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                              : 'bg-slate-100 text-slate-400 border-slate-200 hover:bg-slate-200'
+                          }`}
+                          title={sc.enabled ? 'Atajo activado' : 'Atajo desactivado'}
+                        >
+                          {sc.enabled ? <Check className="w-3.5 h-3.5" /> : <X className="w-3.5 h-3.5" />}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+            </div>
+          )}
+
+          {/* ========================================================= */}
+          {/* TAB 8: SISTEMA, DEMO & AUTOGUARDADO LOCAL */}
           {/* ========================================================= */}
           {activeTab === 'system' && (
             <div className="space-y-6">

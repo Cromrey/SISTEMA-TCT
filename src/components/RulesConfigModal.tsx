@@ -5,7 +5,9 @@ import {
   EquipmentItem, 
   MasterStepChecklistRule, 
   TemplateDocumentFormat,
-  EventType 
+  EventType,
+  UserRole,
+  StaffMember
 } from '../types';
 import { 
   getStoredRules, 
@@ -34,21 +36,41 @@ import {
   Info,
   ChevronRight,
   Search,
-  ExternalLink
+  ExternalLink,
+  UserCheck,
+  Users,
+  Monitor,
+  Wifi,
+  WifiOff
 } from 'lucide-react';
+import { getSyncStatus } from '../utils/syncQueue';
 
 interface RulesConfigModalProps {
   onClose: () => void;
   onRulesUpdated?: () => void;
+  currentRole?: UserRole;
+  onRoleChange?: (role: UserRole) => void;
+  currentStaff?: StaffMember;
+  allStaff?: StaffMember[];
+  onStaffChange?: (staff: StaffMember) => void;
 }
 
 type TabType = 'packages' | 'checklists' | 'equipment' | 'formats' | 'settings';
 
-export const RulesConfigModal: React.FC<RulesConfigModalProps> = ({ onClose, onRulesUpdated }) => {
+export const RulesConfigModal: React.FC<RulesConfigModalProps> = ({ 
+  onClose, 
+  onRulesUpdated,
+  currentRole = 'admin',
+  onRoleChange,
+  currentStaff,
+  allStaff = [],
+  onStaffChange
+}) => {
   const [rules, setRules] = useState<TCTMasterRules>(getStoredRules());
   const [activeTab, setActiveTab] = useState<TabType>('packages');
   const [searchQuery, setSearchQuery] = useState('');
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const syncStatus = getSyncStatus();
 
   // Selected package for editing
   const [editingPackage, setEditingPackage] = useState<TCTMasterPackage | null>(null);
@@ -299,6 +321,92 @@ export const RulesConfigModal: React.FC<RulesConfigModalProps> = ({ onClose, onR
           <div className="bg-emerald-500/20 border-b border-emerald-500/40 px-6 py-2 text-xs font-bold text-emerald-300 flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
             <span>{successMessage}</span>
+          </div>
+        )}
+
+        {/* REQUERIMIENTO: Cuadro de "Vista de Sistema & Modo de Navegación" */}
+        {onRoleChange && (
+          <div className="bg-slate-950 px-6 py-3.5 border-b border-slate-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 text-xs">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/40 shrink-0">
+                <Monitor className="w-4 h-4" />
+              </div>
+              <div>
+                <div className="flex items-center space-x-2">
+                  <h3 className="font-black text-white text-xs uppercase tracking-wider">
+                    Vista de Sistema & Navegación
+                  </h3>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                    currentRole === 'admin' 
+                      ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' 
+                      : 'bg-blue-500/20 text-blue-300 border border-blue-500/40'
+                  }`}>
+                    {currentRole === 'admin' ? '🛡️ Modo Administrador General' : `👷 Modo Técnico (${currentStaff?.name.split(' ')[0] || 'Personal'})`}
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-400">
+                  {currentRole === 'admin'
+                    ? 'Visualizando panel completo: control total, aprobación de contratos y supervisión global.'
+                    : `Visualizando como ${currentStaff?.name} (${currentStaff?.role}): solo producciones y tareas asignadas.`}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-2 flex-wrap gap-y-1.5 shrink-0 w-full md:w-auto">
+              {/* Role Toggle */}
+              <div className="flex items-center bg-slate-900 p-1 rounded-xl border border-slate-700">
+                <button
+                  type="button"
+                  onClick={() => onRoleChange('admin')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 ${
+                    currentRole === 'admin'
+                      ? 'bg-amber-500 text-slate-950 shadow-md'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  <span>Admin</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onRoleChange('employee')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 ${
+                    currentRole === 'employee'
+                      ? 'bg-blue-500 text-white shadow-md'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <UserCheck className="w-3.5 h-3.5" />
+                  <span>Técnico</span>
+                </button>
+              </div>
+
+              {/* Staff Selector Dropdown (When in technical view or admin wants to pick which employee view) */}
+              {onStaffChange && allStaff.length > 0 && (
+                <div className="flex items-center space-x-1.5 bg-slate-900 px-2.5 py-1 rounded-xl border border-slate-700">
+                  <Users className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                  <span className="text-[10px] text-slate-400 font-bold hidden sm:inline">Empleado:</span>
+                  <select
+                    value={currentStaff?.id || allStaff[0]?.id}
+                    onChange={(e) => {
+                      const found = allStaff.find(s => s.id === e.target.value);
+                      if (found) {
+                        onStaffChange(found);
+                        onRoleChange('employee');
+                        notifySuccess(`Cambiando a la vista del técnico: ${found.name}`);
+                      }
+                    }}
+                    className="bg-transparent text-xs font-bold text-amber-300 focus:outline-none cursor-pointer pr-1"
+                  >
+                    {allStaff.map(st => (
+                      <option key={st.id} value={st.id} className="bg-slate-900 text-white">
+                        {st.name} ({st.role.split(' ')[0]})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
           </div>
         )}
 

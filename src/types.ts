@@ -121,6 +121,26 @@ export interface AssignedStaff {
   role: 'Director de Cámara' | 'Fotógrafo Principal' | 'Piloto Dron' | 'Editor Principal' | 'Asistente de Audio / Iluminación' | 'Diseñador Gráfico' | string;
   phone: string;
   confirmed: boolean;
+  checkedIn?: boolean;
+  checkInTime?: string;
+  checkInStatus?: 'on_time' | 'early' | 'late';
+  checkInLocation?: string;
+}
+
+export interface StaffCheckInRecord {
+  id: string;
+  staffId: string;
+  staffName: string;
+  role: string;
+  checkInTime: string; // formatted e.g. "18/08/2026 04:30 PM"
+  timestamp: string; // ISO string
+  status: 'on_time' | 'early' | 'late';
+  locationNotes?: string;
+  latitude?: number;
+  longitude?: number;
+  deviceInfo?: string;
+  verifiedByQr: boolean;
+  notes?: string;
 }
 
 export type StaffMember = AssignedStaff;
@@ -131,6 +151,9 @@ export interface EquipmentItem {
   category: 'Cámara' | 'Lente' | 'Dron' | 'Audio' | 'Iluminación' | 'Accesorios / Memorias' | 'Estabilizadores / Soportes';
   serialNumber?: string;
   checkedOut: boolean;
+  isAvailable?: boolean;
+  condition?: 'good' | 'fair' | 'maintenance' | string;
+  maintenanceRequired?: boolean;
 }
 
 export interface ProductionProject {
@@ -182,6 +205,7 @@ export interface ProductionProject {
   // Staff & Equipment
   assignedStaff: AssignedStaff[];
   equipmentList: EquipmentItem[];
+  staffCheckIns?: StaffCheckInRecord[];
   
   // Phases 1 through 6
   phases: PhaseData[];
@@ -215,6 +239,7 @@ export interface ProjectAuditLog {
     | 'commercial_edited'
     | 'staff_assigned'
     | 'equipment_assigned'
+    | 'staff_checkin_qr'
     | 'manual_note_added'
     | 'project_created';
   title: string;
@@ -269,6 +294,7 @@ export interface TCTMasterPackage {
   name: string;
   eventType: EventType;
   basePrice: number;
+  price?: number;
   standardHours: number;
   includesDrone: boolean;
   includesPhotobook: boolean;
@@ -277,6 +303,7 @@ export interface TCTMasterPackage {
   recommendedEquipment: string[];
   slaDaysVideo: number;
   slaDaysPhotobook: number;
+  isPopular?: boolean;
 }
 
 export interface MasterStepChecklistRule {

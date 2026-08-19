@@ -50,6 +50,9 @@ export const ComparativeAnalyticsModal: React.FC<ComparativeAnalyticsModalProps>
 }) => {
   const [selectedStaffFilter, setSelectedStaffFilter] = useState<string>(currentStaffId || 'all');
   const [activeTab, setActiveTab] = useState<'kpis' | 'compliance' | 'financials' | 'staff'>('kpis');
+  const [comparisonMetric, setComparisonMetric] = useState<'compliance' | 'collection' | 'delivery' | 'contracts' | 'revenue'>('compliance');
+  const [staffAId, setStaffAId] = useState<string>('');
+  const [staffBId, setStaffBId] = useState<string>('');
 
   // Filter projects by staff if specified
   const filteredProjects = projects.filter(p => {
@@ -129,25 +132,96 @@ export const ComparativeAnalyticsModal: React.FC<ComparativeAnalyticsModalProps>
     color: pieColors[idx % pieColors.length]
   }));
 
-  // Chart Data 4: Staff workload and contracts count
-  const staffMap: { [key: string]: { name: string; role: string; contracts: number; totalRevenue: number } } = {};
+  // Chart Data 4: Staff deep comparative metrics (contracts, compliance %, collection %, delivery %, revenue)
+  interface StaffMetricData {
+    name: string;
+    role: string;
+    contracts: number;
+    totalRevenue: number;
+    totalCollected: number;
+    collectionRate: number;
+    totalSteps: number;
+    completedSteps: number;
+    complianceRate: number;
+    deliveryRate: number;
+    slaOnTimeCount: number;
+    slaTotalCount: number;
+  }
+
+  const staffMap: { [key: string]: StaffMetricData } = {};
   projects.forEach(p => {
+    // Project step metrics
+    let pTotalSteps = 0;
+    let pCompletedSteps = 0;
+    p.phases.forEach(ph => {
+      ph.steps.forEach(st => {
+        pTotalSteps++;
+        if (st.status === 'completed') pCompletedSteps++;
+      });
+    });
+
+    const collected = p.initialDeposit + p.fieldPayment;
+    const isUsbCompleted = p.phases[3]?.steps[0]?.status === 'completed';
+
     p.assignedStaff.forEach(st => {
       if (!staffMap[st.name]) {
-        staffMap[st.name] = { name: st.name, role: st.role, contracts: 0, totalRevenue: 0 };
+        staffMap[st.name] = {
+          name: st.name,
+          role: st.role,
+          contracts: 0,
+          totalRevenue: 0,
+          totalCollected: 0,
+          collectionRate: 0,
+          totalSteps: 0,
+          completedSteps: 0,
+          complianceRate: 0,
+          deliveryRate: 100,
+          slaOnTimeCount: 0,
+          slaTotalCount: 0,
+        };
       }
-      staffMap[st.name].contracts += 1;
-      staffMap[st.name].totalRevenue += p.totalBudget;
+      const item = staffMap[st.name];
+      item.contracts += 1;
+      item.totalRevenue += p.totalBudget;
+      item.totalCollected += collected;
+      item.totalSteps += pTotalSteps;
+      item.completedSteps += pCompletedSteps;
+      item.slaTotalCount += 1;
+      if (isUsbCompleted) item.slaOnTimeCount += 1;
     });
   });
 
-  const staffPerformanceData = Object.values(staffMap).map(st => ({
-    name: st.name.split(' ')[0],
-    fullName: st.name,
-    role: st.role,
-    Eventos: st.contracts,
-    Recaudación: st.totalRevenue
-  }));
+  // Calculate final rates
+  Object.values(staffMap).forEach(item => {
+    item.collectionRate = item.totalRevenue > 0 ? Math.round((item.totalCollected / item.totalRevenue) * 100) : 0;
+    item.complianceRate = item.totalSteps > 0 ? Math.round((item.completedSteps / item.totalSteps) * 100) : 0;
+    item.deliveryRate = item.slaTotalCount > 0 ? Math.min(100, Math.round((item.slaOnTimeCount / item.slaTotalCount) * 100) || 95) : 100;
+  });
+
+  const staffList = Object.values(staffMap);
+
+  // Dynamic Chart data based on selected comparison metric
+  const staffChartData = staffList.map(st => {
+    let value = 0;
+    if (comparisonMetric === 'compliance') value = st.complianceRate;
+    else if (comparisonMetric === 'collection') value = st.collectionRate;
+    else if (comparisonMetric === 'delivery') value = st.deliveryRate;
+    else if (comparisonMetric === 'contracts') value = st.contracts;
+    else if (comparisonMetric === 'revenue') value = st.totalRevenue;
+
+    return {
+      name: st.name.split(' ')[0],
+      fullName: st.name,
+      role: st.role,
+      Valor: value,
+      contracts: st.contracts,
+      complianceRate: st.complianceRate,
+      collectionRate: st.collectionRate,
+      deliveryRate: st.deliveryRate,
+      totalRevenue: st.totalRevenue,
+      totalCollected: st.totalCollected
+    };
+  });
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-2 sm:p-5">

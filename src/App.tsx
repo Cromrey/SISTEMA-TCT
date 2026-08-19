@@ -392,8 +392,10 @@ export default function App() {
             onOpenReportPrint={(proj) => setSelectedProjectForReport(proj)}
             onOpenContractExport={(proj) => setSelectedProjectForContract(proj)}
             onOpenAnalytics={() => setIsAnalyticsModalOpen(true)}
+            onUpdateProject={handleUpdateProject}
             savedQuickFilter={savedAdminFilter}
             onSaveQuickFilter={setSavedAdminFilter}
+            allStaff={allStaff}
           />
         ) : (
           <StaffDashboard
@@ -401,6 +403,7 @@ export default function App() {
             currentStaff={currentStaff}
             onOpenProject={(proj) => setSelectedProjectForDetail(proj)}
             onOpenAnalytics={() => setIsAnalyticsModalOpen(true)}
+            onUpdateProject={handleUpdateProject}
           />
         )}
 
@@ -499,6 +502,9 @@ export default function App() {
           currentRole={currentRole}
           onRoleChange={setCurrentRole}
           currentUser={currentUser || undefined}
+          currentStaff={currentStaff}
+          allStaff={allStaff}
+          onStaffChange={setCurrentStaff}
           initialTab={rulesInitialTab}
           onUsersChanged={(updatedUsers) => {
             refreshStaffList(updatedUsers);

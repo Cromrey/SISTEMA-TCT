@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ProductionProject, SmartAlert, DecisionInsight, EventType, StepData } from '../types';
+import { ProductionProject, SmartAlert, DecisionInsight, EventType, StepData, StaffMember } from '../types';
 import { TCTLogo } from './TCTLogo';
 import { KpiMetricsDashboard } from './KpiMetricsDashboard';
 import { SlaOverdueAlertsBanner } from './SlaOverdueAlertsBanner';
@@ -30,10 +30,29 @@ import {
   Lock,
   ArrowDown,
   BarChart3,
-  PieChart
+  PieChart,
+  QrCode,
+  Download,
+  CalendarDays
 } from 'lucide-react';
 import { CalendarView } from './CalendarView';
 import { ExecutiveSummaryModule } from './ExecutiveSummaryModule';
+import { TimelineGanttView } from './TimelineGanttView';
+import { ProjectQrCheckinModal } from './ProjectQrCheckinModal';
+import { GlobalPdfExportModal, PdfReportType } from './GlobalPdfExportModal';
+import { formatDateDDMMAA } from '../utils/dateFormatter';
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Legend,
+  CartesianGrid,
+  Cell,
+  ReferenceLine
+} from 'recharts';
 
 interface AdminDashboardProps {
   projects: ProductionProject[];
@@ -46,11 +65,13 @@ interface AdminDashboardProps {
   onOpenReportPrint: (project: ProductionProject) => void;
   onOpenContractExport: (project: ProductionProject) => void;
   onOpenAnalytics: () => void;
-  savedQuickFilter?: 'all' | 'pending' | 'in_progress' | 'completed' | 'overdue' | 'phase_specific';
-  onSaveQuickFilter?: (filter: 'all' | 'pending' | 'in_progress' | 'completed' | 'overdue' | 'phase_specific') => void;
+  onUpdateProject?: (project: ProductionProject) => void;
+  savedQuickFilter?: 'all' | 'pending' | 'in_progress' | 'completed' | 'overdue' | 'due_this_week' | 'high_priority' | 'waiting_approval' | 'phase_specific';
+  onSaveQuickFilter?: (filter: any) => void;
+  allStaff?: StaffMember[];
 }
 
-type MainGrouping = 'all' | 'pending' | 'in_progress' | 'completed' | 'overdue' | 'phase_specific';
+type MainGrouping = 'all' | 'pending' | 'in_progress' | 'completed' | 'overdue' | 'due_this_week' | 'high_priority' | 'waiting_approval' | 'phase_specific';
 type SpecificPhaseFilter = 'all' | 'f1' | 'f2' | 'f3' | 'f4' | 'f5' | 'f6';
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({
@@ -64,13 +85,19 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onOpenReportPrint,
   onOpenContractExport,
   onOpenAnalytics,
+  onUpdateProject,
   savedQuickFilter = 'all',
-  onSaveQuickFilter
+  onSaveQuickFilter,
+  allStaff = []
 }) => {
-  const [currentView, setCurrentView] = useState<'list' | 'calendar' | 'executive'>('list');
-  const [groupFilter, setGroupFilterState] = useState<MainGrouping>(savedQuickFilter);
+  const [currentView, setCurrentView] = useState<'list' | 'timeline' | 'calendar' | 'executive'>('list');
+  const [groupFilter, setGroupFilterState] = useState<MainGrouping>(savedQuickFilter as MainGrouping);
   const [specificPhaseFilter, setSpecificPhaseFilter] = useState<SpecificPhaseFilter>('all');
   const [selectedTypeFilter, setSelectedTypeFilter] = useState<EventType | 'all'>('all');
+  const [qrModalProject, setQrModalProject] = useState<ProductionProject | null>(null);
+  const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
+  const [pdfReportType, setPdfReportType] = useState<PdfReportType>('projects_list');
+  const [showTimelineChart, setShowTimelineChart] = useState(false);
 
   const setGroupFilter = (filter: MainGrouping) => {
     setGroupFilterState(filter);
@@ -187,7 +214,26 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const projectsInEdit15Days = projects.filter(p => p.phases[3]?.steps[0]?.status === 'in_progress').length;
   const projectsInPhotobook30Days = projects.filter(p => p.phases[4]?.steps[0]?.status === 'in_progress').length;
 
-  // Counts for Grouping Tabs
+  // Helper functions for extended Quick Filters
+  const isDueThisWeek = (p: ProductionProject) => {
+    if (!p.eventDate) return false;
+    const evDate = new Date(p.eventDate + 'T00:00:00');
+    const now = new Date();
+    const diffTime = evDate.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays >= -1 && diffDays <= 7;
+  };
+
+  const isHighPriority = (p: ProductionProject) => {
+    return isProjectOverdue(p) || p.finalBalance >= 1500 || isDueThisWeek(p);
+  };
+
+  const isWaitingApproval = (p: ProductionProject) => {
+    const milestone = getCurrentMilestone(p);
+    return milestone.stepNumber <= 3 && !p.isArchived;
+  };
+
+  // Counts for Grouping Tabs & Quick Filter Chips
   const countAll = projects.length;
   const countInProgress = projects.filter(p => {
     const { percent } = getProjectProgress(p);
@@ -198,6 +244,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     return percent === 100 || p.isArchived;
   }).length;
   const countOverdue = projects.filter(p => isProjectOverdue(p)).length;
+  const countDueThisWeek = projects.filter(p => isDueThisWeek(p) && !p.isArchived).length;
+  const countHighPriority = projects.filter(p => isHighPriority(p) && !p.isArchived).length;
+  const countWaitingApproval = projects.filter(p => isWaitingApproval(p)).length;
 
   // Filter projects by Grouping, Specific Phase, Search, and EventType
   const filteredProjects = projects.filter(p => {
@@ -221,6 +270,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       matchesGroup = percent === 100 || Boolean(p.isArchived);
     } else if (groupFilter === 'overdue') {
       matchesGroup = isProjectOverdue(p);
+    } else if (groupFilter === 'due_this_week') {
+      matchesGroup = isDueThisWeek(p) && !p.isArchived;
+    } else if (groupFilter === 'high_priority') {
+      matchesGroup = isHighPriority(p) && !p.isArchived;
+    } else if (groupFilter === 'waiting_approval') {
+      matchesGroup = isWaitingApproval(p);
     } else if (groupFilter === 'phase_specific') {
       if (specificPhaseFilter === 'f1') {
         matchesGroup = p.phases[0]?.steps.some(s => s.status === 'in_progress' || s.status === 'pending');
@@ -240,7 +295,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     return matchesSearch && matchesType && matchesGroup;
   });
 
-  const handleQuickFilterSelect = (filter: 'all' | 'pending' | 'overdue' | 'completed') => {
+  const handleQuickFilterSelect = (filter: MainGrouping) => {
     setGroupFilter(filter);
     // Smooth scroll down to projects section if needed
     const projectsListEl = document.getElementById('tct-projects-list-section');
@@ -285,6 +340,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <Film className="w-3.5 h-3.5" />
               <span>Expedientes ({filteredProjects.length})</span>
             </button>
+
+            <button
+              onClick={() => setCurrentView('timeline')}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 ${
+                currentView === 'timeline' 
+                  ? 'bg-amber-500 text-slate-950 shadow-md font-black' 
+                  : 'text-slate-700 hover:text-slate-900 hover:bg-slate-200/60'
+              }`}
+            >
+              <Clock className="w-3.5 h-3.5" />
+              <span>Cronograma Gantt</span>
+              <span className="text-[10px] bg-slate-950/15 text-slate-900 px-1.5 py-0.2 rounded-full font-mono font-bold">
+                12 Pasos
+              </span>
+            </button>
             
             <button
               onClick={() => setCurrentView('executive')}
@@ -313,10 +383,23 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </div>
 
           {/* Action buttons */}
-          <div className="flex items-center space-x-2 shrink-0">
+          <div className="flex items-center space-x-2 shrink-0 flex-wrap gap-y-1.5">
+            {/* Botón de Exportación PDF Oficial TCT */}
+            <button
+              onClick={() => {
+                setPdfReportType('projects_list');
+                setIsPdfModalOpen(true);
+              }}
+              className="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-amber-400 text-xs font-black flex items-center gap-1.5 shadow-sm transition-all border border-slate-700 cursor-pointer"
+              title="Exportar a PDF Oficial TCT (Expedientes, Cronograma Gantt, KPI, Calendario, Cobranzas)"
+            >
+              <Printer className="w-4 h-4 text-amber-400" />
+              <span>Exportar a PDF</span>
+            </button>
+
             <button
               onClick={onOpenAnalytics}
-              className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold flex items-center gap-1.5 transition-colors"
+              className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
             >
               <TrendingUp className="w-4 h-4 text-amber-600" />
               <span>Toma de Decisiones</span>
@@ -324,10 +407,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
             <button
               onClick={onOpenNewProject}
-              className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 text-xs font-black flex items-center gap-1.5 shadow-md transition-all"
+              className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 text-xs font-black flex items-center gap-1.5 shadow-md transition-all cursor-pointer"
             >
               <PlusCircle className="w-4 h-4" />
-              <span>+ Nueva Producción / Contrato</span>
+              <span>+ Nueva Producción</span>
             </button>
           </div>
 
@@ -336,15 +419,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         {/* Agrupador Principal & Filtros Rápidos de Producciones */}
         <div className="space-y-3">
           <div className="flex items-center justify-between flex-wrap gap-2">
-            <div className="flex items-center space-x-2 flex-wrap gap-y-1.5 text-xs font-bold">
+            <div className="flex items-center space-x-1.5 flex-wrap gap-y-1.5 text-xs font-bold">
               <span className="text-slate-500 font-extrabold flex items-center gap-1 mr-1">
-                <Filter className="w-3.5 h-3.5 text-amber-600" /> Filtro Rápido:
+                <Filter className="w-3.5 h-3.5 text-amber-600" /> Filtros Rápidos:
               </span>
 
               {/* Tab 1: Todas */}
               <button
                 onClick={() => setGroupFilter('all')}
-                className={`px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 ${
+                className={`px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
                   groupFilter === 'all'
                     ? 'bg-slate-900 text-white shadow-xs font-black'
                     : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
@@ -359,14 +442,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               {/* Tab 2: Por Vencer (Alertas SLA) */}
               <button
                 onClick={() => setGroupFilter('overdue')}
-                className={`px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 ${
+                className={`px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
                   groupFilter === 'overdue'
                     ? 'bg-red-600 text-white shadow-xs font-black'
                     : 'bg-red-50 text-red-700 hover:bg-red-100 border border-red-200'
                 }`}
               >
                 <AlertTriangle className="w-3.5 h-3.5 text-red-500" />
-                <span>Por Vencer / Alertas</span>
+                <span>Por Vencer / Alertas SLA</span>
                 {countOverdue > 0 && (
                   <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-red-800 text-white animate-pulse font-black">
                     {countOverdue}
@@ -374,48 +457,102 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 )}
               </button>
 
-              {/* Tab 3: Pendientes / En Proceso */}
+              {/* Tab 3: Esta Semana (Due This Week) */}
+              <button
+                onClick={() => setGroupFilter('due_this_week')}
+                className={`px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
+                  groupFilter === 'due_this_week'
+                    ? 'bg-indigo-600 text-white shadow-xs font-black'
+                    : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200'
+                }`}
+              >
+                <CalendarDays className="w-3.5 h-3.5 text-indigo-500" />
+                <span>Esta Semana</span>
+                {countDueThisWeek > 0 && (
+                  <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-indigo-800 text-white font-black">
+                    {countDueThisWeek}
+                  </span>
+                )}
+              </button>
+
+              {/* Tab 4: Alta Prioridad (High Priority) */}
+              <button
+                onClick={() => setGroupFilter('high_priority')}
+                className={`px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
+                  groupFilter === 'high_priority'
+                    ? 'bg-amber-500 text-slate-950 shadow-xs font-black'
+                    : 'bg-amber-50 text-amber-900 hover:bg-amber-100 border border-amber-200'
+                }`}
+              >
+                <Flame className="w-3.5 h-3.5 text-amber-600" />
+                <span>Alta Prioridad</span>
+                {countHighPriority > 0 && (
+                  <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-amber-600 text-white font-black">
+                    {countHighPriority}
+                  </span>
+                )}
+              </button>
+
+              {/* Tab 5: Por Aprobar / Contratos */}
+              <button
+                onClick={() => setGroupFilter('waiting_approval')}
+                className={`px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
+                  groupFilter === 'waiting_approval'
+                    ? 'bg-purple-600 text-white shadow-xs font-black'
+                    : 'bg-purple-50 text-purple-800 hover:bg-purple-100 border border-purple-200'
+                }`}
+              >
+                <FileCheck className="w-3.5 h-3.5 text-purple-500" />
+                <span>Por Aprobar</span>
+                {countWaitingApproval > 0 && (
+                  <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-purple-800 text-white font-black">
+                    {countWaitingApproval}
+                  </span>
+                )}
+              </button>
+
+              {/* Tab 6: Pendientes / En Proceso */}
               <button
                 onClick={() => setGroupFilter('pending')}
-                className={`px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 ${
+                className={`px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
                   groupFilter === 'pending' || groupFilter === 'in_progress'
-                    ? 'bg-amber-500 text-slate-950 shadow-xs font-black'
+                    ? 'bg-slate-800 text-amber-400 shadow-xs font-black'
                     : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                 }`}
               >
-                <Zap className="w-3.5 h-3.5 text-amber-600" />
-                <span>Pendientes / En Curso</span>
-                <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-amber-200 text-amber-950 font-black">
+                <Zap className="w-3.5 h-3.5 text-amber-500" />
+                <span>En Curso</span>
+                <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-700 text-amber-300 font-black">
                   {countInProgress}
                 </span>
               </button>
 
-              {/* Tab 4: Completadas */}
+              {/* Tab 7: Completadas */}
               <button
                 onClick={() => setGroupFilter('completed')}
-                className={`px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 ${
+                className={`px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
                   groupFilter === 'completed'
                     ? 'bg-emerald-600 text-white shadow-xs font-black'
                     : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                 }`}
               >
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-300" />
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
                 <span>Completadas</span>
                 <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-700 text-white">
                   {countCompleted}
                 </span>
               </button>
 
-              {/* Tab 5: Por Fase / Proceso Específico */}
+              {/* Tab 8: Por Fase */}
               <button
                 onClick={() => setGroupFilter('phase_specific')}
-                className={`px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 ${
+                className={`px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
                   groupFilter === 'phase_specific'
                     ? 'bg-blue-600 text-white shadow-xs font-black'
                     : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                 }`}
               >
-                <Layers className="w-3.5 h-3.5 text-blue-400" />
+                <Layers className="w-3.5 h-3.5 text-blue-500" />
                 <span>Por Fase</span>
               </button>
             </div>
@@ -472,8 +609,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
       </div>
 
-      {/* Main View: List of Projects vs Executive Summary vs Calendar */}
-      {currentView === 'executive' ? (
+      {/* Main View: List of Projects vs Executive Summary vs Calendar vs Timeline Gantt */}
+      {currentView === 'timeline' ? (
+        <TimelineGanttView
+          projects={projects}
+          onOpenProject={onOpenProject}
+          onOpenReport={onOpenReportPrint}
+        />
+      ) : currentView === 'executive' ? (
         <ExecutiveSummaryModule
           projects={projects}
           onOpenProject={onOpenProject}
@@ -502,12 +645,115 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             </div>
 
             <div className="flex items-center gap-2 text-xs font-bold text-slate-600">
-              <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-50 text-amber-900 border border-amber-300 text-[11px] font-black">
+              <button
+                type="button"
+                onClick={() => setShowTimelineChart(!showTimelineChart)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer border ${
+                  showTimelineChart
+                    ? 'bg-slate-900 text-amber-400 border-slate-800 shadow-sm'
+                    : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200'
+                }`}
+                title="Mostrar u ocultar gráfico Recharts de superposición de cronogramas"
+              >
+                <BarChart3 className="w-3.5 h-3.5 text-amber-500" />
+                <span>{showTimelineChart ? 'Ocultar Gráfico' : 'Ver Cronología Visual'}</span>
+              </button>
+
+              <span className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-amber-50 text-amber-900 border border-amber-300 text-[11px] font-black">
                 <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping inline-block" />
                 Flujo Oficial TCT Activo
               </span>
             </div>
           </div>
+
+          {/* Recharts Overlap & Production Schedule Bar Chart */}
+          {showTimelineChart && filteredProjects.length > 0 && (
+            <div className="bg-slate-950 text-white p-5 rounded-3xl border border-slate-800 shadow-xl space-y-4">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center space-x-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400">
+                    <BarChart3 className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-black text-white">
+                      Cronología Visual y Superposición de Producciones (Recharts)
+                    </h4>
+                    <p className="text-xs text-slate-400">
+                      Muestra el avance de hitos (%) y presupuesto por producción ordenado por fecha de evento (formato dd/mm/aa)
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowTimelineChart(false)}
+                  className="text-xs text-slate-400 hover:text-white px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 cursor-pointer"
+                >
+                  ✕ Cerrar
+                </button>
+              </div>
+
+              <div className="h-64 sm:h-72 w-full pt-2">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={filteredProjects.map((p) => {
+                      const { percent } = getProjectProgress(p);
+                      return {
+                        codigo: p.uniqueCode,
+                        titulo: p.title.length > 20 ? p.title.substring(0, 18) + '...' : p.title,
+                        fecha: formatDateDDMMAA(p.eventDate),
+                        avance: percent,
+                        presupuesto: p.totalBudget,
+                        saldo: p.finalBalance,
+                        tipo: p.eventType
+                      };
+                    })}
+                    margin={{ top: 10, right: 20, left: -10, bottom: 25 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.5} />
+                    <XAxis
+                      dataKey="codigo"
+                      stroke="#94a3b8"
+                      tick={{ fill: '#cbd5e1', fontSize: 11, fontWeight: 'bold' }}
+                    />
+                    <YAxis
+                      stroke="#94a3b8"
+                      tick={{ fill: '#cbd5e1', fontSize: 11 }}
+                      domain={[0, 100]}
+                      unit="%"
+                    />
+                    <Tooltip
+                      content={({ active, payload }) => {
+                        if (active && payload && payload.length) {
+                          const data = payload[0].payload;
+                          return (
+                            <div className="bg-slate-900 border border-slate-700 p-3 rounded-xl shadow-2xl text-xs space-y-1 text-white">
+                              <div className="font-black text-amber-400">{data.codigo} - {data.titulo}</div>
+                              <div className="text-slate-300">📅 Evento: <span className="text-white font-bold">{data.fecha}</span></div>
+                              <div className="text-slate-300">⚡ Avance: <span className="text-emerald-400 font-bold">{data.avance}%</span></div>
+                              <div className="text-slate-300">💰 Presupuesto: <span className="text-white font-bold">S/. {data.presupuesto.toLocaleString()}</span></div>
+                              <div className="text-slate-300">Saldo Pendiente: <span className={data.saldo === 0 ? "text-emerald-400 font-bold" : "text-red-400 font-bold"}>S/. {data.saldo.toLocaleString()}</span></div>
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
+                    />
+                    <Bar dataKey="avance" name="Avance de Pasos (%)" radius={[6, 6, 0, 0]}>
+                      {filteredProjects.map((p, index) => {
+                        const { percent } = getProjectProgress(p);
+                        const isOverdue = isProjectOverdue(p);
+                        let fillColor = '#f59e0b';
+                        if (isOverdue) fillColor = '#ef4444';
+                        else if (percent === 100) fillColor = '#10b981';
+                        else if (percent >= 50) fillColor = '#06b6d4';
+                        return <Cell key={`cell-${index}`} fill={fillColor} />;
+                      })}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          )}
 
           <div className="space-y-3">
             {filteredProjects.length === 0 ? (
@@ -527,17 +773,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 return (
                   <div 
                     key={project.id}
-                    className={`p-4 sm:p-4.5 rounded-2xl border transition-all duration-300 flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-4 shadow-xs ${
+                    className={`p-4 sm:p-5 rounded-3xl border transition-all duration-300 flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-4 shadow-sm hover:shadow-md ${
                       isOverdue
-                        ? 'bg-gradient-to-br from-red-50/50 via-white to-red-50/20 border-red-300 hover:shadow-md'
+                        ? 'bg-gradient-to-r from-red-100/90 via-slate-100 to-red-100/80 border-red-300'
                         : isActivelyWorking 
-                        ? 'animate-subtle-pulse bg-gradient-to-br from-amber-50/40 via-white to-amber-50/20 border-amber-400/90 hover:shadow-md' 
-                        : 'bg-white border-slate-200 hover:border-slate-300 hover:shadow-xs'
+                        ? 'bg-gradient-to-r from-slate-200/95 via-slate-100 to-slate-200/95 border-slate-300' 
+                        : 'bg-gradient-to-r from-slate-200/80 via-slate-100 to-slate-200/80 border-slate-300'
                     }`}
                   >
                     
                     {/* Left Column: Codes, Title, Client, Location, Tags */}
-                    <div className="flex-1 space-y-2 min-w-0">
+                    <div className="flex-1 space-y-2.5 min-w-0">
                       
                       {/* Linked Codes Badge Group */}
                       <div className="flex items-center space-x-2 flex-wrap gap-y-1">
@@ -545,34 +791,34 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         {/* Quotation linked with Contract */}
                         <div className="flex items-center bg-slate-900 text-white rounded-xl p-0.5 border border-slate-700 shadow-xs">
                           {project.quotationCode && (
-                            <span className="font-mono text-[11px] font-extrabold px-2.5 py-0.5 text-amber-300 border-r border-slate-700 flex items-center gap-1" title="Código de Cotización">
+                            <span className="font-mono text-xs font-black px-2.5 py-0.5 text-amber-300 border-r border-slate-700 flex items-center gap-1" title="Código de Cotización">
                               <Receipt className="w-3 h-3 text-amber-400" />
                               {project.quotationCode}
                             </span>
                           )}
-                          <span className="font-mono text-[11px] font-black px-2.5 py-0.5 text-slate-100 flex items-center gap-1" title="Código de Contrato Oficial">
+                          <span className="font-mono text-xs font-black px-2.5 py-0.5 text-slate-100 flex items-center gap-1" title="Código de Contrato Oficial">
                             <FileCheck className="w-3 h-3 text-emerald-400" />
                             {project.contractNumber}
                           </span>
                         </div>
 
-                        <span className="font-mono text-[11px] font-black bg-amber-100 text-amber-950 px-2 py-0.5 rounded-lg border border-amber-300">
+                        <span className="font-mono text-xs font-black bg-amber-100 text-amber-950 px-2.5 py-0.5 rounded-lg border border-amber-300">
                           {project.uniqueCode}
                         </span>
 
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-100 text-blue-900 border border-blue-200">
+                        <span className="px-2.5 py-0.5 rounded-lg text-xs font-extrabold bg-blue-100 text-blue-900 border border-blue-200">
                           {project.eventType}
                         </span>
 
                         {isToday && (
-                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-red-600 text-white animate-pulse shadow-xs">
+                          <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-red-600 text-white animate-pulse shadow-xs">
                             🔴 EVENTO HOY (Cobro 7:00 PM)
                           </span>
                         )}
 
                         {isOverdue && (
-                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-red-600 text-white shadow-xs flex items-center gap-1">
-                            <AlertCircle className="w-3 h-3" /> VENCIDO DE PLAZO
+                          <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-red-600 text-white shadow-xs flex items-center gap-1">
+                            <AlertCircle className="w-3.5 h-3.5" /> VENCIDO DE PLAZO
                           </span>
                         )}
                       </div>
@@ -580,13 +826,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       {/* Project Title */}
                       <h4 
                         onClick={() => onOpenProject(project)}
-                        className="text-base font-black text-slate-900 hover:text-amber-600 cursor-pointer transition-colors leading-tight"
+                        className="text-base sm:text-lg font-black text-slate-950 hover:text-amber-700 cursor-pointer transition-colors leading-snug tracking-tight"
                       >
                         {project.title}
                       </h4>
 
                       {/* Contract Details */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-xs text-slate-600">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 text-xs text-slate-700 font-medium">
                         <div className="flex items-center gap-1.5 truncate">
                           <UserCheck className="w-3.5 h-3.5 text-blue-600 shrink-0" />
                           <span className="truncate"><strong>Asesor / Contrato:</strong> {project.contractHolder || 'Ing. Roberto Acuña'}</span>
@@ -598,7 +844,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
                         <div className="flex items-center gap-1.5 truncate">
                           <Calendar className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                          <span><strong>Fecha:</strong> {project.eventDate} ({project.eventTime || 'Horario pactado'})</span>
+                          <span><strong>Fecha:</strong> {formatDateDDMMAA(project.eventDate)} ({project.eventTime || 'Horario pactado'})</span>
                         </div>
 
                         <div className="flex items-center gap-1.5 truncate">
@@ -607,20 +853,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       </div>
 
                       {/* Package and extra info pills */}
-                      <div className="flex items-center space-x-2 text-[11px] flex-wrap gap-y-1 pt-0.5">
+                      <div className="flex items-center space-x-2 text-xs flex-wrap gap-y-1 pt-0.5">
                         {project.selectedPackageName && (
-                          <span className="px-2 py-0.5 rounded-lg bg-slate-100 text-slate-800 font-bold border border-slate-200">
+                          <span className="px-2.5 py-0.5 rounded-lg bg-amber-50 text-amber-900 font-bold border border-amber-200">
                             📦 {project.selectedPackageName}
                           </span>
                         )}
                         {project.discountAmount && project.discountAmount > 0 ? (
-                          <span className="px-2 py-0.5 rounded-lg bg-emerald-50 text-emerald-800 font-black border border-emerald-300 flex items-center gap-1">
-                            <Tag className="w-3 h-3 text-emerald-600" />
+                          <span className="px-2.5 py-0.5 rounded-lg bg-emerald-100 text-emerald-900 font-black border border-emerald-300 flex items-center gap-1">
+                            <Tag className="w-3 h-3 text-emerald-700" />
                             Desc. S/. {project.discountAmount} {project.discountReason ? `(${project.discountReason})` : ''}
                           </span>
                         ) : null}
                         {project.extraHoursCount && project.extraHoursCount > 0 ? (
-                          <span className="px-2 py-0.5 rounded-lg bg-purple-50 text-purple-800 font-bold border border-purple-200">
+                          <span className="px-2.5 py-0.5 rounded-lg bg-purple-100 text-purple-900 font-bold border border-purple-300">
                             ⏱ +{project.extraHoursCount} hrs extra
                           </span>
                         ) : null}
@@ -629,16 +875,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     </div>
 
                     {/* Compact, Highly Intuitive Dark Card: (Porcentaje, Hito Actual Parpadeante Fuerte, Alerta de lo que Falta) */}
-                    <div className="w-full xl:w-84 bg-slate-950 text-white p-3.5 rounded-2xl border border-slate-800 space-y-2.5 shadow-lg shrink-0">
+                    <div className="w-full xl:w-92 bg-slate-950 text-white p-3.5 sm:p-4 rounded-2xl border border-slate-800 space-y-2.5 shadow-xl shrink-0">
                       
                       {/* Top row of card: Milestone Badge & Big % */}
                       <div className="flex items-center justify-between gap-2">
                         
-                        {/* Hito Actual: STRONGLY PULSING & HIGHLIGHTED AS REQUESTED */}
+                        {/* Hito Actual: STRONGLY PULSING & HIGHLIGHTED */}
                         <div className="min-w-0 flex-1">
-                          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gradient-to-r from-amber-500/30 to-amber-600/40 text-amber-300 border-2 border-amber-400 text-xs font-black shadow-md animate-pulse">
-                            <Zap className="w-3.5 h-3.5 text-amber-300" />
-                            <span>⚡ Paso {milestone.stepNumber}/12</span>
+                          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gradient-to-r from-amber-600 to-amber-500 text-slate-950 text-xs font-black shadow-md">
+                            <Zap className="w-3.5 h-3.5 text-slate-950" />
+                            <span>⚡ Paso {milestone.stepNumber} /12</span>
                           </div>
                           <div className="text-xs font-black text-white truncate block mt-1" title={milestone.title}>
                             {milestone.title}
@@ -650,25 +896,25 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           <div className="text-3xl font-black text-amber-400 font-mono leading-none">
                             {percent}<span className="text-base font-bold text-amber-300">%</span>
                           </div>
-                          <span className="text-[10px] text-slate-300 font-bold bg-slate-800 px-1.5 py-0.2 rounded font-mono border border-slate-700 block mt-1">
-                            {done}/12 pasos
+                          <span className="text-[10px] text-slate-300 font-bold bg-slate-800 px-2 py-0.5 rounded font-mono border border-slate-700 block mt-1">
+                            {done} /12 pasos
                           </span>
                         </div>
 
                       </div>
 
                       {/* Mini Progress Bar */}
-                      <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden p-0.5 border border-slate-700">
+                      <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden p-0.2 border border-slate-700">
                         <div 
-                          className="h-full bg-gradient-to-r from-amber-400 via-emerald-400 to-teal-400 rounded-full transition-all duration-700"
+                          className="h-full bg-gradient-to-r from-amber-400 via-teal-400 to-emerald-400 rounded-full transition-all duration-700"
                           style={{ width: `${percent}%` }}
                         />
                       </div>
 
                       {/* ALERTA DE LO QUE FALTA PARA EL SIGUIENTE PASO */}
-                      <div className="bg-slate-900 p-2 rounded-xl border border-slate-800 text-[11px] flex items-start gap-1.5">
+                      <div className="bg-slate-900/90 p-2 rounded-xl border border-slate-800 text-[11px] flex items-start gap-1.5">
                         <AlertCircle className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
-                        <span className="text-slate-200 leading-tight font-medium">
+                        <span className="text-amber-200 leading-tight font-medium">
                           {missingActionAlert}
                         </span>
                       </div>
@@ -689,13 +935,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
                     </div>
 
-                    {/* Right Column: Actions (Contract Export, PDF TCT, Ver 12 Pasos) */}
-                    <div className="flex flex-row xl:flex-col items-center justify-end space-x-2 xl:space-x-0 xl:space-y-1.5 shrink-0 pt-2 xl:pt-0 border-t xl:border-t-0 border-slate-100">
+                    {/* Right Column: Actions (Contrato, Informe, Ver 12 Pasos, QR) */}
+                    <div className="flex flex-row xl:flex-col items-stretch justify-end space-x-2 xl:space-x-0 xl:space-y-1.5 shrink-0 pt-2 xl:pt-0 border-t xl:border-t-0 border-slate-300">
                       
-                      {/* Export Contract Button (Pulls all registered data) */}
+                      {/* Export Contract Button */}
                       <button
                         onClick={() => onOpenContractExport(project)}
-                        className="flex-1 xl:flex-initial px-3 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 transition-all text-xs font-black flex items-center justify-center gap-1.5 shadow-xs"
+                        className="flex-1 xl:flex-initial px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 transition-all text-xs font-black flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
                         title="Ver y Exportar Contrato Oficial con datos rellenados"
                       >
                         <FileText className="w-3.5 h-3.5" />
@@ -705,20 +951,30 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       {/* PDF Report */}
                       <button
                         onClick={() => onOpenReportPrint(project)}
-                        className="flex-1 xl:flex-initial px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors text-xs font-bold flex items-center justify-center gap-1.5"
+                        className="flex-1 xl:flex-initial px-3.5 py-2 rounded-xl bg-white hover:bg-emerald-50 text-slate-900 transition-colors text-xs font-bold flex items-center justify-center gap-1.5 border border-slate-300 shadow-xs cursor-pointer"
                         title="Exportar Reporte de Auditoría TCT"
                       >
                         <Printer className="w-3.5 h-3.5 text-emerald-600" />
-                        <span>Reporte</span>
+                        <span>Informe</span>
                       </button>
 
                       {/* Open 12 Steps Modal */}
                       <button
                         onClick={() => onOpenProject(project)}
-                        className="flex-1 xl:flex-initial px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-amber-400 text-xs font-black transition-all flex items-center justify-center gap-1.5 shadow-xs"
+                        className="flex-1 xl:flex-initial px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-amber-400 text-xs font-black transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer border border-amber-500/30"
                       >
                         <Eye className="w-3.5 h-3.5" />
                         <span>Ver 12 Pasos</span>
+                      </button>
+
+                      {/* QR Check-in on site button */}
+                      <button
+                        onClick={() => setQrModalProject(project)}
+                        className="flex-1 xl:flex-initial px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 transition-all text-[11px] font-bold flex items-center justify-center gap-1.5 shadow-xs border border-slate-700 cursor-pointer"
+                        title="Generar Código QR de Asistencia y Check-in en Locación"
+                      >
+                        <QrCode className="w-3 h-3 text-amber-400" />
+                        <span>QR Check-in</span>
                       </button>
                     </div>
 
@@ -751,7 +1007,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
           <button
             onClick={onOpenAnalytics}
-            className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-300 text-xs font-bold rounded-xl border border-slate-700 transition-colors flex items-center gap-1"
+            className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-300 text-xs font-bold rounded-xl border border-slate-700 transition-colors flex items-center gap-1 cursor-pointer"
           >
             <span>Ver Gráficos Comparativos</span>
             <ChevronRight className="w-4 h-4" />
@@ -780,6 +1036,32 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </div>
 
       </div>
+
+      {/* QR Code Check-In Modal for Staff */}
+      {qrModalProject && (
+        <ProjectQrCheckinModal
+          project={qrModalProject}
+          isOpen={Boolean(qrModalProject)}
+          onClose={() => setQrModalProject(null)}
+          onUpdateProject={(updated) => {
+            if (onUpdateProject) {
+              onUpdateProject(updated);
+            }
+            setQrModalProject(updated);
+          }}
+        />
+      )}
+
+      {/* Global Official PDF Report Modal for Corporacion TCT */}
+      {isPdfModalOpen && (
+        <GlobalPdfExportModal
+          isOpen={isPdfModalOpen}
+          onClose={() => setIsPdfModalOpen(false)}
+          projects={projects}
+          staffList={allStaff}
+          reportType={pdfReportType}
+        />
+      )}
 
     </div>
   );
