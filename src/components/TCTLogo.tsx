@@ -123,12 +123,12 @@ export const TCTLogo: React.FC<TCTLogoProps> = ({
       {variant === 'full' && (
         <div className="flex flex-col">
           <div className="flex items-center gap-1.5">
-            <span className="font-black text-white text-base sm:text-lg tracking-wider leading-none">
+            <span className="font-black text-white text-base sm:text-lg tracking-wider leading-tight">
               CORPORACIÓN TCT
             </span>
           </div>
-          <span className="text-[10px] font-bold text-amber-400 uppercase tracking-wider mt-0.5">
-            Producción Audiovisual & Eventos
+          <span className="font-slogan text-sm sm:text-base text-amber-300 font-medium tracking-wide leading-none select-none drop-shadow-sm -mt-0.5">
+            Marcando Historia
           </span>
         </div>
       )}

@@ -808,98 +808,6 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
           </div>
         )}
 
-        {/* REQUERIMIENTO OFICIAL: Cuadro "Vista de Sistema" para conmutar Admin / Técnico o escoger cualquier empleado */}
-        {onRoleChange && (
-          <div className="bg-slate-900 px-6 py-3 border-b border-slate-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 text-xs">
-            <div className="flex items-center space-x-3">
-              <div className="p-2 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/40 shrink-0">
-                <ShieldCheck className="w-4 h-4" />
-              </div>
-              <div>
-                <div className="flex items-center space-x-2">
-                  <h4 className="font-black text-white text-xs uppercase tracking-wider">
-                    Vista de Sistema & Modo de Navegación
-                  </h4>
-                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
-                    currentRole === 'admin'
-                      ? 'bg-amber-500 text-slate-950 shadow-xs'
-                      : 'bg-blue-500 text-white shadow-xs'
-                  }`}>
-                    {currentRole === 'admin' ? '🛡️ Administrador General' : `👷 Vista Empleado: ${currentStaff?.name || 'Técnico'}`}
-                  </span>
-                </div>
-                <p className="text-[11px] text-slate-400">
-                  {currentRole === 'admin'
-                    ? 'Supervisión global de todos los proyectos, balances financieros y asignación de personal.'
-                    : `Visualización restringida a las tareas y expedientes asignados a ${currentStaff?.name}.`}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center space-x-2 flex-wrap gap-y-1.5 shrink-0 w-full md:w-auto">
-              {/* Toggle Admin / Técnico */}
-              <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => {
-                    onRoleChange('admin');
-                    notifySuccess('Cambiando a Vista de Administrador General');
-                  }}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
-                    currentRole === 'admin'
-                      ? 'bg-amber-500 text-slate-950 shadow-md'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  <ShieldCheck className="w-3.5 h-3.5" />
-                  <span>Admin</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    onRoleChange('employee');
-                    notifySuccess(`Cambiando a Vista de Técnico (${currentStaff?.name || 'Personal'})`);
-                  }}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
-                    currentRole === 'employee'
-                      ? 'bg-blue-500 text-white shadow-md'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  <UserCheck className="w-3.5 h-3.5" />
-                  <span>Técnico</span>
-                </button>
-              </div>
-
-              {/* Employee selector for viewing as any technician */}
-              {onStaffChange && allStaff.length > 0 && (
-                <div className="flex items-center space-x-1.5 bg-slate-950 px-2.5 py-1 rounded-xl border border-slate-800">
-                  <Users className="w-3.5 h-3.5 text-blue-400 shrink-0" />
-                  <span className="text-[10px] text-slate-400 font-bold hidden sm:inline">Ver como:</span>
-                  <select
-                    value={currentStaff?.id || allStaff[0]?.id}
-                    onChange={(e) => {
-                      const found = allStaff.find(s => s.id === e.target.value);
-                      if (found) {
-                        onStaffChange(found);
-                        onRoleChange('employee');
-                        notifySuccess(`✓ Viendo sistema como: ${found.name} (${found.role})`);
-                      }
-                    }}
-                    className="bg-transparent text-xs font-bold text-amber-300 focus:outline-none cursor-pointer pr-1"
-                  >
-                    {allStaff.map(st => (
-                      <option key={st.id} value={st.id} className="bg-slate-900 text-white">
-                        {st.name} ({st.role.split(' ')[0]})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
         {/* Tab Navigation */}
         <div className="bg-slate-100 px-4 sm:px-6 py-2 border-b border-slate-200 flex items-center space-x-2 overflow-x-auto shrink-0 scrollbar-none">
           <button
@@ -1398,6 +1306,96 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
                     </div>
                   </div>
 
+                  {/* Proforma Attachment (Image or PDF) */}
+                  <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <label className="text-[11px] font-black text-slate-800 flex items-center gap-1.5">
+                          <FileText className="w-3.5 h-3.5 text-indigo-600" />
+                          <span>Archivo o Imagen Adjunta de la Proforma (Imagen / PDF)</span>
+                        </label>
+                        <p className="text-[10px] text-slate-500">
+                          Sube un diagrama, fotografía o PDF ilustrativo para que los asesores y clientes comprendan esta proforma.
+                        </p>
+                      </div>
+
+                      {editingPackage.attachmentUrl && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            handleUpdateEditingPackage('attachmentUrl', undefined);
+                            handleUpdateEditingPackage('attachmentType', undefined);
+                            handleUpdateEditingPackage('attachmentName', undefined);
+                          }}
+                          className="text-red-600 hover:text-red-800 text-[10px] font-bold flex items-center gap-1 px-2 py-1 bg-red-50 rounded-lg"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          <span>Quitar Archivo</span>
+                        </button>
+                      )}
+                    </div>
+
+                    {editingPackage.attachmentUrl ? (
+                      <div className="p-3 bg-white rounded-xl border border-indigo-200 flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600 font-bold shrink-0">
+                            {editingPackage.attachmentType === 'pdf' ? (
+                              <FileText className="w-5 h-5" />
+                            ) : (
+                              <Camera className="w-5 h-5" />
+                            )}
+                          </div>
+                          <div>
+                            <p className="text-xs font-bold text-slate-900 truncate max-w-xs">
+                              {editingPackage.attachmentName || 'Proforma_Adjunta'}
+                            </p>
+                            <span className="text-[10px] text-indigo-600 font-medium uppercase">
+                              {editingPackage.attachmentType === 'pdf' ? 'Documento PDF' : 'Imagen Adjunta'}
+                            </span>
+                          </div>
+                        </div>
+
+                        <a
+                          href={editingPackage.attachmentUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold flex items-center gap-1"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          <span>Ver</span>
+                        </a>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-center p-4 border-2 border-dashed border-slate-300 rounded-xl bg-white hover:bg-slate-50 transition-colors">
+                        <label className="flex flex-col items-center cursor-pointer">
+                          <Upload className="w-6 h-6 text-indigo-500 mb-1" />
+                          <span className="text-xs font-bold text-slate-700">Subir Imagen o PDF de la Proforma</span>
+                          <span className="text-[10px] text-slate-400">PNG, JPG, WEBP o PDF (Hasta 5MB)</span>
+                          <input
+                            type="file"
+                            accept="image/*,application/pdf"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                const isPdf = file.type === 'application/pdf' || file.name.endsWith('.pdf');
+                                const reader = new FileReader();
+                                reader.onload = (event) => {
+                                  const result = event.target?.result as string;
+                                  handleUpdateEditingPackage('attachmentUrl', result);
+                                  handleUpdateEditingPackage('attachmentType', isPdf ? 'pdf' : 'image');
+                                  handleUpdateEditingPackage('attachmentName', file.name);
+                                  notifySuccess(`✓ Archivo adjuntado a la proforma: ${file.name}`);
+                                };
+                                reader.readAsDataURL(file);
+                              }
+                            }}
+                          />
+                        </label>
+                      </div>
+                    )}
+                  </div>
+
                   {/* Included services */}
                   <div className="space-y-3 pt-2">
                     <label className="text-[11px] font-black text-slate-700 block">
@@ -1447,7 +1445,7 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
           )}
 
           {/* ========================================================= */}
-          {/* TAB 4: TARIFAS & ASESORES */}
+          {/* TAB 4: TARIFAS & PARÁMETROS */}
           {/* ========================================================= */}
           {activeTab === 'services' && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1491,45 +1489,31 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
                 </div>
               </div>
 
-              {/* Advisors */}
+              {/* Informative notice regarding Commercial Advisors */}
               <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs space-y-4">
                 <h4 className="text-xs font-black uppercase tracking-wider text-slate-500 flex items-center gap-2">
                   <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                  <span>Asesores & Representantes Autorizados</span>
+                  <span>Asesores Comerciales & Representantes</span>
                 </h4>
 
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="text"
-                    value={newAdvisorName}
-                    onChange={(e) => setNewAdvisorName(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleAddAdvisor()}
-                    placeholder="Nombre completo del asesor..."
-                    className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:bg-white focus:ring-2 focus:ring-amber-500 focus:outline-none"
-                  />
-                  <button
-                    onClick={handleAddAdvisor}
-                    className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-amber-400 text-xs font-black rounded-xl shrink-0"
-                  >
-                    + Asesor
-                  </button>
+                <div className="p-4 bg-emerald-50/80 border border-emerald-200 rounded-2xl space-y-2">
+                  <p className="text-xs font-bold text-emerald-900">
+                    ✓ Gestión Automática por Usuarios
+                  </p>
+                  <p className="text-[11px] text-emerald-800 leading-relaxed">
+                    Los asesores comerciales son automáticamente los <strong>usuarios registrados en el sistema</strong>. Al registrar una cotización o producción, el nombre del empleado activo se asigna inmediatamente como asesor comercial responsable.
+                  </p>
                 </div>
 
-                <div className="space-y-2 max-h-60 overflow-y-auto">
-                  {rules.authorizedContractHolders.map((advisor, idx) => (
-                    <div key={idx} className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between text-xs">
-                      <div className="flex items-center space-x-2">
-                        <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                        <span className="font-bold text-slate-800">{advisor}</span>
-                      </div>
-                      <button
-                        onClick={() => handleDeleteAdvisor(advisor)}
-                        className="text-slate-400 hover:text-red-600 p-1"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  ))}
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('users')}
+                    className="w-full py-2.5 px-4 bg-slate-900 hover:bg-slate-800 text-amber-400 rounded-xl text-xs font-black flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                  >
+                    <Users className="w-4 h-4" />
+                    <span>Ir a pestaña de Usuarios & Roles</span>
+                  </button>
                 </div>
               </div>
             </div>

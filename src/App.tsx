@@ -25,7 +25,6 @@ import { NewProjectModal } from './components/NewProjectModal';
 import { ComparativeAnalyticsModal } from './components/ComparativeAnalyticsModal';
 import { ReportPrintModal } from './components/ReportPrintModal';
 import { ContractExportModal } from './components/ContractExportModal';
-import { ExportLovableModal } from './components/ExportLovableModal';
 import { AdminSettingsModal } from './components/AdminSettingsModal';
 import { RotateCcw, Sparkles, CheckCircle2, ShieldCheck, UserCheck } from 'lucide-react';
 
@@ -42,6 +41,7 @@ const INACTIVITY_TIMEOUT_MS = 3 * 60 * 1000;
 export default function App() {
   // Authentication state
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => getActiveSession());
+  const [allUsers, setAllUsers] = useState<AuthUser[]>(() => getStoredUsers());
   const [allStaff, setAllStaff] = useState<StaffMember[]>(() => {
     const users = getStoredUsers();
     const converted = usersToStaffMembers(users);
@@ -73,7 +73,6 @@ export default function App() {
   const [selectedProjectForContract, setSelectedProjectForContract] = useState<ProductionProject | null>(null);
   const [isNewProjectModalOpen, setIsNewProjectModalOpen] = useState(false);
   const [isAnalyticsModalOpen, setIsAnalyticsModalOpen] = useState(false);
-  const [isExportLovableModalOpen, setIsExportLovableModalOpen] = useState(false);
   const [isRulesModalOpen, setIsRulesModalOpen] = useState(false);
   const [rulesInitialTab, setRulesInitialTab] = useState<'checklists' | 'equipment' | 'packages' | 'services' | 'formats' | 'users' | 'system'>('checklists');
   const [isUsersModalOpen, setIsUsersModalOpen] = useState(false);
@@ -99,10 +98,9 @@ export default function App() {
     setSelectedProjectForContract(null);
     setIsNewProjectModalOpen(false);
     setIsAnalyticsModalOpen(false);
-    setIsExportLovableModalOpen(false);
     setIsRulesModalOpen(false);
     setIsUsersModalOpen(false);
-    showToast('⏱️ Sesión cerrada automáticamente por inactividad de 3 minutos (incluso en segundo plano).');
+    showToast('⏱️ Sesión cerrada automáticamente por inactividad de 3 minutos.');
   };
 
   // 3-Minute Inactivity and Background Tab Tracker
@@ -331,10 +329,13 @@ export default function App() {
         onRoleChange={setCurrentRole}
         currentStaff={currentStaff}
         allStaff={allStaff}
+        allUsers={allUsers}
         onStaffChange={setCurrentStaff}
+        onUserSelect={(usr) => {
+          setCurrentUser(usr);
+        }}
         onOpenNewProject={() => setIsNewProjectModalOpen(true)}
         onOpenAnalytics={() => setIsAnalyticsModalOpen(true)}
-        onOpenExportLovableModal={() => setIsExportLovableModalOpen(true)}
         onOpenRulesModal={() => {
           setRulesInitialTab('checklists');
           setIsRulesModalOpen(true);
@@ -350,8 +351,8 @@ export default function App() {
         activeProjectsCount={projects.filter(p => !p.isArchived).length}
       />
 
-      {/* Main Workspace */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      {/* Main Workspace with responsive full-width padding */}
+      <main className="flex-1 w-full max-w-7xl mx-auto px-2 sm:px-4 md:px-6 lg:px-8 py-3 sm:py-6">
 
         {/* View Switch based on Role */}
         {currentRole === 'admin' ? (
@@ -385,17 +386,15 @@ export default function App() {
       </main>
 
       {/* Footer */}
-      <footer className="bg-slate-900 border-t border-slate-800 text-slate-400 py-4 text-xs">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between flex-wrap gap-2">
+      <footer className="bg-slate-900 border-t border-slate-800 text-slate-400 py-3.5 sm:py-4 text-xs">
+        <div className="w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 flex items-center justify-between flex-wrap gap-2">
           <div className="flex items-center space-x-2">
             <span className="font-extrabold text-amber-400">CORPORACIÓN TCT</span>
-            <span>• Sistema de Monitoreo Audiovisual, Eventos y Entregables</span>
+            <span className="font-slogan text-amber-300/80 text-sm hidden sm:inline">• Marcando Historia</span>
+            <span className="text-slate-500">• Sistema de Monitoreo Audiovisual y Eventos</span>
           </div>
-          <div className="flex items-center space-x-4 text-[11px]">
+          <div className="flex items-center space-x-4 text-[11px] text-slate-400">
             <span>6 Fases • 12 Pasos Secuenciales Oficiales</span>
-            <button onClick={() => setIsExportLovableModalOpen(true)} className="text-indigo-400 hover:underline">
-              Exportar Lovable.dev & Vistas
-            </button>
           </div>
         </div>
       </footer>
@@ -427,6 +426,7 @@ export default function App() {
       {isNewProjectModalOpen && (
         <NewProjectModal
           existingProjects={projects}
+          currentUser={currentUser}
           onClose={() => setIsNewProjectModalOpen(false)}
           onCreateProject={handleCreateProject}
         />
@@ -461,13 +461,6 @@ export default function App() {
           currentRole={currentRole}
           onClose={() => setSelectedProjectForContract(null)}
           onUpdateProject={handleUpdateProject}
-        />
-      )}
-
-      {/* MODAL 6: Combined Lovable.dev Exporter & Visual Screens Gallery */}
-      {isExportLovableModalOpen && (
-        <ExportLovableModal
-          onClose={() => setIsExportLovableModalOpen(false)}
         />
       )}
 

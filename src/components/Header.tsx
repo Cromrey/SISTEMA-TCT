@@ -7,9 +7,9 @@ import {
   PlusCircle, 
   Sliders,
   Users,
-  LogOut
+  LogOut,
+  User
 } from 'lucide-react';
-import { SyncStatusIndicator } from './SyncStatusIndicator';
 
 interface HeaderProps {
   currentUser: AuthUser | null;
@@ -17,10 +17,11 @@ interface HeaderProps {
   onRoleChange: (role: UserRole) => void;
   currentStaff: StaffMember;
   allStaff: StaffMember[];
+  allUsers?: AuthUser[];
   onStaffChange: (staff: StaffMember) => void;
+  onUserSelect?: (user: AuthUser) => void;
   onOpenNewProject: () => void;
   onOpenAnalytics: () => void;
-  onOpenExportLovableModal: () => void;
   onOpenRulesModal: () => void;
   onOpenUsersManagement: () => void;
   onLogout: () => void;
@@ -36,100 +37,166 @@ export const Header: React.FC<HeaderProps> = ({
   onRoleChange,
   currentStaff,
   allStaff,
+  allUsers = [],
   onStaffChange,
+  onUserSelect,
   onOpenNewProject,
-  onOpenAnalytics,
-  onOpenExportLovableModal,
   onOpenRulesModal,
-  onOpenUsersManagement,
   onLogout,
-  onResetData,
   activeProjectsCount
 }) => {
+  // Find current active user job title or cargo
+  const activeUser = allUsers.find(u => 
+    (currentRole === 'employee' && u.fullName === currentStaff.name) || 
+    (currentRole === 'admin' && u.role === 'admin') ||
+    u.id === currentUser?.id
+  ) || currentUser;
+
+  const currentJobTitle = currentRole === 'admin' 
+    ? 'Administrador General' 
+    : (currentStaff?.role || activeUser?.jobTitle || 'Técnico de Producción');
+
+  const handleSelectUser = (userId: string) => {
+    const selectedUser = allUsers.find(u => u.id === userId);
+    if (selectedUser) {
+      if (onUserSelect) {
+        onUserSelect(selectedUser);
+      }
+      if (selectedUser.role === 'admin') {
+        onRoleChange('admin');
+      } else {
+        onRoleChange('employee');
+        const staffMatch = allStaff.find(s => s.id === selectedUser.id || s.name.toLowerCase() === selectedUser.fullName.toLowerCase()) || {
+          id: selectedUser.id,
+          name: selectedUser.fullName,
+          role: selectedUser.jobTitle || 'Técnico de Producción',
+          phone: selectedUser.phone || '+51 900 000 000',
+          confirmed: true
+        };
+        onStaffChange(staffMatch);
+      }
+    } else {
+      const staffMatch = allStaff.find(s => s.id === userId);
+      if (staffMatch) {
+        onRoleChange('employee');
+        onStaffChange(staffMatch);
+      }
+    }
+  };
+
   return (
     <header className="bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-40 shadow-lg">
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-18 py-2 gap-2">
+      <div className="w-full max-w-7xl mx-auto px-2 sm:px-4 lg:px-6">
+        <div className="flex items-center justify-between min-h-16 py-2 gap-2 sm:gap-4 flex-wrap sm:flex-nowrap">
           
-          {/* Official TCT Logo & Branding */}
-          <div className="flex items-center space-x-2.5 sm:space-x-3 shrink-0">
+          {/* Official TCT Logo & Calligraphy Slogan Branding */}
+          <div className="flex items-center space-x-2 sm:space-x-3 shrink-0">
             <TCTLogo size="md" variant="icon-only" />
-            <div>
-              <div className="flex items-center space-x-2">
-                <span className="font-black text-sm sm:text-lg tracking-wider text-white flex items-center gap-1.5">
+            <div className="flex flex-col justify-center">
+              <div className="flex items-center space-x-1.5">
+                <span className="font-black text-sm sm:text-base md:text-lg tracking-wider text-white flex items-center leading-none">
                   CORPORACIÓN TCT
                 </span>
-                <span className="hidden lg:inline px-2 py-0.5 text-[10px] font-black rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/40">
-                  PRODUCCIÓN AUDIOVISUAL
-                </span>
               </div>
-              <p className="text-xs text-slate-400 hidden sm:block">
-                Monitoreo, Eventos y Entregables • {activeProjectsCount} producciones activas
-              </p>
+              <span className="font-slogan text-xs sm:text-sm md:text-base text-amber-300 font-medium tracking-wide leading-tight select-none drop-shadow-sm mt-0.5">
+                Marcando Historia
+              </span>
             </div>
           </div>
 
-          {/* Right Actions & User Controls */}
-          <div className="flex items-center space-x-2 sm:space-x-3">
+          {/* Synthesized User Selector & Actions Panel (As requested in image.png) */}
+          <div className="flex items-center space-x-1.5 sm:space-x-2.5 ml-auto flex-wrap justify-end gap-y-1.5">
             
-            {/* "Reglas" Master Rules Button (ONLY visible for Admin users) */}
+            {/* User Switcher Dropdown with Cargo Badge (Defaults to Admin unless changed) */}
+            <div className="flex items-center bg-slate-950/90 hover:bg-slate-950 p-1 sm:p-1.5 rounded-xl border border-slate-800 shadow-inner">
+              <div className="flex items-center space-x-1.5 px-1.5 py-0.5">
+                <div className={`w-5 h-5 sm:w-6 sm:h-6 rounded-lg flex items-center justify-center text-[10px] font-black shrink-0 ${
+                  currentRole === 'admin' 
+                    ? 'bg-amber-500 text-slate-950 ring-1 ring-amber-400' 
+                    : 'bg-blue-500 text-white ring-1 ring-blue-400'
+                }`}>
+                  {currentRole === 'admin' ? '🛡️' : '👷'}
+                </div>
+
+                <div className="flex items-center space-x-1 sm:space-x-1.5">
+                  <select
+                    id="select-active-system-user"
+                    aria-label="Seleccionar usuario activo"
+                    value={
+                      currentRole === 'admin' 
+                        ? (allUsers.find(u => u.role === 'admin')?.id || 'admin') 
+                        : (currentStaff?.id || allStaff[0]?.id || '')
+                    }
+                    onChange={(e) => handleSelectUser(e.target.value)}
+                    className="bg-transparent text-xs font-black text-white focus:outline-none cursor-pointer max-w-[130px] sm:max-w-[190px] truncate pr-1"
+                  >
+                    {allUsers.length > 0 ? (
+                      allUsers.map((usr) => (
+                        <option key={usr.id} value={usr.id} className="bg-slate-900 text-white">
+                          {usr.fullName}
+                        </option>
+                      ))
+                    ) : (
+                      <>
+                        <option value="admin" className="bg-slate-900 text-white">
+                          Ing. Michael RomeroReyes
+                        </option>
+                        {allStaff.map((st) => (
+                          <option key={st.id} value={st.id} className="bg-slate-900 text-white">
+                            {st.name}
+                          </option>
+                        ))}
+                      </>
+                    )}
+                  </select>
+
+                  {/* Role / Cargo Badge right beside user */}
+                  <span className={`px-2 py-0.5 rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-wider whitespace-nowrap shadow-xs ${
+                    currentRole === 'admin'
+                      ? 'bg-amber-400/20 text-amber-300 border border-amber-400/40'
+                      : 'bg-blue-500/20 text-blue-300 border border-blue-400/40'
+                  }`}>
+                    {currentJobTitle}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* "Reglas" Master Rules Button (Visible for Admin users) */}
             {currentRole === 'admin' && (
               <button
                 id="btn-open-rules-config"
                 onClick={onOpenRulesModal}
                 className="p-2 sm:p-2.5 rounded-xl bg-slate-800 hover:bg-slate-750 text-amber-300 hover:text-amber-200 border border-slate-700 hover:border-amber-500/60 transition-all flex items-center justify-center text-xs font-black shadow-xs shrink-0 cursor-pointer"
-                title="Reglas & Sistema (Configuración, Usuarios, Autoguardado, Restablecer)"
-                aria-label="Reglas & Sistema"
+                title="Reglas del Sistema (Configuración, Usuarios, Autoguardado)"
+                aria-label="Reglas del Sistema"
               >
                 <Sliders className="w-4 h-4 text-amber-400" />
               </button>
             )}
 
-            {/* New Project CTA (Visible for both Admin and Staff/Employees) */}
+            {/* New Project CTA */}
             <button
               id="btn-new-project-header"
               onClick={onOpenNewProject}
-              className="flex items-center gap-1.5 px-3 sm:px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 text-xs font-black rounded-xl shadow-md hover:shadow-lg transition-all shrink-0 cursor-pointer"
+              className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3.5 py-1.5 sm:py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 text-xs font-black rounded-xl shadow-md hover:shadow-lg transition-all shrink-0 cursor-pointer"
               title="Registrar nueva producción y emitir contrato (Ctrl+N)"
             >
-              <PlusCircle className="w-4 h-4" />
+              <PlusCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               <span className="hidden sm:inline">+ Nueva Producción</span>
-              <span className="text-[10px] bg-slate-950/20 px-1 py-0.2 rounded font-mono font-bold hidden lg:inline">
-                Ctrl+N
-              </span>
+              <span className="sm:hidden font-bold">+ Crear</span>
             </button>
 
-            {/* Logged User Info displaying who is using the system on this machine */}
-            <div className="flex items-center pl-1 sm:pl-2 border-l border-slate-800 space-x-1.5 shrink-0">
-              <div className="flex items-center space-x-2 bg-slate-800/90 hover:bg-slate-800 px-2.5 sm:px-3 py-1 rounded-xl border border-slate-700 text-left">
-                <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-black shrink-0 ${
-                  currentUser?.role === 'admin' || currentRole === 'admin'
-                    ? 'bg-amber-500 text-slate-950' 
-                    : 'bg-blue-500 text-white'
-                }`}>
-                  {(currentUser?.username || 'TC').slice(0, 2).toUpperCase()}
-                </div>
-                <div className="min-w-0 leading-tight">
-                  <p className="text-[11px] font-black text-white truncate max-w-[130px]" title={currentUser?.username || 'Usuario TCT'}>
-                    👤 {currentUser?.username || 'Ing. Roberto Acuña'}
-                  </p>
-                  <p className="text-[9px] text-slate-400 truncate max-w-[130px]">
-                    {currentUser?.role === 'admin' ? '🛡️ Admin • Equipo Local' : `👷 ${currentUser?.jobTitle || 'Técnico'} • Terminal`}
-                  </p>
-                </div>
-              </div>
-
-              {/* Logout Button (Icon only) */}
-              <button
-                id="btn-logout-header"
-                onClick={onLogout}
-                className="p-2 rounded-xl bg-red-950/50 hover:bg-red-600 text-red-300 hover:text-white border border-red-800/50 transition-all flex items-center justify-center text-xs font-bold shadow-xs shrink-0 group cursor-pointer"
-                title="Cerrar sesión del aplicativo"
-                aria-label="Cerrar sesión"
-              >
-                <LogOut className="w-4 h-4 text-red-300 group-hover:text-white transition-colors" />
-              </button>
-            </div>
+            {/* Logout Button */}
+            <button
+              id="btn-logout-header"
+              onClick={onLogout}
+              className="p-1.5 sm:p-2 rounded-xl bg-red-950/50 hover:bg-red-600 text-red-300 hover:text-white border border-red-800/50 transition-all flex items-center justify-center text-xs font-bold shadow-xs shrink-0 group cursor-pointer"
+              title="Cerrar sesión"
+              aria-label="Cerrar sesión"
+            >
+              <LogOut className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-red-300 group-hover:text-white transition-colors" />
+            </button>
 
           </div>
 

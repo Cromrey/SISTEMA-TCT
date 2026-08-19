@@ -304,6 +304,9 @@ export interface TCTMasterPackage {
   slaDaysVideo: number;
   slaDaysPhotobook: number;
   isPopular?: boolean;
+  attachmentUrl?: string; // Image or PDF reference URL or base64 data
+  attachmentType?: 'image' | 'pdf';
+  attachmentName?: string;
 }
 
 export interface MasterStepChecklistRule {

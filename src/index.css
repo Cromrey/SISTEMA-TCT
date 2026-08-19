@@ -53,22 +53,79 @@
   animation: subtle-pulse-blue 3.2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
+.font-slogan {
+  font-family: 'Alex Brush', 'Dancing Script', cursive, serif;
+}
+
+.font-script {
+  font-family: 'Dancing Script', 'Alex Brush', cursive, serif;
+}
+
+@keyframes neon-blink-gold {
+  0%, 100% {
+    box-shadow: 0 0 6px #10b981, 0 0 12px rgba(16, 185, 129, 0.6), 0 0 20px rgba(245, 158, 11, 0.4);
+    filter: drop-shadow(0 0 4px rgba(245, 158, 11, 0.7));
+  }
+  50% {
+    box-shadow: 0 0 14px #10b981, 0 0 26px rgba(16, 185, 129, 0.9), 0 0 38px rgba(245, 158, 11, 0.95);
+    filter: drop-shadow(0 0 10px rgba(245, 158, 11, 1));
+  }
+}
+
+.animate-neon-blink {
+  animation: neon-blink-gold 1.5s ease-in-out infinite;
+}
+
+@keyframes particle-drift {
+  0% {
+    opacity: 1;
+    transform: translate(0, 0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--tx, 0px), var(--ty, -30px)) scale(0.4);
+  }
+}
+
+.animate-particle {
+  animation: particle-drift 0.9s cubic-bezier(0.2, 0.8, 0.3, 1) forwards;
+}
+
+@page {
+  size: A4 portrait;
+  margin: 8mm 8mm 8mm 8mm;
+}
+
 @media print {
-  body {
+  html, body {
+    width: 210mm !important;
+    min-height: 297mm !important;
     background-color: #ffffff !important;
     color: #000000 !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
   
-  header, footer, nav, .print\:hidden {
+  header, footer, nav, .print\:hidden, #tct-floating-whatsapp-btn {
     display: none !important;
   }
 
-  #tct-printable-report {
+  .print-page-break {
+    page-break-after: always;
+    break-after: page;
+  }
+
+  .print-single-page {
+    page-break-inside: avoid;
+    break-inside: avoid;
+    max-height: 275mm;
+  }
+
+  #tct-printable-report, .printable-document {
     padding: 0 !important;
     margin: 0 !important;
     border: none !important;
     box-shadow: none !important;
+    width: 100% !important;
   }
 }

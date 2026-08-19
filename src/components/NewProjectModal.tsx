@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { ProductionProject, EventType } from '../types';
+import { ProductionProject, EventType, AuthUser } from '../types';
 import { createDefaultPhases } from '../data/templateWorkflow';
 import { generateUniqueTCTCode, generateContractNumber } from '../utils/storage';
 import { getStoredRules } from '../utils/rulesStorage';
+import { getStoredUsers } from '../utils/authStorage';
 import { TCTLogo } from './TCTLogo';
 import confetti from 'canvas-confetti';
 import { 
@@ -23,11 +24,14 @@ import {
   Receipt,
   FileText,
   CreditCard,
-  Building
+  Building,
+  Image,
+  Eye
 } from 'lucide-react';
 
 interface NewProjectModalProps {
   existingProjects: ProductionProject[];
+  currentUser?: AuthUser | null;
   onClose: () => void;
   onCreateProject: (newProject: ProductionProject) => void;
 }
@@ -54,10 +58,22 @@ const PAYMENT_METHODS = [
 
 export const NewProjectModal: React.FC<NewProjectModalProps> = ({
   existingProjects,
+  currentUser,
   onClose,
   onCreateProject
 }) => {
   const masterRules = getStoredRules();
+  const systemUsers = getStoredUsers();
+
+  // Build advisor list exclusively from registered users
+  const advisorOptions = systemUsers.length > 0
+    ? systemUsers.map(u => `${u.fullName} - ${u.jobTitle || (u.role === 'admin' ? 'Administrador' : 'Asesor')}`)
+    : (masterRules.authorizedContractHolders || ['Ing. Michael RomeroReyes - Administrador General']);
+
+  // Auto-default advisor to logged in user if available!
+  const defaultAdvisor = currentUser 
+    ? `${currentUser.fullName} - ${currentUser.jobTitle || (currentUser.role === 'admin' ? 'Administrador General' : 'Asesor Comercial')}`
+    : (advisorOptions[0] || 'Ing. Michael RomeroReyes - Administrador General');
 
   const [eventType, setEventType] = useState<EventType>('Boda');
   const [title, setTitle] = useState('Boda Especial: ');
@@ -79,9 +95,7 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
   const contractNumber = generateContractNumber(existingProjects);
   const quotationNumberStr = `COT-${new Date().getFullYear()}-${String(existingProjects.length + 101).padStart(3, '0')}`;
   const [quotationCode, setQuotationCode] = useState(quotationNumberStr);
-  const [contractHolder, setContractHolder] = useState(
-    masterRules.authorizedContractHolders[0] || 'Ing. Roberto Acuña - Asesor Comercial Principal'
-  );
+  const [contractHolder, setContractHolder] = useState(defaultAdvisor);
 
   // Selected package from Master Rules
   const [selectedPackageId, setSelectedPackageId] = useState<string>(
@@ -90,6 +104,7 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
   const [selectedPackageName, setSelectedPackageName] = useState<string>(
     masterRules.packages[0]?.name || 'Paquete Personalizado'
   );
+  const [previewAttachment, setPreviewAttachment] = useState<{ url: string; type?: 'image' | 'pdf'; name?: string } | null>(null);
 
   // Financials & Discounts in Soles (S/.)
   const [listPrice, setListPrice] = useState<number>(masterRules.packages[0]?.basePrice || 3500);
@@ -262,19 +277,18 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
 
               <div>
                 <label className="block text-slate-400 font-bold mb-1 flex items-center gap-1">
-                  <ShieldCheck className="w-3.5 h-3.5 text-blue-400" /> Asesor / Tomó Contrato
+                  <ShieldCheck className="w-3.5 h-3.5 text-blue-400" /> Asesor Comercial Asignado
                 </label>
                 <select
                   value={contractHolder}
                   onChange={(e) => setContractHolder(e.target.value)}
-                  className="w-full bg-slate-950 text-white font-bold px-3 py-2 rounded-xl border border-slate-700"
+                  className="w-full bg-slate-950 text-white font-bold px-3 py-2 rounded-xl border border-slate-700 focus:ring-2 focus:ring-amber-500"
                 >
-                  {masterRules.authorizedContractHolders.map((holder, idx) => (
+                  {advisorOptions.map((holder, idx) => (
                     <option key={idx} value={holder}>
                       {holder}
                     </option>
                   ))}
-                  <option value="Otro Asesor Externo TCT">Otro Asesor Autorizado...</option>
                 </select>
               </div>
             </div>
@@ -282,10 +296,15 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
 
           {/* Section 1: Proforma & Package Selection */}
           <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs space-y-3">
-            <label className="block text-xs font-black text-slate-900 uppercase tracking-wide flex items-center gap-1.5">
-              <Package className="w-4 h-4 text-amber-600" />
-              1. Selección de Paquete & Formato de Contrato
-            </label>
+            <div className="flex items-center justify-between">
+              <label className="block text-xs font-black text-slate-900 uppercase tracking-wide flex items-center gap-1.5">
+                <Package className="w-4 h-4 text-amber-600" />
+                1. Selección de Paquete & Proforma Oficial
+              </label>
+              <span className="text-[11px] text-slate-500 font-medium">
+                Selecciona una proforma para auto-cargar horas y especificaciones
+              </span>
+            </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
               {masterRules.packages.map((pkg) => {
@@ -294,23 +313,47 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
                   <div
                     key={pkg.id}
                     onClick={() => handlePackageChange(pkg.id)}
-                    className={`p-3 rounded-xl border cursor-pointer transition-all ${
+                    className={`p-3.5 rounded-xl border cursor-pointer transition-all flex flex-col justify-between ${
                       isSelected
                         ? 'bg-amber-50 border-amber-500 ring-2 ring-amber-400 shadow-xs'
                         : 'bg-slate-50 border-slate-200 hover:bg-slate-100'
                     }`}
                   >
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-extrabold text-slate-900">{pkg.name}</span>
-                      <span className="font-mono font-black text-emerald-700">S/. {pkg.basePrice}</span>
+                    <div>
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-extrabold text-slate-900">{pkg.name}</span>
+                        <span className="font-mono font-black text-emerald-700">S/. {pkg.basePrice}</span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 mt-1 line-clamp-2">
+                        {pkg.description}
+                      </p>
                     </div>
-                    <p className="text-[11px] text-slate-500 mt-1 line-clamp-1">
-                      {pkg.description}
-                    </p>
-                    <div className="mt-2 flex items-center justify-between text-[10px] text-slate-600 font-bold border-t border-slate-200/60 pt-1.5">
-                      <span>⏱ {pkg.standardHours}h</span>
-                      <span>{pkg.includesDrone ? '🛸 Dron' : ''}</span>
-                      <span>{pkg.includesPhotobook ? '📖 Fotolibro' : ''}</span>
+
+                    <div className="mt-2.5 pt-2 border-t border-slate-200/80 space-y-1.5">
+                      <div className="flex items-center justify-between text-[10px] text-slate-600 font-bold">
+                        <span>⏱ {pkg.standardHours}h</span>
+                        <span>{pkg.includesDrone ? '🛸 Dron' : ''}</span>
+                        <span>{pkg.includesPhotobook ? '📖 Fotolibro' : ''}</span>
+                      </div>
+
+                      {/* Attached Proforma preview button if available */}
+                      {pkg.attachmentUrl && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setPreviewAttachment({
+                              url: pkg.attachmentUrl!,
+                              type: pkg.attachmentType || 'image',
+                              name: pkg.attachmentName || `Proforma ${pkg.name}`
+                            });
+                          }}
+                          className="w-full mt-1.5 py-1 px-2 rounded-lg bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 text-[10px] font-black flex items-center justify-center gap-1 transition-colors"
+                        >
+                          <Eye className="w-3 h-3" />
+                          <span>Ver Proforma / PDF Adjunto</span>
+                        </button>
+                      )}
                     </div>
                   </div>
                 );
@@ -609,6 +652,47 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
         </form>
 
       </div>
+
+      {/* Attachment Preview Modal (Image / PDF) */}
+      {previewAttachment && (
+        <div 
+          className="fixed inset-0 z-[11000] flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-fadeIn"
+          onClick={() => setPreviewAttachment(null)}
+        >
+          <div 
+            className="bg-slate-900 border border-slate-700 rounded-3xl p-5 max-w-2xl w-full max-h-[90vh] flex flex-col shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <div className="flex items-center space-x-2">
+                <FileText className="w-5 h-5 text-amber-400" />
+                <h4 className="font-bold text-white text-sm">{previewAttachment.name || 'Proforma Oficial'}</h4>
+              </div>
+              <button 
+                onClick={() => setPreviewAttachment(null)}
+                className="p-1 rounded-full text-slate-400 hover:text-white bg-slate-800"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-auto py-4 flex items-center justify-center">
+              {previewAttachment.type === 'pdf' || previewAttachment.url.startsWith('data:application/pdf') ? (
+                <iframe 
+                  src={previewAttachment.url} 
+                  className="w-full h-[60vh] rounded-xl border border-slate-800"
+                  title="PDF Proforma"
+                />
+              ) : (
+                <img 
+                  src={previewAttachment.url} 
+                  alt={previewAttachment.name || 'Proforma'} 
+                  className="max-h-[65vh] object-contain rounded-xl shadow-lg border border-slate-800"
+                />
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
