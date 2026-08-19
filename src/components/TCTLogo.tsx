@@ -42,31 +42,32 @@ export const TCTLogo: React.FC<TCTLogoProps> = ({
 
   return (
     <div className={`inline-flex items-center gap-2.5 ${className}`}>
-      {/* Official Circular TCT Logo Emblem with Golden Glowing Aura */}
+      {/* Official Circular TCT Logo Emblem with Golden Neon Glowing Aura */}
       <div 
         style={{ height: currentSize.height, width: currentSize.width }}
-        className="relative shrink-0 flex items-center justify-center aspect-square"
+        className="relative shrink-0 flex items-center justify-center aspect-square rounded-full"
       >
-        {/* Golden Pulsing Border Glow */}
-        <div className="absolute -inset-0.5 rounded-full ring-1.5 ring-amber-400/80 shadow-[0_0_10px_rgba(245,158,11,0.65)] animate-pulse pointer-events-none" />
+        {/* Golden Neon Pulsing / Blinking Ring Glow */}
+        <div className="absolute -inset-1 rounded-full ring-2 ring-amber-400/90 shadow-[0_0_14px_rgba(245,158,11,0.85),0_0_24px_rgba(217,119,6,0.6)] animate-pulse pointer-events-none z-0" />
 
-        {!imgError && useImage ? (
-          <img
-            src="/assets/tct-logo.png"
-            alt="Corporación TCT Logo"
-            referrerPolicy="no-referrer"
-            onError={() => setImgError(true)}
-            style={{ height: currentSize.height, width: currentSize.width }}
-            className="w-full h-full object-contain filter drop-shadow-[0_0_6px_rgba(245,158,11,0.5)] select-none relative z-10"
-          />
-        ) : (
-          <svg
-            viewBox="0 0 600 600"
-            style={{ height: currentSize.height, width: currentSize.width }}
-            className="filter drop-shadow-md"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
+        <div className="w-full h-full rounded-full overflow-hidden relative z-10 bg-slate-950 flex items-center justify-center border border-amber-400/40">
+          {!imgError && useImage ? (
+            <img
+              src="/assets/tct-logo.png"
+              alt="Corporación TCT Logo"
+              referrerPolicy="no-referrer"
+              onError={() => setImgError(true)}
+              style={{ height: currentSize.height, width: currentSize.width }}
+              className="w-full h-full object-cover select-none"
+            />
+          ) : (
+            <svg
+              viewBox="0 0 600 600"
+              style={{ height: currentSize.height, width: currentSize.width }}
+              className="filter drop-shadow-md w-full h-full object-cover"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
             <defs>
               <radialGradient id="tctCircleBgFb" cx="45%" cy="35%" r="65%">
                 <stop offset="0%" stopColor="#2c323b" />
@@ -115,6 +116,7 @@ export const TCTLogo: React.FC<TCTLogoProps> = ({
             </text>
           </svg>
         )}
+        </div>
       </div>
 
       {/* Optional Title Branding if variant is full */}

@@ -352,47 +352,6 @@ export default function App() {
 
       {/* Main Workspace */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        
-        {/* Role & Storage Banner Indicator (Available for all users) */}
-        <div className="mb-5 flex items-center justify-between bg-slate-900/90 p-3.5 rounded-2xl border border-slate-800 text-xs flex-wrap gap-3 shadow-md">
-          <div className="flex items-center space-x-2 flex-wrap gap-1">
-            <span className="text-slate-400">Usuario Activo:</span>
-            {currentRole === 'admin' ? (
-              <span className="px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-extrabold border border-amber-500/40 flex items-center gap-1">
-                <ShieldCheck className="w-3.5 h-3.5" /> {currentUser.fullName} (@{currentUser.username} • Administrador General TCT)
-              </span>
-            ) : (
-              <span className="px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 font-extrabold border border-blue-500/40 flex items-center gap-1">
-                <UserCheck className="w-3.5 h-3.5" /> Panel Técnico: {currentStaff.name} ({currentStaff.role})
-              </span>
-            )}
-          </div>
-
-          <div className="flex items-center space-x-3 text-xs flex-wrap gap-2">
-            {/* Auto-Guardado Local Status Pill for all users */}
-            <div 
-              onClick={() => {
-                setRulesInitialTab('system');
-                setIsRulesModalOpen(true);
-              }}
-              className="flex items-center space-x-1.5 px-3 py-1 rounded-xl bg-emerald-950/50 border border-emerald-500/40 text-emerald-300 cursor-pointer hover:bg-emerald-900/50 transition-colors"
-              title="Auto-Guardado Local Activo (IndexedDB + LocalStorage). Clic para ver detalles."
-            >
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="font-bold text-[11px]">💾 Auto-Guardado Local: Activo</span>
-            </div>
-
-            {/* Restablecer Demo for all users */}
-            <button
-              onClick={handleResetData}
-              className="px-3 py-1 rounded-xl bg-amber-500/10 hover:bg-amber-500/25 text-amber-300 border border-amber-500/40 transition-all flex items-center gap-1.5 font-bold text-[11px] shadow-xs"
-              title="Restablecer base de datos a proyectos demo oficiales de Corporación TCT"
-            >
-              <RotateCcw className="w-3.5 h-3.5 text-amber-400" />
-              <span>Restablecer Demo</span>
-            </button>
-          </div>
-        </div>
 
         {/* View Switch based on Role */}
         {currentRole === 'admin' ? (

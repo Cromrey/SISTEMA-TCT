@@ -43,23 +43,33 @@ export function printElement(elementId: string, docTitle: string = 'Documento Co
         ${styles}
         <style>
           @page {
-            size: A4;
-            margin: 12mm 15mm;
+            size: A4 portrait;
+            margin: 8mm 10mm;
+          }
+          * {
+            box-sizing: border-box;
           }
           body {
             background: white !important;
             color: #0f172a !important;
-            font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
+            font-size: 11px;
+            line-height: 1.35;
           }
           .print\\:hidden, button, .no-print {
             display: none !important;
           }
+          /* Ensure single page fit and prevent unwanted breaks */
+          .page-break-inside-avoid {
+            break-inside: avoid;
+            page-break-inside: avoid;
+          }
         </style>
       </head>
       <body>
-        <div class="p-6 bg-white text-slate-900">
+        <div class="p-2 sm:p-4 bg-white text-slate-900">
           ${contentHtml}
         </div>
       </body>
@@ -106,13 +116,15 @@ export function downloadPrintableHtml(elementId: string, filename: string = 'TCT
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   ${styles}
   <style>
-    @page { size: A4; margin: 15mm; }
-    body { background: white !important; color: #0f172a !important; font-family: sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    @page { size: A4 portrait; margin: 8mm 10mm; }
+    * { box-sizing: border-box; }
+    body { background: white !important; color: #0f172a !important; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; font-size: 11px; line-height: 1.35; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .print\\:hidden, button, .no-print { display: none !important; }
+    .page-break-inside-avoid { break-inside: avoid; page-break-inside: avoid; }
   </style>
 </head>
 <body>
-  <div style="max-width: 900px; margin: 0 auto; padding: 20px;">
+  <div style="max-width: 820px; margin: 0 auto; padding: 10px;">
     ${contentHtml}
   </div>
   <script>

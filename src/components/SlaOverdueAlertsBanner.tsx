@@ -42,7 +42,7 @@ export const SlaOverdueAlertsBanner: React.FC<SlaOverdueAlertsBannerProps> = ({
   onFilterByOverdue,
   onOpenContract
 }) => {
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(true);
   const todayStr = new Date().toISOString().split('T')[0];
   const nowTime = new Date(todayStr).getTime();
 
@@ -152,11 +152,14 @@ export const SlaOverdueAlertsBanner: React.FC<SlaOverdueAlertsBannerProps> = ({
   return (
     <div className="bg-gradient-to-br from-red-950 via-slate-900 to-slate-900 text-white rounded-2xl border border-red-500/50 shadow-lg overflow-hidden transition-all">
       
-      {/* Banner Top Header */}
-      <div className="p-4 sm:p-5 flex items-center justify-between flex-wrap gap-3 border-b border-red-500/30">
+      {/* Banner Top Header - Clickable to expand/collapse */}
+      <div 
+        onClick={() => setIsCollapsed(!isCollapsed)}
+        className="p-3.5 sm:p-4 flex items-center justify-between flex-wrap gap-3 cursor-pointer hover:bg-red-900/20 transition-colors border-b border-red-500/30 select-none"
+      >
         <div className="flex items-center space-x-3">
-          <div className="p-2 bg-red-600/30 rounded-xl border border-red-500 text-red-300 animate-pulse">
-            <ShieldAlert className="w-5 h-5" />
+          <div className="p-1.5 sm:p-2 bg-red-600/30 rounded-xl border border-red-500 text-red-300 animate-pulse shrink-0">
+            <ShieldAlert className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
           <div>
             <div className="flex items-center space-x-2 flex-wrap gap-1">
@@ -164,34 +167,35 @@ export const SlaOverdueAlertsBanner: React.FC<SlaOverdueAlertsBannerProps> = ({
                 Alertas de Plazos y SLA Vencidos TCT
               </h3>
               <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-red-600 text-white animate-pulse">
-                {overdueIssues.length} {overdueIssues.length === 1 ? 'PROYECTO REQUIERE ATENCIÓN' : 'PROYECTOS EN ALERTA'}
+                {overdueIssues.length} {overdueIssues.length === 1 ? 'ALERTA' : 'ALERTAS ACTIVAS'}
               </span>
             </div>
-            <p className="text-xs text-red-200/80 mt-0.5">
+            <p className="text-[11px] sm:text-xs text-red-200/80 mt-0.5">
               {criticalCount > 0 && <span className="font-bold text-red-300 mr-2">🚨 {criticalCount} Crítico(s)</span>}
-              {warningCount > 0 && <span className="font-bold text-amber-300">⚠️ {warningCount} Advertencia(s)</span>}
-              {' '}• Acciones inmediatas para preservar el cumplimiento contractual
+              {warningCount > 0 && <span className="font-bold text-amber-300 mr-2">⚠️ {warningCount} Advertencia(s)</span>}
+              <span className="text-slate-400 font-medium">({isCollapsed ? 'Clic aquí para expandir detalles' : 'Clic para comprimir'})</span>
             </p>
           </div>
         </div>
 
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-2" onClick={(e) => e.stopPropagation()}>
           {onFilterByOverdue && (
             <button
               onClick={onFilterByOverdue}
-              className="px-3 py-1.5 rounded-xl bg-red-600/40 hover:bg-red-600 text-white text-xs font-bold border border-red-500/60 transition-all flex items-center gap-1.5"
+              className="px-3 py-1.5 rounded-xl bg-red-600/40 hover:bg-red-600 text-white text-xs font-bold border border-red-500/60 transition-all flex items-center gap-1.5 cursor-pointer"
               title="Filtrar la lista de expedientes por los que tienen plazos vencidos"
             >
               <Filter className="w-3.5 h-3.5" />
-              <span>Ver Solo Vencidos</span>
+              <span className="hidden sm:inline">Ver Solo Vencidos</span>
             </button>
           )}
 
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-colors"
+            className="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-colors cursor-pointer"
+            aria-label={isCollapsed ? 'Expandir alertas' : 'Comprimir alertas'}
           >
-            {isCollapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
+            {isCollapsed ? <ChevronDown className="w-4 h-4 text-amber-400" /> : <ChevronUp className="w-4 h-4" />}
           </button>
         </div>
       </div>

@@ -72,32 +72,32 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Right Actions & User Controls */}
           <div className="flex items-center space-x-2 sm:space-x-3">
             
-            {/* "Reglas" Master Rules Button (Icon Only as requested) */}
-            <button
-              id="btn-open-rules-config"
-              onClick={onOpenRulesModal}
-              className="p-2 sm:p-2.5 rounded-xl bg-slate-800 hover:bg-slate-750 text-amber-300 hover:text-amber-200 border border-slate-700 hover:border-amber-500/60 transition-all flex items-center justify-center text-xs font-black shadow-xs shrink-0 cursor-pointer"
-              title="Reglas & Sistema (Configuración, Usuarios, Autoguardado, Restablecer)"
-              aria-label="Reglas & Sistema"
-            >
-              <Sliders className="w-4 h-4 text-amber-400" />
-            </button>
-
-            {/* New Project CTA (Only for Admin) */}
+            {/* "Reglas" Master Rules Button (ONLY visible for Admin users) */}
             {currentRole === 'admin' && (
               <button
-                id="btn-new-project-header"
-                onClick={onOpenNewProject}
-                className="flex items-center gap-1.5 px-3 sm:px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 text-xs font-black rounded-xl shadow-md hover:shadow-lg transition-all shrink-0 cursor-pointer"
-                title="Registrar nueva producción y emitir contrato (Ctrl+N)"
+                id="btn-open-rules-config"
+                onClick={onOpenRulesModal}
+                className="p-2 sm:p-2.5 rounded-xl bg-slate-800 hover:bg-slate-750 text-amber-300 hover:text-amber-200 border border-slate-700 hover:border-amber-500/60 transition-all flex items-center justify-center text-xs font-black shadow-xs shrink-0 cursor-pointer"
+                title="Reglas & Sistema (Configuración, Usuarios, Autoguardado, Restablecer)"
+                aria-label="Reglas & Sistema"
               >
-                <PlusCircle className="w-4 h-4" />
-                <span className="hidden sm:inline">+ Nueva Producción</span>
-                <span className="text-[10px] bg-slate-950/20 px-1 py-0.2 rounded font-mono font-bold hidden lg:inline">
-                  Ctrl+N
-                </span>
+                <Sliders className="w-4 h-4 text-amber-400" />
               </button>
             )}
+
+            {/* New Project CTA (Visible for both Admin and Staff/Employees) */}
+            <button
+              id="btn-new-project-header"
+              onClick={onOpenNewProject}
+              className="flex items-center gap-1.5 px-3 sm:px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 text-xs font-black rounded-xl shadow-md hover:shadow-lg transition-all shrink-0 cursor-pointer"
+              title="Registrar nueva producción y emitir contrato (Ctrl+N)"
+            >
+              <PlusCircle className="w-4 h-4" />
+              <span className="hidden sm:inline">+ Nueva Producción</span>
+              <span className="text-[10px] bg-slate-950/20 px-1 py-0.2 rounded font-mono font-bold hidden lg:inline">
+                Ctrl+N
+              </span>
+            </button>
 
             {/* Logged User Info displaying who is using the system on this machine */}
             <div className="flex items-center pl-1 sm:pl-2 border-l border-slate-800 space-x-1.5 shrink-0">

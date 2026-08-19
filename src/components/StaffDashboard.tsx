@@ -24,7 +24,7 @@ interface StaffDashboardProps {
   projects: ProductionProject[];
   currentStaff: StaffMember;
   onOpenProject: (project: ProductionProject) => void;
-  onOpenAnalytics: () => void;
+  onOpenAnalytics?: () => void;
   onUpdateProject?: (project: ProductionProject) => void;
 }
 
@@ -32,7 +32,6 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
   projects,
   currentStaff,
   onOpenProject,
-  onOpenAnalytics,
   onUpdateProject
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<'events' | 'calendar'>('events');
@@ -84,20 +83,9 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
               ¡Hola, {currentStaff.name}!
             </h2>
             <p className="text-xs text-slate-300">
-              Rol: <strong>{currentStaff.role}</strong> • Tienes <strong>{myProjects.length} eventos contratados</strong> bajo tu responsabilidad.
+              Rol: <strong>{currentStaff.role}</strong> • Tienes <strong>{myProjects.length} eventos contratados</strong> bajo tu responsabilidad técnica.
             </p>
           </div>
-        </div>
-
-        {/* Action Button: Personal Analytics */}
-        <div className="flex items-center space-x-2 shrink-0">
-          <button
-            onClick={onOpenAnalytics}
-            className="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs shadow-md transition-all flex items-center gap-1.5"
-          >
-            <TrendingUp className="w-4 h-4" />
-            <span>Mis Estadísticas y Gráficos</span>
-          </button>
         </div>
       </div>
 
