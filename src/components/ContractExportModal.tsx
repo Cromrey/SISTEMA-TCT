@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ProductionProject, UserRole } from '../types';
 import { TCTLogo } from './TCTLogo';
+import { printElement, downloadPrintableHtml, downloadEditableDoc } from '../utils/printHelper';
 import { 
   Printer, 
   X, 
@@ -15,8 +16,10 @@ import {
   Lock, 
   Edit3, 
   Save, 
-  CheckCircle2,
-  FileText
+  CheckCircle2, 
+  Download,
+  FileText,
+  FileCode
 } from 'lucide-react';
 
 interface ContractExportModalProps {
@@ -35,9 +38,26 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
   const isAdmin = currentRole === 'admin';
   const [isEditing, setIsEditing] = useState(false);
   const [editedProject, setEditedProject] = useState<ProductionProject>({ ...project });
+  const [copySuccess, setCopySuccess] = useState(false);
 
   const handlePrint = () => {
-    window.print();
+    printElement('tct-contract-document', `Contrato-${currentData.contractNumber || currentData.uniqueCode}`);
+  };
+
+  const handleDownloadHtml = () => {
+    downloadPrintableHtml(
+      'tct-contract-document',
+      `Contrato-${currentData.contractNumber || currentData.uniqueCode}.html`,
+      `Contrato Oficial TCT - ${currentData.contractNumber}`
+    );
+  };
+
+  const handleDownloadWordDoc = () => {
+    downloadEditableDoc(
+      'tct-contract-document',
+      `Contrato-${currentData.contractNumber || currentData.uniqueCode}-Editable.doc`,
+      `Contrato Oficial TCT - ${currentData.contractNumber}`
+    );
   };
 
   const handleSaveEdits = () => {
@@ -58,7 +78,7 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
       <div className="bg-white w-full max-w-4xl rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[96vh]">
         
         {/* Top Control Bar (Hidden during Print) */}
-        <div className="print:hidden px-6 py-4 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800 shrink-0">
+        <div className="print:hidden px-4 sm:px-6 py-4 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800 shrink-0 flex-wrap gap-2">
           <div className="flex items-center space-x-3">
             <TCTLogo size="xs" variant="icon-only" />
             <div>
@@ -73,13 +93,13 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center space-x-2 sm:space-x-3">
+          <div className="flex items-center space-x-1.5 sm:space-x-2 flex-wrap gap-1">
             {/* Admin Edit Controls */}
             {isAdmin ? (
               isEditing ? (
                 <button
                   onClick={handleSaveEdits}
-                  className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-md flex items-center gap-1.5 transition-all"
+                  className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-md flex items-center gap-1.5 transition-all cursor-pointer"
                 >
                   <Save className="w-4 h-4" />
                   <span>Guardar Cambios</span>
@@ -87,26 +107,47 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
               ) : (
                 <button
                   onClick={() => setIsEditing(true)}
-                  className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all"
+                  className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all cursor-pointer"
                 >
                   <Edit3 className="w-4 h-4 text-amber-400" />
-                  <span>Editar Contrato (Admin)</span>
+                  <span>Editar (Admin)</span>
                 </button>
               )
             ) : (
               <span className="text-[11px] font-bold text-slate-400 bg-slate-800/80 px-2.5 py-1 rounded-lg border border-slate-700 flex items-center gap-1">
                 <Lock className="w-3 h-3 text-slate-400" />
-                <span>Modo Técnico (Solo Lectura)</span>
+                <span>Modo Técnico</span>
               </span>
             )}
 
             {/* Print / PDF Export Button */}
             <button
               onClick={handlePrint}
-              className="px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-black text-xs rounded-xl shadow-md flex items-center gap-1.5 transition-all"
+              className="px-3 sm:px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-black text-xs rounded-xl shadow-md flex items-center gap-1.5 transition-all cursor-pointer"
+              title="Abrir cuadro de diálogo de impresión y Guardar como PDF"
             >
               <Printer className="w-4 h-4" />
-              <span>Exportar / Imprimir PDF</span>
+              <span>PDF / Imprimir</span>
+            </button>
+
+            {/* Download Word Editable Document (.doc) */}
+            <button
+              onClick={handleDownloadWordDoc}
+              className="px-3 sm:px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-sm flex items-center gap-1.5 transition-all cursor-pointer"
+              title="Descargar Contrato Editable para Microsoft Word (.doc) / Google Docs"
+            >
+              <FileText className="w-4 h-4 text-white" />
+              <span>Word Editable (.doc)</span>
+            </button>
+
+            {/* Direct Download HTML */}
+            <button
+              onClick={handleDownloadHtml}
+              className="px-2.5 sm:px-3 py-2 bg-slate-800 hover:bg-slate-700 text-amber-300 font-bold text-xs rounded-xl border border-slate-700 shadow-sm flex items-center gap-1 transition-all cursor-pointer"
+              title="Descargar archivo web imprimible"
+            >
+              <Download className="w-3.5 h-3.5 text-amber-400" />
+              <span className="hidden lg:inline">.HTML</span>
             </button>
 
             <button

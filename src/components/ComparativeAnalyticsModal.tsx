@@ -586,18 +586,18 @@ export const ComparativeAnalyticsModal: React.FC<ComparativeAnalyticsModalProps>
                 </h4>
                 <div className="h-72">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={staffPerformanceData}>
+                    <BarChart data={staffChartData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                       <XAxis dataKey="name" stroke="#64748b" />
                       <YAxis stroke="#64748b" />
                       <Tooltip 
                         formatter={(value: any, name: any) => [
-                          name === 'Recaudación' ? `S/. ${Number(value).toLocaleString()}` : `${value} eventos`,
-                          name
+                          name === 'totalRevenue' ? `S/. ${Number(value).toLocaleString()}` : `${value} contratos`,
+                          name === 'contracts' ? 'Contratos' : name
                         ]}
                       />
                       <Legend />
-                      <Bar dataKey="Eventos" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                      <Bar name="Contratos Asignados" dataKey="contracts" fill="#3b82f6" radius={[4, 4, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>

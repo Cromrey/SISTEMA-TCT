@@ -33,7 +33,8 @@ import {
   MapPin,
   Clock,
   Save,
-  QrCode
+  QrCode,
+  Trash2
 } from 'lucide-react';
 
 interface ProjectDetailModalProps {
@@ -42,6 +43,7 @@ interface ProjectDetailModalProps {
   onUpdateProject: (updated: ProductionProject) => void;
   onOpenReportPrint: (project: ProductionProject) => void;
   onOpenContractExport?: (project: ProductionProject) => void;
+  onDeleteProject?: (projectId: string) => void;
 }
 
 type ModalTab = 'workflow' | 'commercial' | 'audit_logs' | 'staff_equipment';
@@ -51,7 +53,8 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
   onClose,
   onUpdateProject,
   onOpenReportPrint,
-  onOpenContractExport
+  onOpenContractExport,
+  onDeleteProject
 }) => {
   const [activeTab, setActiveTab] = useState<ModalTab>('workflow');
   const [selectedStepCoord, setSelectedStepCoord] = useState<{ phaseIndex: number; stepIndex: number } | null>(null);
@@ -258,11 +261,23 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
             <button
               type="button"
               onClick={() => onOpenReportPrint(project)}
-              className="px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1 shadow-md transition-all shrink-0"
+              className="px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1 shadow-md transition-all shrink-0 cursor-pointer"
             >
               <Printer className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Reporte PDF</span>
             </button>
+
+            {onDeleteProject && (
+              <button
+                type="button"
+                onClick={() => onDeleteProject(project.id)}
+                className="px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl bg-red-600/20 hover:bg-red-600 text-red-300 hover:text-white border border-red-500/40 font-bold text-xs flex items-center gap-1 shadow-md transition-all shrink-0 cursor-pointer"
+                title="Eliminar este contrato permanentemente"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span className="hidden md:inline">Borrar</span>
+              </button>
+            )}
 
             <button
               type="button"

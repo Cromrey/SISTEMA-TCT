@@ -43,7 +43,8 @@ export const KpiMetricsDashboard: React.FC<KpiMetricsDashboardProps> = ({
   activeFilter = 'all',
   onOpenProject
 }) => {
-  const [isChartsExpanded, setIsChartsExpanded] = useState(true);
+  // Gráficos ocultos al inicio según requerimiento del usuario
+  const [isChartsExpanded, setIsChartsExpanded] = useState(false);
   const [selectedChartTab, setSelectedChartTab] = useState<'income' | 'status' | 'closing_time'>('income');
 
   const todayStr = new Date().toISOString().split('T')[0];

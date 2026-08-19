@@ -42,11 +42,14 @@ export const TCTLogo: React.FC<TCTLogoProps> = ({
 
   return (
     <div className={`inline-flex items-center gap-2.5 ${className}`}>
-      {/* Official Circular TCT Logo Emblem */}
+      {/* Official Circular TCT Logo Emblem with Golden Glowing Aura */}
       <div 
         style={{ height: currentSize.height, width: currentSize.width }}
-        className="relative shrink-0 flex items-center justify-center filter drop-shadow-md aspect-square"
+        className="relative shrink-0 flex items-center justify-center aspect-square"
       >
+        {/* Golden Pulsing Border Glow */}
+        <div className="absolute -inset-0.5 rounded-full ring-1.5 ring-amber-400/80 shadow-[0_0_10px_rgba(245,158,11,0.65)] animate-pulse pointer-events-none" />
+
         {!imgError && useImage ? (
           <img
             src="/assets/tct-logo.png"
@@ -54,7 +57,7 @@ export const TCTLogo: React.FC<TCTLogoProps> = ({
             referrerPolicy="no-referrer"
             onError={() => setImgError(true)}
             style={{ height: currentSize.height, width: currentSize.width }}
-            className="w-full h-full object-contain filter drop-shadow-md select-none"
+            className="w-full h-full object-contain filter drop-shadow-[0_0_6px_rgba(245,158,11,0.5)] select-none relative z-10"
           />
         ) : (
           <svg

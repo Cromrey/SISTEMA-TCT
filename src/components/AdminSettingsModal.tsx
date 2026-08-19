@@ -20,13 +20,18 @@ import {
   getStoredUsers, 
   createOrUpdateUser, 
   deleteUser, 
-  resetUsersToDefaults 
+  resetUsersToDefaults,
+  deleteAllEmployeesExceptAdmin,
+  deleteUsersByFilter
 } from '../utils/authStorage';
 import { 
   resetToDemoData, 
   getStoredProjects, 
   saveProjects, 
-  getLastSyncTime 
+  getLastSyncTime,
+  deleteAllContractsHistory,
+  deleteProjectsByFilter,
+  factoryResetAllSystemData
 } from '../utils/storage';
 import { 
   KeyboardShortcutConfig, 
@@ -93,6 +98,7 @@ interface AdminSettingsModalProps {
   currentUser?: AuthUser;
   onUsersChanged?: (users: AuthUser[]) => void;
   onResetDemoData?: () => void;
+  onProjectsChange?: (projects: ProductionProject[]) => void;
   initialTab?: SettingsTab;
   currentStaff?: StaffMember;
   allStaff?: StaffMember[];
@@ -118,6 +124,7 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
   currentUser,
   onUsersChanged,
   onResetDemoData,
+  onProjectsChange,
   initialTab = 'checklists',
   currentStaff,
   allStaff = [],
@@ -175,6 +182,11 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
   const [shortcutsList, setShortcutsList] = useState<KeyboardShortcutConfig[]>(getStoredShortcuts());
   const [selectedShortcutAction, setSelectedShortcutAction] = useState<string>(SHORTCUT_ACTIONS[0].actionId);
   const [customShortcutKeys, setCustomShortcutKeys] = useState<string>('ctrl+b');
+
+  // --- Selective Deletion & Data Management State ---
+  const [deleteFilterDataType, setDeleteFilterDataType] = useState<'contracts' | 'quotations' | 'employees' | 'by_event_type' | 'archived_only'>('contracts');
+  const [deleteFilterEventType, setDeleteFilterEventType] = useState<string>('all');
+  const [deleteFilterStaffRole, setDeleteFilterStaffRole] = useState<'all' | 'employee' | 'admin'>('employee');
 
   // File input ref for JSON restore
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -629,8 +641,10 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
   // -------------------------------------------------------------
   const handleTriggerResetDemo = () => {
     if (window.confirm('¿Deseas restablecer la base de datos a los proyectos demo oficiales de Corporación TCT?')) {
-      resetToDemoData();
-      if (onResetDemoData) {
+      const reset = resetToDemoData();
+      if (onProjectsChange) {
+        onProjectsChange(reset);
+      } else if (onResetDemoData) {
         onResetDemoData();
       }
       notifySuccess('🔄 Proyectos demo restaurados correctamente para todos los usuarios.');
@@ -666,6 +680,7 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
           const parsed = JSON.parse(event.target?.result as string);
           if (parsed.projects && Array.isArray(parsed.projects)) {
             saveProjects(parsed.projects);
+            if (onProjectsChange) onProjectsChange(parsed.projects);
           }
           if (parsed.rules) {
             saveMasterRules(parsed.rules);
@@ -675,13 +690,76 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
             localStorage.setItem('tct_auth_users_v1', JSON.stringify(parsed.users));
             refreshUsersList();
           }
-          if (onResetDemoData) onResetDemoData();
           if (onRulesUpdated) onRulesUpdated();
           notifySuccess('✓ Respaldo restaurado exitosamente en el sistema local.');
         } catch (err) {
           alert('Error al leer el archivo JSON de respaldo. Verifique el formato.');
         }
       };
+    }
+  };
+
+  // -------------------------------------------------------------
+  // 8. DATA PURGE & CLEANUP HANDLERS
+  // -------------------------------------------------------------
+  const handleDeleteAllContractsHistory = () => {
+    if (window.confirm('⚠️ ¿CONFIRMACIÓN: Deseas ELIMINAR TODO EL HISTORIAL Y REGISTRO DE CONTRATOS?\n\nEsta acción vaciará todos los expedientes, contratos y cotizaciones del sistema. Las cuentas de usuario y reglas se mantendrán.')) {
+      const empty = deleteAllContractsHistory();
+      if (onProjectsChange) {
+        onProjectsChange(empty);
+      }
+      notifySuccess('🗑️ Todos los registros e historial de contratos han sido eliminados.');
+    }
+  };
+
+  const handleFactoryResetAllData = () => {
+    if (window.confirm('🚨 ACCIÓN DE ALTO RIESGO: ¿REINICIO TOTAL DE FÁBRICA?\n\nSe eliminarán:\n• Todos los contratos y cotizaciones\n• Todos los perfiles de usuario creados\n• Todos los cargos y configuraciones personalizadas\n• Todos los archivos y firmas adjuntas\n\n¿Estás completamente seguro?')) {
+      factoryResetAllSystemData();
+      resetUsersToDefaults();
+      resetMasterRulesToDefault();
+      resetShortcutsToDefault();
+      refreshUsersList();
+      if (onProjectsChange) {
+        onProjectsChange([]);
+      }
+      if (onRulesUpdated) onRulesUpdated();
+      notifySuccess('✨ Sistema reiniciado a estado original de fábrica.');
+    }
+  };
+
+  const handleExecuteSelectiveDeletion = () => {
+    if (deleteFilterDataType === 'contracts') {
+      if (window.confirm('¿Eliminar todos los proyectos que tienen N° de Contrato emitido?')) {
+        const result = deleteProjectsByFilter({ targetType: 'contracts' });
+        if (onProjectsChange) onProjectsChange(result.remaining);
+        notifySuccess(`🗑️ Se eliminaron ${result.deletedCount} contrato(s) del sistema.`);
+      }
+    } else if (deleteFilterDataType === 'quotations') {
+      if (window.confirm('¿Eliminar todas las cotizaciones preliminares (sin N° de contrato)?')) {
+        const result = deleteProjectsByFilter({ targetType: 'quotations' });
+        if (onProjectsChange) onProjectsChange(result.remaining);
+        notifySuccess(`🗑️ Se eliminaron ${result.deletedCount} cotización(es) del sistema.`);
+      }
+    } else if (deleteFilterDataType === 'employees') {
+      if (window.confirm(`¿Eliminar empleados y personal técnico según el filtro (${deleteFilterStaffRole})?`)) {
+        if (deleteFilterStaffRole === 'all' || deleteFilterStaffRole === 'employee') {
+          const res = deleteAllEmployeesExceptAdmin();
+          refreshUsersList();
+          notifySuccess(`🗑️ Se eliminaron ${res.deletedCount} cuenta(s) de empleados técnicos.`);
+        }
+      }
+    } else if (deleteFilterDataType === 'by_event_type') {
+      if (window.confirm(`¿Eliminar todos los proyectos con tipo de evento "${deleteFilterEventType}"?`)) {
+        const result = deleteProjectsByFilter({ eventType: deleteFilterEventType });
+        if (onProjectsChange) onProjectsChange(result.remaining);
+        notifySuccess(`🗑️ Se eliminaron ${result.deletedCount} proyecto(s) de tipo "${deleteFilterEventType}".`);
+      }
+    } else if (deleteFilterDataType === 'archived_only') {
+      if (window.confirm('¿Eliminar todos los proyectos archivados y con 12 pasos completados?')) {
+        const result = deleteProjectsByFilter({ isArchivedOnly: true });
+        if (onProjectsChange) onProjectsChange(result.remaining);
+        notifySuccess(`🗑️ Se eliminaron ${result.deletedCount} proyecto(s) archivados/completados.`);
+      }
     }
   };
 
@@ -2188,6 +2266,128 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
                   </button>
                 </div>
 
+              </div>
+
+              {/* DANGER & SELECTIVE PURGE ZONE */}
+              <div className="border-t-2 border-red-200 pt-6 space-y-5">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-red-600 animate-pulse" />
+                  <h4 className="text-sm font-black text-red-950 uppercase tracking-wider">
+                    Herramientas de Limpieza de Registros & Borrado de Base de Datos
+                  </h4>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                  
+                  {/* Option A: Borrar Historial de Todos los Contratos */}
+                  <div className="bg-red-50/50 p-5 rounded-3xl border border-red-200 space-y-3 flex flex-col justify-between">
+                    <div className="space-y-2">
+                      <div className="flex items-center space-x-2 text-red-700">
+                        <Trash2 className="w-5 h-5" />
+                        <h5 className="font-black text-slate-900 text-xs sm:text-sm">
+                          Borrar Historial de Todos los Contratos
+                        </h5>
+                      </div>
+                      <p className="text-xs text-slate-600 leading-relaxed">
+                        Elimina el historial completo de contratos, eventos y cotizaciones de la base de datos local. Las cuentas de usuario y reglas no se alteran.
+                      </p>
+                    </div>
+
+                    <button
+                      onClick={handleDeleteAllContractsHistory}
+                      className="w-full py-2.5 bg-red-600 hover:bg-red-700 text-white font-black text-xs rounded-xl transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      <span>Vaciar Todos los Contratos</span>
+                    </button>
+                  </div>
+
+                  {/* Option B: Borrado Selectivo con Filtros */}
+                  <div className="bg-slate-50 p-5 rounded-3xl border border-slate-300 space-y-3 flex flex-col justify-between">
+                    <div className="space-y-2.5">
+                      <div className="flex items-center space-x-2 text-amber-700">
+                        <Sliders className="w-5 h-5" />
+                        <h5 className="font-black text-slate-900 text-xs sm:text-sm">
+                          Borrado Selectivo con Filtros
+                        </h5>
+                      </div>
+                      <p className="text-[11px] text-slate-500">
+                        Elimina únicamente los elementos específicos que selecciones mediante filtros:
+                      </p>
+
+                      <div className="space-y-2 pt-1">
+                        <div>
+                          <label className="text-[10px] font-black text-slate-600 uppercase block mb-1">
+                            ¿Qué deseas borrar?
+                          </label>
+                          <select
+                            value={deleteFilterDataType}
+                            onChange={(e: any) => setDeleteFilterDataType(e.target.value)}
+                            className="w-full bg-white border border-slate-300 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-800"
+                          >
+                            <option value="contracts">Solo Contratos Firmados (con N°)</option>
+                            <option value="quotations">Solo Cotizaciones Preliminares</option>
+                            <option value="employees">Solo Cuentas de Empleados Técnicos</option>
+                            <option value="by_event_type">Solo Proyectos por Tipo de Evento</option>
+                            <option value="archived_only">Solo Proyectos Archivados / 12 Pasos</option>
+                          </select>
+                        </div>
+
+                        {deleteFilterDataType === 'by_event_type' && (
+                          <div>
+                            <label className="text-[10px] font-black text-slate-600 uppercase block mb-1">
+                              Tipo de Evento a Eliminar:
+                            </label>
+                            <select
+                              value={deleteFilterEventType}
+                              onChange={(e) => setDeleteFilterEventType(e.target.value)}
+                              className="w-full bg-white border border-slate-300 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-800"
+                            >
+                              <option value="all">Seleccionar Tipo...</option>
+                              <option value="Boda">Bodas</option>
+                              <option value="XV Años">XV Años</option>
+                              <option value="Evento Corporativo">Corporativos</option>
+                              <option value="Graduación">Graduaciones</option>
+                              <option value="Concierto / Festival">Conciertos</option>
+                            </select>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={handleExecuteSelectiveDeletion}
+                      className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-amber-400 font-black text-xs rounded-xl transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer mt-2"
+                    >
+                      <Trash2 className="w-4 h-4 text-amber-400" />
+                      <span>Ejecutar Borrado Filtrado</span>
+                    </button>
+                  </div>
+
+                  {/* Option C: Borrar TODOS los Datos (Factory Reset Total) */}
+                  <div className="bg-gradient-to-br from-red-950 to-slate-950 text-white p-5 rounded-3xl border border-red-900 space-y-3 flex flex-col justify-between shadow-lg">
+                    <div className="space-y-2">
+                      <div className="flex items-center space-x-2 text-red-400">
+                        <AlertCircle className="w-5 h-5" />
+                        <h5 className="font-black text-white text-xs sm:text-sm">
+                          Borrar TODOS los Datos (Factory Reset)
+                        </h5>
+                      </div>
+                      <p className="text-xs text-red-200/80 leading-relaxed">
+                        Purga total: borra todos los perfiles de empleados, contratos, cotizaciones, cargos, reglas personalizadas y archivos adjuntos.
+                      </p>
+                    </div>
+
+                    <button
+                      onClick={handleFactoryResetAllData}
+                      className="w-full py-2.5 bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-700 hover:to-rose-800 text-white font-black text-xs rounded-xl transition-all shadow-md flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <AlertCircle className="w-4 h-4 text-white" />
+                      <span>Reinicio Total de Fábrica</span>
+                    </button>
+                  </div>
+
+                </div>
               </div>
             </div>
           )}

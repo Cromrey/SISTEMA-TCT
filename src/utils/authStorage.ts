@@ -9,10 +9,70 @@ export const DEFAULT_AUTH_USERS: AuthUser[] = [
     username: 'TCT',
     password: 'TCT',
     role: 'admin',
-    fullName: 'Ing. Roberto Acuña (Admin TCT)',
-    jobTitle: 'Director General & Administrador',
-    phone: '+51 999 888 777',
+    fullName: 'Michael Romero (Administrador TCT)',
+    jobTitle: 'Administrador General',
+    phone: '+51 990030200',
     email: 'admin@corporaciontct.pe',
+    isActive: true,
+    createdAt: '2026-01-01T00:00:00.000Z'
+  },
+  {
+    id: 'usr-emp-elim',
+    username: 'Elim',
+    password: 'TCT2',
+    role: 'employee',
+    fullName: 'Elim Cristóbal Bernabé',
+    jobTitle: 'Editor y productor',
+    phone: '990050010',
+    email: 'elim@corporaciontct.pe',
+    isActive: true,
+    createdAt: '2026-01-01T00:00:00.000Z'
+  },
+  {
+    id: 'usr-emp-arcilla',
+    username: 'Arcilla',
+    password: 'TCT1',
+    role: 'employee',
+    fullName: 'Clay Romero Reyes',
+    jobTitle: 'Coordinador de Producción',
+    phone: '990010010',
+    email: 'clay@corporaciontct.pe',
+    isActive: true,
+    createdAt: '2026-01-01T00:00:00.000Z'
+  },
+  {
+    id: 'usr-emp-henry',
+    username: 'Henry',
+    password: 'TCT3',
+    role: 'employee',
+    fullName: 'Henry Romero Reyes',
+    jobTitle: 'Fotógrafo Principal',
+    phone: '990010020',
+    email: 'henry@corporaciontct.pe',
+    isActive: true,
+    createdAt: '2026-01-01T00:00:00.000Z'
+  },
+  {
+    id: 'usr-emp-luz',
+    username: 'Luz',
+    password: 'TCT4',
+    role: 'employee',
+    fullName: 'Luz Reyes Riveros',
+    jobTitle: 'Director de Cámara',
+    phone: '980050010',
+    email: 'luz@corporaciontct.pe',
+    isActive: true,
+    createdAt: '2026-01-01T00:00:00.000Z'
+  },
+  {
+    id: 'usr-emp-ely',
+    username: 'Ely',
+    password: 'TCT5',
+    role: 'employee',
+    fullName: 'Elizabeth Matamoros Fuentes',
+    jobTitle: 'Técnico de Audio & Luces',
+    phone: '990010054',
+    email: 'ely@corporaciontct.pe',
     isActive: true,
     createdAt: '2026-01-01T00:00:00.000Z'
   },
@@ -25,42 +85,6 @@ export const DEFAULT_AUTH_USERS: AuthUser[] = [
     jobTitle: 'Director de Cámara',
     phone: '+51 912 345 678',
     email: 'carlos.mendoza@corporaciontct.pe',
-    isActive: true,
-    createdAt: '2026-01-01T00:00:00.000Z'
-  },
-  {
-    id: 'usr-emp-valeria',
-    username: 'valeria',
-    password: '123',
-    role: 'employee',
-    fullName: 'Valeria Castro',
-    jobTitle: 'Fotógrafo Principal',
-    phone: '+51 923 456 789',
-    email: 'valeria.castro@corporaciontct.pe',
-    isActive: true,
-    createdAt: '2026-01-01T00:00:00.000Z'
-  },
-  {
-    id: 'usr-emp-jorge',
-    username: 'jorge',
-    password: '123',
-    role: 'employee',
-    fullName: 'Jorge Huamán',
-    jobTitle: 'Piloto Dron',
-    phone: '+51 934 567 890',
-    email: 'jorge.huaman@corporaciontct.pe',
-    isActive: true,
-    createdAt: '2026-01-01T00:00:00.000Z'
-  },
-  {
-    id: 'usr-emp-pedro',
-    username: 'pedro',
-    password: '123',
-    role: 'employee',
-    fullName: 'Pedro Alva',
-    jobTitle: 'Editor & Ingest',
-    phone: '+51 945 678 901',
-    email: 'pedro.alva@corporaciontct.pe',
     isActive: true,
     createdAt: '2026-01-01T00:00:00.000Z'
   }
@@ -79,15 +103,25 @@ export function getStoredUsers(): AuthUser[] {
       return DEFAULT_AUTH_USERS;
     }
     
-    // Ensure the default root TCT admin exists in the list
-    const hasTctAdmin = parsed.some(u => u.username?.toUpperCase() === 'TCT');
-    if (!hasTctAdmin) {
-      const merged = [DEFAULT_AUTH_USERS[0], ...parsed];
-      localStorage.setItem(AUTH_USERS_STORAGE_KEY, JSON.stringify(merged));
-      return merged;
+    // Ensure all standard official TCT staff accounts exist in the storage list
+    let updatedList = [...parsed];
+    let hadMissing = false;
+    
+    DEFAULT_AUTH_USERS.forEach(defUser => {
+      const exists = updatedList.some(
+        u => u.username?.toLowerCase() === defUser.username.toLowerCase() || u.id === defUser.id
+      );
+      if (!exists) {
+        updatedList.push(defUser);
+        hadMissing = true;
+      }
+    });
+
+    if (hadMissing) {
+      localStorage.setItem(AUTH_USERS_STORAGE_KEY, JSON.stringify(updatedList));
     }
     
-    return parsed;
+    return updatedList;
   } catch (err) {
     console.error('Error loading users from storage:', err);
     return DEFAULT_AUTH_USERS;
@@ -142,9 +176,21 @@ export function authenticateUser(usernameInput: string, passwordInput: string): 
     return { success: false, error: 'Por favor ingrese usuario y contraseña.' };
   }
 
-  const found = users.find(u => 
-    u.username.toLowerCase() === trimmedUser.toLowerCase() && u.password === trimmedPass
-  );
+  const cleanUser = trimmedUser.toLowerCase().replace(/^@/, '');
+  const cleanPass = trimmedPass.toLowerCase();
+
+  const found = users.find(u => {
+    const uName = (u.username || '').toLowerCase().trim();
+    const uFull = (u.fullName || '').toLowerCase().trim();
+    const uFirst = uFull.split(' ')[0] || '';
+    const uEmail = (u.email || '').toLowerCase().trim();
+    const uPass = (u.password || '').trim();
+
+    const matchesUser = uName === cleanUser || uFull === cleanUser || uFirst === cleanUser || uEmail === cleanUser;
+    const matchesPass = uPass === trimmedPass || uPass.toLowerCase() === cleanPass;
+
+    return matchesUser && matchesPass;
+  });
 
   if (!found) {
     return { success: false, error: 'Usuario o contraseña incorrectos. Verifique sus credenciales.' };
@@ -268,6 +314,44 @@ export function deleteUser(userId: string): { success: boolean; error?: string }
   const filtered = users.filter(u => u.id !== userId);
   saveStoredUsers(filtered);
   return { success: true };
+}
+
+export function deleteAllEmployeesExceptAdmin(): { success: boolean; deletedCount: number } {
+  const users = getStoredUsers();
+  const adminOnly = users.filter(u => u.username.toUpperCase() === 'TCT' || u.role === 'admin');
+  const deletedCount = users.length - adminOnly.length;
+  saveStoredUsers(adminOnly);
+  return { success: true, deletedCount };
+}
+
+export function deleteUsersByFilter(options: {
+  role?: 'all' | 'admin' | 'employee';
+  jobTitle?: string;
+  selectedUserIds?: string[];
+}): { success: boolean; remaining: AuthUser[]; deletedCount: number } {
+  const users = getStoredUsers();
+  const remaining = users.filter(u => {
+    // Preserve main TCT account always
+    if (u.username.toUpperCase() === 'TCT') return true;
+
+    if (options.selectedUserIds && options.selectedUserIds.includes(u.id)) {
+      return false;
+    }
+
+    if (options.role && options.role !== 'all' && u.role === options.role) {
+      return false;
+    }
+
+    if (options.jobTitle && options.jobTitle !== 'all' && u.jobTitle === options.jobTitle) {
+      return false;
+    }
+
+    return true;
+  });
+
+  const deletedCount = users.length - remaining.length;
+  saveStoredUsers(remaining);
+  return { success: true, remaining, deletedCount };
 }
 
 export function resetUsersToDefaults(): AuthUser[] {

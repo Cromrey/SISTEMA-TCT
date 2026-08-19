@@ -281,6 +281,21 @@ export default function App() {
     showToast(`🎉 ¡Producción creada con éxito! Contrato listo para exportar.`);
   };
 
+  // Delete a single project / contract
+  const handleDeleteProject = (projectId: string) => {
+    const target = projects.find(p => p.id === projectId);
+    const title = target ? target.title : 'el expediente';
+    if (window.confirm(`¿Deseas eliminar permanentemente el contrato/expediente "${title}"?`)) {
+      const updated = projects.filter(p => p.id !== projectId);
+      setProjects(updated);
+      saveProjects(updated);
+      if (selectedProjectForDetail?.id === projectId) setSelectedProjectForDetail(null);
+      if (selectedProjectForContract?.id === projectId) setSelectedProjectForContract(null);
+      if (selectedProjectForReport?.id === projectId) setSelectedProjectForReport(null);
+      showToast(`🗑️ "${title}" ha sido eliminado del sistema.`);
+    }
+  };
+
   // Reset to demo data
   const handleResetData = () => {
     if (window.confirm('¿Deseas restaurar los proyectos demo oficiales de Corporación TCT?')) {
@@ -393,6 +408,7 @@ export default function App() {
             onOpenContractExport={(proj) => setSelectedProjectForContract(proj)}
             onOpenAnalytics={() => setIsAnalyticsModalOpen(true)}
             onUpdateProject={handleUpdateProject}
+            onDeleteProject={handleDeleteProject}
             savedQuickFilter={savedAdminFilter}
             onSaveQuickFilter={setSavedAdminFilter}
             allStaff={allStaff}
@@ -442,6 +458,7 @@ export default function App() {
           project={selectedProjectForDetail}
           onClose={() => setSelectedProjectForDetail(null)}
           onUpdateProject={handleUpdateProject}
+          onDeleteProject={handleDeleteProject}
           onOpenReportPrint={(proj) => setSelectedProjectForReport(proj)}
           onOpenContractExport={(proj) => setSelectedProjectForContract(proj)}
         />
@@ -510,6 +527,9 @@ export default function App() {
             refreshStaffList(updatedUsers);
           }}
           onResetDemoData={handleResetData}
+          onProjectsChange={(updatedProjects) => {
+            setProjects(updatedProjects);
+          }}
           onRulesUpdated={() => {
             showToast('✓ Reglas Maestras TCT guardadas y actualizadas');
           }}

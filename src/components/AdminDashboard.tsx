@@ -33,7 +33,8 @@ import {
   PieChart,
   QrCode,
   Download,
-  CalendarDays
+  CalendarDays,
+  Trash2
 } from 'lucide-react';
 import { CalendarView } from './CalendarView';
 import { ExecutiveSummaryModule } from './ExecutiveSummaryModule';
@@ -66,6 +67,7 @@ interface AdminDashboardProps {
   onOpenContractExport: (project: ProductionProject) => void;
   onOpenAnalytics: () => void;
   onUpdateProject?: (project: ProductionProject) => void;
+  onDeleteProject?: (projectId: string) => void;
   savedQuickFilter?: 'all' | 'pending' | 'in_progress' | 'completed' | 'overdue' | 'due_this_week' | 'high_priority' | 'waiting_approval' | 'phase_specific';
   onSaveQuickFilter?: (filter: any) => void;
   allStaff?: StaffMember[];
@@ -86,6 +88,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onOpenContractExport,
   onOpenAnalytics,
   onUpdateProject,
+  onDeleteProject,
   savedQuickFilter = 'all',
   onSaveQuickFilter,
   allStaff = []
@@ -935,47 +938,62 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
                     </div>
 
-                    {/* Right Column: Actions (Contrato, Informe, Ver 12 Pasos, QR) */}
-                    <div className="flex flex-row xl:flex-col items-stretch justify-end space-x-2 xl:space-x-0 xl:space-y-1.5 shrink-0 pt-2 xl:pt-0 border-t xl:border-t-0 border-slate-300">
+                    {/* Right Column: Actions (Contrato, Informe, Ver 12 Pasos, QR, Borrar) */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 xl:flex xl:flex-col items-stretch justify-end gap-1.5 shrink-0 pt-2 xl:pt-0 border-t xl:border-t-0 border-slate-300">
                       
                       {/* Export Contract Button */}
                       <button
                         onClick={() => onOpenContractExport(project)}
-                        className="flex-1 xl:flex-initial px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 transition-all text-xs font-black flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
+                        className="min-h-[44px] xl:min-h-0 xl:flex-initial px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 active:scale-95 text-slate-950 transition-all text-xs font-black flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
                         title="Ver y Exportar Contrato Oficial con datos rellenados"
                       >
-                        <FileText className="w-3.5 h-3.5" />
+                        <FileText className="w-4 h-4 shrink-0" />
                         <span>Contrato</span>
                       </button>
 
                       {/* PDF Report */}
                       <button
                         onClick={() => onOpenReportPrint(project)}
-                        className="flex-1 xl:flex-initial px-3.5 py-2 rounded-xl bg-white hover:bg-emerald-50 text-slate-900 transition-colors text-xs font-bold flex items-center justify-center gap-1.5 border border-slate-300 shadow-xs cursor-pointer"
+                        className="min-h-[44px] xl:min-h-0 xl:flex-initial px-3.5 py-2 rounded-xl bg-white hover:bg-emerald-50 active:scale-95 text-slate-900 transition-colors text-xs font-bold flex items-center justify-center gap-1.5 border border-slate-300 shadow-xs cursor-pointer"
                         title="Exportar Reporte de Auditoría TCT"
                       >
-                        <Printer className="w-3.5 h-3.5 text-emerald-600" />
+                        <Printer className="w-4 h-4 text-emerald-600 shrink-0" />
                         <span>Informe</span>
                       </button>
 
                       {/* Open 12 Steps Modal */}
                       <button
                         onClick={() => onOpenProject(project)}
-                        className="flex-1 xl:flex-initial px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-amber-400 text-xs font-black transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer border border-amber-500/30"
+                        className="min-h-[44px] xl:min-h-0 xl:flex-initial px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 active:scale-95 text-amber-400 text-xs font-black transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer border border-amber-500/30"
                       >
-                        <Eye className="w-3.5 h-3.5" />
-                        <span>Ver 12 Pasos</span>
+                        <Eye className="w-4 h-4 shrink-0" />
+                        <span>12 Pasos</span>
                       </button>
 
                       {/* QR Check-in on site button */}
                       <button
                         onClick={() => setQrModalProject(project)}
-                        className="flex-1 xl:flex-initial px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 transition-all text-[11px] font-bold flex items-center justify-center gap-1.5 shadow-xs border border-slate-700 cursor-pointer"
+                        className="min-h-[44px] xl:min-h-0 xl:flex-initial px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 active:scale-95 text-amber-300 transition-all text-[11px] font-bold flex items-center justify-center gap-1.5 shadow-xs border border-slate-700 cursor-pointer"
                         title="Generar Código QR de Asistencia y Check-in en Locación"
                       >
-                        <QrCode className="w-3 h-3 text-amber-400" />
-                        <span>QR Check-in</span>
+                        <QrCode className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                        <span>QR Check</span>
                       </button>
+
+                      {/* Delete individual project button */}
+                      {onDeleteProject && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDeleteProject(project.id);
+                          }}
+                          className="col-span-2 sm:col-span-4 xl:col-span-1 min-h-[40px] xl:min-h-0 xl:flex-initial px-2.5 py-1.5 rounded-xl bg-red-600/10 hover:bg-red-600/25 active:scale-95 text-red-700 hover:text-red-800 transition-all text-[11px] font-bold flex items-center justify-center gap-1 border border-red-200 cursor-pointer"
+                          title="Eliminar este contrato/expediente de la base de datos"
+                        >
+                          <Trash2 className="w-3.5 h-3.5 text-red-500 shrink-0" />
+                          <span>Eliminar Expediente</span>
+                        </button>
+                      )}
                     </div>
 
                   </div>

@@ -72,15 +72,15 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Right Actions & User Controls */}
           <div className="flex items-center space-x-2 sm:space-x-3">
             
-            {/* "Reglas" Master Rules Button (Access to Rules, Users, System View, Shortcuts, and Sync status) */}
+            {/* "Reglas" Master Rules Button (Icon Only as requested) */}
             <button
               id="btn-open-rules-config"
               onClick={onOpenRulesModal}
-              className="px-3 sm:px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-750 text-amber-300 hover:text-amber-200 border border-slate-700 hover:border-amber-500/60 transition-all flex items-center gap-2 text-xs font-black shadow-xs shrink-0 cursor-pointer"
-              title="Configurar Reglas Maestras TCT, Usuarios, Vista de Sistema y Atajos"
+              className="p-2 sm:p-2.5 rounded-xl bg-slate-800 hover:bg-slate-750 text-amber-300 hover:text-amber-200 border border-slate-700 hover:border-amber-500/60 transition-all flex items-center justify-center text-xs font-black shadow-xs shrink-0 cursor-pointer"
+              title="Reglas & Sistema (Configuración, Usuarios, Autoguardado, Restablecer)"
+              aria-label="Reglas & Sistema"
             >
               <Sliders className="w-4 h-4 text-amber-400" />
-              <span className="font-black">Reglas & Sistema</span>
             </button>
 
             {/* New Project CTA (Only for Admin) */}

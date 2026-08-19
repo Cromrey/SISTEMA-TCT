@@ -156,6 +156,94 @@ export const resetToDemoData = (): ProductionProject[] => {
   return INITIAL_PROJECTS;
 };
 
+/**
+ * Deletes all contracts, quotes, and project history, resetting the projects database to empty.
+ */
+export const deleteAllContractsHistory = (): ProductionProject[] => {
+  const emptyProjects: ProductionProject[] = [];
+  memoryProjectsCache = emptyProjects;
+
+  clearIdbStore(STORES.PROJECTS).then(() => {
+    setIdbItem(STORES.PROJECTS, IDB_PROJECTS_KEY, emptyProjects);
+  });
+
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(emptyProjects));
+    localStorage.setItem(SYNC_TIMESTAMP_KEY, new Date().toISOString());
+  } catch (err) {
+    console.warn('Notice clearing projects in localStorage:', err);
+  }
+
+  window.dispatchEvent(new CustomEvent('tct_projects_updated', { detail: emptyProjects }));
+  return emptyProjects;
+};
+
+/**
+ * Selectively deletes projects/contracts/quotations based on custom filter criteria.
+ */
+export const deleteProjectsByFilter = (options: {
+  targetType?: 'all' | 'contracts' | 'quotations';
+  eventType?: string;
+  isArchivedOnly?: boolean;
+  selectedProjectIds?: string[];
+}): { remaining: ProductionProject[]; deletedCount: number } => {
+  const current = getStoredProjects();
+  
+  const remaining = current.filter(p => {
+    // If specific IDs are selected
+    if (options.selectedProjectIds && options.selectedProjectIds.length > 0) {
+      if (options.selectedProjectIds.includes(p.id)) return false;
+    }
+
+    // Filter by Event Type
+    if (options.eventType && options.eventType !== 'all') {
+      if (p.eventType === options.eventType) return false;
+    }
+
+    // Filter by Archived/Completed status
+    if (options.isArchivedOnly) {
+      const isComplete = p.isArchived || p.phases.every(ph => ph.steps.every(st => st.status === 'completed'));
+      if (isComplete) return false;
+    }
+
+    // Target type: contracts vs quotations
+    if (options.targetType === 'contracts') {
+      const isContract = p.contractNumber && p.contractNumber.length > 0;
+      if (isContract) return false;
+    } else if (options.targetType === 'quotations') {
+      const isQuotation = !p.contractNumber || p.contractNumber.trim() === '';
+      if (isQuotation) return false;
+    }
+
+    return true;
+  });
+
+  const deletedCount = current.length - remaining.length;
+  saveProjects(remaining);
+  return { remaining, deletedCount };
+};
+
+/**
+ * Master Factory Reset: Purges all project history, resets users, resets rules to factory default.
+ */
+export const factoryResetAllSystemData = (): void => {
+  // 1. Clear projects
+  deleteAllContractsHistory();
+
+  // 2. Clear IndexedDB completely
+  clearIdbStore(STORES.PROJECTS).catch(console.warn);
+  clearIdbStore(STORES.RULES).catch(console.warn);
+  clearIdbStore(STORES.SYNC_QUEUE).catch(console.warn);
+
+  // 3. Clear relevant LocalStorage keys
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(SYNC_TIMESTAMP_KEY);
+  } catch (e) {
+    console.warn('Notice clearing local storage on factory reset:', e);
+  }
+};
+
 export const getLastSyncTime = (): string => {
   return localStorage.getItem(SYNC_TIMESTAMP_KEY) || new Date().toISOString();
 };

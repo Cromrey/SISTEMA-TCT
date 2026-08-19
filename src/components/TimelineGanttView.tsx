@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { ProductionProject, EventType, StepData, PhaseData } from '../types';
+import { printElement, downloadPrintableHtml } from '../utils/printHelper';
 import { 
   Calendar as CalendarIcon, 
   Clock, 
@@ -1020,6 +1021,22 @@ export const TimelineGanttView: React.FC<TimelineGanttViewProps> = ({
                 className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-200 rounded-xl transition-colors cursor-pointer"
               >
                 Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  downloadPrintableHtml(
+                    'tct-gantt-chart-container',
+                    `Cronograma-Gantt-TCT-${exportScale}.html`,
+                    `Diagrama Gantt 12 Pasos - Corporación TCT`
+                  );
+                  setIsExportModalOpen(false);
+                }}
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 text-xs font-bold rounded-xl shadow-xs flex items-center gap-2 transition-all cursor-pointer"
+                title="Descargar archivo imprimible directamente al equipo"
+              >
+                <Download className="w-4 h-4 text-amber-400" />
+                <span>Descargar HTML / PDF</span>
               </button>
               <button
                 type="button"
