@@ -1,0 +1,252 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" width="100%" height="100%">
+  <defs>
+    <!-- Circular Dark Background Gradient -->
+    <radialGradient id="tctCircleBg" cx="45%" cy="35%" r="65%">
+      <stop offset="0%" stopColor="#2c323b" />
+      <stop offset="40%" stopColor="#181c22" />
+      <stop offset="75%" stopColor="#0d0f12" />
+      <stop offset="100%" stopColor="#050607" />
+    </radialGradient>
+
+    <!-- Metallic 3D Letter & Frame Gradient -->
+    <linearGradient id="tctChromeGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stopColor="#ffffff" />
+      <stop offset="25%" stopColor="#e2e8f0" />
+      <stop offset="55%" stopColor="#cbd5e1" />
+      <stop offset="85%" stopColor="#94a3b8" />
+      <stop offset="100%" stopColor="#64748b" />
+    </linearGradient>
+
+    <!-- Chrome Bevel Top Highlight -->
+    <linearGradient id="tctChromeBevel" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stopColor="#ffffff" stopOpacity="0.95" />
+      <stop offset="50%" stopColor="#f1f5f9" stopOpacity="0.6" />
+      <stop offset="100%" stopColor="#94a3b8" stopOpacity="0.2" />
+    </linearGradient>
+
+    <!-- Optical Multi-Coating Lens Refraction -->
+    <radialGradient id="tctLensOpticalCore" cx="44%" cy="38%" r="62%">
+      <stop offset="0%" stopColor="#fbbf24" />
+      <stop offset="16%" stopColor="#f97316" />
+      <stop offset="38%" stopColor="#ec4899" />
+      <stop offset="55%" stopColor="#8b5cf6" />
+      <stop offset="72%" stopColor="#0284c7" />
+      <stop offset="88%" stopColor="#0f172a" />
+      <stop offset="100%" stopColor="#020617" />
+    </radialGradient>
+
+    <!-- Lens Amber Flare -->
+    <linearGradient id="tctAmberFlare" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stopColor="#ffffff" stopOpacity="0.95" />
+      <stop offset="25%" stopColor="#fed7aa" stopOpacity="0.8" />
+      <stop offset="60%" stopColor="#f97316" stopOpacity="0.4" />
+      <stop offset="100%" stopColor="#c2410c" stopOpacity="0" />
+    </linearGradient>
+
+    <!-- Lens Cyan Flare -->
+    <linearGradient id="tctCyanFlare" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stopColor="#38bdf8" stopOpacity="0.85" />
+      <stop offset="55%" stopColor="#2563eb" stopOpacity="0.45" />
+      <stop offset="100%" stopColor="#1e1b4b" stopOpacity="0" />
+    </linearGradient>
+
+    <!-- Knurled Lens Rim Metal -->
+    <linearGradient id="tctLensMetalRim" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stopColor="#475569" />
+      <stop offset="50%" stopColor="#0f172a" />
+      <stop offset="100%" stopColor="#1e293b" />
+    </linearGradient>
+
+    <!-- Outer Bevel Drop Shadow -->
+    <filter id="tctOuterShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="10" stdDeviation="12" floodColor="#000000" floodOpacity="0.75" />
+    </filter>
+
+    <filter id="tctInnerElementShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="6" stdDeviation="5" floodColor="#000000" floodOpacity="0.8" />
+    </filter>
+  </defs>
+
+  <!-- ========================================================================= -->
+  <!-- 1. BASE CIRCULAR BADGE (Dark Metallic Disc)                               -->
+  <!-- ========================================================================= -->
+  <g filter="url(#tctOuterShadow)">
+    <!-- Base Circular Emblem -->
+    <circle cx="300" cy="300" r="290" fill="url(#tctCircleBg)" stroke="#334155" stroke-width="4" />
+    <!-- Inner ambient highlight rim -->
+    <circle cx="300" cy="300" r="286" fill="none" stroke="#64748b" stroke-width="1.5" opacity="0.4" />
+  </g>
+
+  <!-- ========================================================================= -->
+  <!-- 2. DSLR CAMERA FRAME OUTLINE                                              -->
+  <!-- ========================================================================= -->
+  <g filter="url(#tctInnerElementShadow)">
+    <!-- Top-left shutter button -->
+    <rect x="135" y="160" width="55" height="14" rx="6" fill="#64748b" stroke="#cbd5e1" stroke-width="1.5" />
+    <rect x="140" y="162" width="45" height="4" rx="2" fill="#e2e8f0" />
+
+    <!-- Main Outer DSLR Camera Frame (Beveled Metallic Silver Stroke) -->
+    <path
+      d="M 195 175 
+         L 230 142 
+         Q 242 132, 258 132 
+         L 342 132 
+         Q 358 132, 370 142 
+         L 405 175 
+         Q 465 175, 480 190 
+         Q 492 205, 492 235 
+         L 492 360 
+         Q 492 405, 448 405 
+         L 152 405 
+         Q 108 405, 108 360 
+         L 108 235 
+         Q 108 205, 120 190 
+         Q 135 175, 195 175 Z"
+      fill="#0d1117"
+      stroke="url(#tctChromeGrad)"
+      stroke-width="12"
+      stroke-linejoin="round"
+      stroke-linecap="round"
+    />
+
+    <!-- Bevel inner edge of camera -->
+    <path
+      d="M 197 178 
+         L 231 146 
+         Q 243 136, 258 136 
+         L 342 136 
+         Q 357 136, 369 146 
+         L 403 178 
+         Q 462 178, 476 193 
+         Q 487 207, 487 235 
+         L 487 358 
+         Q 487 400, 446 400 
+         L 154 400 
+         Q 113 400, 113 358 
+         L 113 235 
+         Q 113 207, 124 193 
+         Q 138 178, 197 178 Z"
+      fill="none"
+      stroke="#ffffff"
+      stroke-width="2"
+      opacity="0.6"
+    />
+  </g>
+
+  <!-- ========================================================================= -->
+  <!-- 3. 3D METALLIC SILVER LETTERS T C T                                       -->
+  <!-- ========================================================================= -->
+  <g filter="url(#tctInnerElementShadow)">
+    <!-- LEFT LETTER 'T' -->
+    <g>
+      <!-- Base 3D Body -->
+      <path
+        d="M 132 204 L 236 204 L 236 244 L 204 244 L 204 372 L 164 372 L 164 244 L 132 244 Z"
+        fill="url(#tctChromeGrad)"
+        stroke="#ffffff"
+        stroke-width="2"
+        stroke-linejoin="round"
+      />
+      <!-- Bevel Top Highlight -->
+      <path d="M 132 204 L 236 204 L 232 209 L 136 209 Z" fill="#ffffff" opacity="0.9" />
+      <!-- Left Edge Shadow -->
+      <path d="M 132 204 L 136 209 L 136 240 L 132 244 Z" fill="#64748b" opacity="0.6" />
+    </g>
+
+    <!-- RIGHT LETTER 'T' -->
+    <g>
+      <!-- Base 3D Body -->
+      <path
+        d="M 364 204 L 468 204 L 468 244 L 436 244 L 436 372 L 396 372 L 396 244 L 364 244 Z"
+        fill="url(#tctChromeGrad)"
+        stroke="#ffffff"
+        stroke-width="2"
+        stroke-linejoin="round"
+      />
+      <!-- Bevel Top Highlight -->
+      <path d="M 364 204 L 468 204 L 464 209 L 368 209 Z" fill="#ffffff" opacity="0.9" />
+      <!-- Right Edge Shadow -->
+      <path d="M 468 204 L 468 244 L 464 240 L 464 209 Z" fill="#64748b" opacity="0.6" />
+    </g>
+
+    <!-- CENTER LETTER 'C' (Sculpted Ring around Lens) -->
+    <g>
+      <path
+        d="M 346 220 
+           C 318 198, 282 198, 254 220 
+           C 210 252, 210 324, 254 356 
+           C 282 378, 318 378, 346 356 
+           L 326 322 
+           C 312 333, 288 333, 276 322 
+           C 252 301, 252 275, 276 254 
+           C 288 243, 312 243, 326 254 Z"
+        fill="url(#tctChromeGrad)"
+        stroke="#ffffff"
+        stroke-width="2.5"
+        stroke-linejoin="round"
+      />
+      <!-- Top Bevel Highlight along outer C -->
+      <path
+        d="M 346 220 
+           C 318 198, 282 198, 254 220 
+           C 220 245, 220 315, 254 340 
+           C 248 334, 216 295, 216 288 
+           C 216 252, 248 222, 254 220 Z"
+        fill="#ffffff"
+        opacity="0.8"
+      />
+    </g>
+  </g>
+
+  <!-- ========================================================================= -->
+  <!-- 4. REALISTIC OPTICAL CAMERA LENS (Inside 'C')                             -->
+  <!-- ========================================================================= -->
+  <g>
+    <!-- Outer Metal Knurling Barrel -->
+    <circle cx="300" cy="288" r="70" fill="url(#tctLensMetalRim)" stroke="#0f172a" stroke-width="3" />
+    
+    <!-- Ribbed Grooves -->
+    <circle cx="300" cy="288" r="65" fill="none" stroke="#64748b" stroke-width="2" stroke-dasharray="4,2" />
+    <circle cx="300" cy="288" r="60" fill="#020617" stroke="#334155" stroke-width="2" />
+    <circle cx="300" cy="288" r="56" fill="#090d16" stroke="#94a3b8" stroke-width="1.5" />
+
+    <!-- Optical Multi-Coating Glass Core -->
+    <circle cx="300" cy="288" r="52" fill="url(#tctLensOpticalCore)" />
+
+    <!-- Concentric Internal Lens Rings -->
+    <circle cx="300" cy="288" r="42" fill="none" stroke="#f97316" stroke-width="1.5" opacity="0.6" />
+    <circle cx="300" cy="288" r="32" fill="none" stroke="#38bdf8" stroke-width="1.5" opacity="0.5" />
+    <circle cx="300" cy="288" r="24" fill="#020617" stroke="#1e293b" stroke-width="2" />
+
+    <!-- Aperture Center -->
+    <circle cx="300" cy="288" r="16" fill="#000000" />
+    
+    <!-- Warm Golden / Amber Optical Flare (Top Left) -->
+    <ellipse cx="282" cy="268" rx="26" ry="16" fill="url(#tctAmberFlare)" transform="rotate(-35 282 268)" />
+    
+    <!-- Cyan Flare Refraction (Bottom Right) -->
+    <ellipse cx="318" cy="308" rx="22" ry="12" fill="url(#tctCyanFlare)" transform="rotate(-35 318 308)" />
+
+    <!-- Specular Light Points on Glass -->
+    <circle cx="288" cy="272" r="5" fill="#ffffff" opacity="0.95" />
+    <circle cx="294" cy="277" r="2" fill="#ffffff" opacity="0.8" />
+  </g>
+
+  <!-- ========================================================================= -->
+  <!-- 5. BOTTOM METALLIC TEXT: "CORPORACIÓN TCT"                                -->
+  <!-- ========================================================================= -->
+  <g filter="url(#tctInnerElementShadow)">
+    <text
+      x="300"
+      y="472"
+      text-anchor="middle"
+      fill="url(#tctChromeGrad)"
+      stroke="#cbd5e1"
+      stroke-width="1"
+      font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Arial Black', sans-serif"
+      font-size="44"
+      font-weight="900"
+      letter-spacing="9"
+    >CORPORACIÓN TCT</text>
+  </g>
+</svg>

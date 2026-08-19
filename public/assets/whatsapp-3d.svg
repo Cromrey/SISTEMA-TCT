@@ -1,0 +1,168 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="100%" height="100%">
+  <defs>
+    <!-- Outer Bezel / Speech Bubble 3D White Gradient -->
+    <linearGradient id="waWhiteBezelGrad" x1="20%" y1="10%" x2="80%" y2="90%">
+      <stop offset="0%" stopColor="#ffffff" />
+      <stop offset="35%" stopColor="#f1f5f9" />
+      <stop offset="70%" stopColor="#e2e8f0" />
+      <stop offset="95%" stopColor="#cbd5e1" />
+      <stop offset="100%" stopColor="#94a3b8" />
+    </linearGradient>
+
+    <!-- Outer White Highlight Rim -->
+    <linearGradient id="waWhiteRimGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stopColor="#ffffff" stopOpacity="1" />
+      <stop offset="50%" stopColor="#f8fafc" stopOpacity="0.8" />
+      <stop offset="100%" stopColor="#64748b" stopOpacity="0.3" />
+    </linearGradient>
+
+    <!-- Green Dome 3D Spherical Radial Gradient -->
+    <radialGradient id="waGreenSphere" cx="42%" cy="32%" r="65%" fx="35%" fy="25%">
+      <stop offset="0%" stopColor="#5cf04b" />
+      <stop offset="25%" stopColor="#25d366" />
+      <stop offset="60%" stopColor="#128c40" />
+      <stop offset="88%" stopColor="#075e2b" />
+      <stop offset="100%" stopColor="#04421d" />
+    </radialGradient>
+
+    <!-- Top Specular Gloss Highlight for Glass Dome -->
+    <linearGradient id="waGlassGloss" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%" stopColor="#ffffff" stopOpacity="0.85" />
+      <stop offset="40%" stopColor="#ffffff" stopOpacity="0.25" />
+      <stop offset="100%" stopColor="#ffffff" stopOpacity="0.0" />
+    </linearGradient>
+
+    <!-- Phone Receiver 3D White Plastic Gradient -->
+    <linearGradient id="waPhoneGrad" x1="30%" y1="15%" x2="70%" y2="85%">
+      <stop offset="0%" stopColor="#ffffff" />
+      <stop offset="45%" stopColor="#f8fafc" />
+      <stop offset="80%" stopColor="#e2e8f0" />
+      <stop offset="100%" stopColor="#cbd5e1" />
+    </linearGradient>
+
+    <!-- Drop Shadow Filters -->
+    <filter id="waDropShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" floodColor="#042f1a" floodOpacity="0.45" />
+      <feDropShadow dx="0" dy="4" stdDeviation="6" floodColor="#000000" floodOpacity="0.3" />
+    </filter>
+
+    <filter id="waInnerShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="4" floodColor="#022c15" floodOpacity="0.6" />
+    </filter>
+
+    <filter id="waPhoneShadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="2" dy="6" stdDeviation="5" floodColor="#022c15" floodOpacity="0.65" />
+    </filter>
+  </defs>
+
+  <!-- Outer Speech Bubble with 3D White Bezel and Tail -->
+  <g filter="url(#waDropShadow)">
+    <!-- Base 3D Beveled Outer Path (Circle + Tail at bottom-left) -->
+    <path
+      d="M 250 40 
+         C 365.98 40, 460 134.02, 460 250 
+         C 460 365.98, 365.98 460, 250 460 
+         C 204.6 460, 162.7 445.6, 128.5 421.2 
+         L 58 448 
+         L 86.8 379.4 
+         C 57.8 343.3, 40 298.6, 40 250 
+         C 40 134.02, 134.02 40, 250 40 Z"
+      fill="url(#waWhiteBezelGrad)"
+    />
+
+    <!-- Inner Groove Shadow for 3D Depth -->
+    <path
+      d="M 250 43 
+         C 364.3 43, 457 135.7, 457 250 
+         C 457 364.3, 364.3 457, 250 457 
+         C 205.3 457, 164 442.8, 130.3 418.8 
+         L 64 445 
+         L 91.8 378.1 
+         C 63.3 342.6, 43 298.6, 43 250 
+         C 43 135.7, 135.7 43, 250 43 Z"
+      fill="none"
+      stroke="url(#waWhiteRimGrad)"
+      stroke-width="5"
+    />
+
+    <!-- Inner Green Dome Circle (Recessed / Spherical) -->
+    <circle
+      cx="250"
+      cy="250"
+      r="170"
+      fill="url(#waGreenSphere)"
+      stroke="#04421d"
+      stroke-width="4"
+    />
+
+    <!-- Spherical Ambient Occlusion Rim inside green circle -->
+    <circle
+      cx="250"
+      cy="250"
+      r="168"
+      fill="none"
+      stroke="#032c14"
+      stroke-width="6"
+      opacity="0.6"
+    />
+
+    <!-- Glossy Specular Crescent Highlight at Top of Green Sphere -->
+    <path
+      d="M 120 200 
+         C 140 120, 200 95, 250 95 
+         C 300 95, 360 120, 380 200 
+         C 330 160, 290 150, 250 150 
+         C 210 150, 170 160, 120 200 Z"
+      fill="url(#waGlassGloss)"
+    />
+
+    <!-- Additional Secondary Elliptical Reflection Bubble -->
+    <ellipse
+      cx="250"
+      cy="130"
+      rx="90"
+      ry="25"
+      fill="#ffffff"
+      opacity="0.4"
+    />
+
+    <!-- 3D White Telephone Handset Icon -->
+    <g filter="url(#waPhoneShadow)">
+      <path
+        d="M 195 155 
+           C 188 155, 180 160, 176 167 
+           C 162 192, 158 228, 184 278 
+           C 210 328, 246 348, 280 348 
+           C 290 348, 298 342, 303 334 
+           L 316 312 
+           C 321 304, 319 293, 311 288 
+           L 278 266 
+           C 270 261, 259 263, 254 270 
+           L 246 281 
+           C 241 280, 226 270, 214 252 
+           C 202 234, 200 220, 202 216 
+           L 215 210 
+           C 224 206, 228 195, 225 186 
+           L 209 157 
+           C 206 156, 200 155, 195 155 Z"
+        fill="url(#waPhoneGrad)"
+        stroke="#e2e8f0"
+        stroke-width="3"
+        stroke-linejoin="round"
+      />
+      <!-- Handset 3D top shine -->
+      <path
+        d="M 195 157 
+           C 190 157, 184 161, 180 168 
+           C 172 183, 168 206, 178 238 
+           C 183 234, 193 216, 202 212 
+           L 214 207 
+           C 220 204, 223 196, 221 189 
+           L 207 163 
+           C 204 158, 200 157, 195 157 Z"
+        fill="#ffffff"
+        opacity="0.8"
+      />
+    </g>
+  </g>
+</svg>

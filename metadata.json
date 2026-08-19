@@ -1,0 +1,6 @@
+{
+  "name": "Sistema de Monitoreo Audiovisual TCT",
+  "description": "Sistema de gestión y seguimiento de producción audiovisual para Corporación TCT con paneles para admin y empleados, reglas de cobranza, checklists interactivos, gráficos comparativos y reportes exportables.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
