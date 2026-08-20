@@ -223,17 +223,19 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
       {/* Main Login Card (Matching Screenshot Image 1) */}
       <div className="w-full max-w-sm relative z-10 space-y-5 my-auto">
         
-        {/* TCT Camera Logo Badge (Matching User Uploaded 1 TCT.png) */}
+        {/* TCT Official Circular Emblem Logo (Matching User Uploaded 4 TCT REDONDO.png) */}
         <div className="text-center space-y-2">
           <div className="relative inline-flex items-center justify-center">
             {/* Ambient golden halo */}
-            <div className="absolute -inset-4 bg-amber-500/20 rounded-full blur-2xl pointer-events-none" />
-            <img
-              src="/assets/tct-logo.png"
-              alt="Corporación TCT"
-              referrerPolicy="no-referrer"
-              className="h-28 sm:h-32 w-auto max-w-[280px] object-contain filter drop-shadow-[0_10px_25px_rgba(0,0,0,0.85)] relative z-10 transition-transform duration-300 hover:scale-105"
-            />
+            <div className="absolute -inset-2 bg-amber-500/20 rounded-full blur-xl pointer-events-none" />
+            <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full overflow-hidden relative z-10 bg-slate-950 flex items-center justify-center border-2 border-amber-400/40 shadow-[0_10px_25px_rgba(0,0,0,0.85)] transition-transform duration-300 hover:scale-105">
+              <img
+                src="/assets/tct-logo.png"
+                alt="Corporación TCT Logo Redondo Oficial"
+                referrerPolicy="no-referrer"
+                className="w-full h-full object-cover select-none"
+              />
+            </div>
           </div>
 
           {/* Title and Slogan */}

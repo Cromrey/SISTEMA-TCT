@@ -119,36 +119,42 @@ export const Header: React.FC<HeaderProps> = ({
                 </div>
 
                 <div className="flex items-center space-x-1 sm:space-x-1.5">
-                  <select
-                    id="select-active-system-user"
-                    aria-label="Seleccionar usuario activo"
-                    value={
-                      currentRole === 'admin' 
-                        ? (allUsers.find(u => u.role === 'admin')?.id || 'admin') 
-                        : (currentStaff?.id || allStaff[0]?.id || '')
-                    }
-                    onChange={(e) => handleSelectUser(e.target.value)}
-                    className="bg-transparent text-xs font-black text-white focus:outline-none cursor-pointer max-w-[130px] sm:max-w-[190px] truncate pr-1"
-                  >
-                    {allUsers.length > 0 ? (
-                      allUsers.map((usr) => (
-                        <option key={usr.id} value={usr.id} className="bg-slate-900 text-white">
-                          {usr.fullName}
-                        </option>
-                      ))
-                    ) : (
-                      <>
-                        <option value="admin" className="bg-slate-900 text-white">
-                          Ing. Michael RomeroReyes
-                        </option>
-                        {allStaff.map((st) => (
-                          <option key={st.id} value={st.id} className="bg-slate-900 text-white">
-                            {st.name}
+                  {currentUser?.role === 'admin' ? (
+                    <select
+                      id="select-active-system-user"
+                      aria-label="Seleccionar usuario activo"
+                      value={
+                        currentRole === 'admin' 
+                          ? (allUsers.find(u => u.role === 'admin')?.id || 'admin') 
+                          : (currentStaff?.id || allStaff[0]?.id || '')
+                      }
+                      onChange={(e) => handleSelectUser(e.target.value)}
+                      className="bg-transparent text-xs font-black text-white focus:outline-none cursor-pointer max-w-[130px] sm:max-w-[190px] truncate pr-1"
+                    >
+                      {allUsers.length > 0 ? (
+                        allUsers.map((usr) => (
+                          <option key={usr.id} value={usr.id} className="bg-slate-900 text-white">
+                            {usr.fullName}
                           </option>
-                        ))}
-                      </>
-                    )}
-                  </select>
+                        ))
+                      ) : (
+                        <>
+                          <option value="admin" className="bg-slate-900 text-white">
+                            Ing. Michael RomeroReyes
+                          </option>
+                          {allStaff.map((st) => (
+                            <option key={st.id} value={st.id} className="bg-slate-900 text-white">
+                              {st.name}
+                            </option>
+                          ))}
+                        </>
+                      )}
+                    </select>
+                  ) : (
+                    <span className="text-xs font-black text-white max-w-[140px] sm:max-w-[200px] truncate px-1">
+                      {currentUser?.fullName || currentStaff.name}
+                    </span>
+                  )}
 
                   {/* Role / Cargo Badge right beside user */}
                   <span className={`px-2 py-0.5 rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-wider whitespace-nowrap shadow-xs ${
@@ -179,12 +185,11 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               id="btn-new-project-header"
               onClick={onOpenNewProject}
-              className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3.5 py-1.5 sm:py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 text-xs font-black rounded-xl shadow-md hover:shadow-lg transition-all shrink-0 cursor-pointer"
+              className="flex items-center gap-1 sm:gap-1.5 px-3 py-1.5 sm:py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 text-xs font-black rounded-xl shadow-md hover:shadow-lg transition-all shrink-0 cursor-pointer whitespace-nowrap"
               title="Registrar nueva producción y emitir contrato (Ctrl+N)"
             >
-              <PlusCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              <span className="hidden sm:inline">+ Nueva Producción</span>
-              <span className="sm:hidden font-bold">+ Crear</span>
+              <PlusCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+              <span className="whitespace-nowrap">+ Nueva Producción</span>
             </button>
 
             {/* Logout Button */}

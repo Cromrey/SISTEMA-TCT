@@ -288,35 +288,28 @@ export const WhatsAppAssistantBot: React.FC = () => {
         title="Bot de WhatsApp Corporación TCT (Arrastra para mover)"
       >
         <div className="relative flex items-center justify-center">
-          {/* Neon blinking glow background */}
-          <div className="absolute -inset-1.5 rounded-full bg-emerald-500/40 blur-sm animate-neon-blink pointer-events-none" />
-          <div className="absolute -inset-1 rounded-full bg-amber-400/30 blur-xs animate-pulse pointer-events-none" />
+          {/* Subtle elegant glow */}
+          <div className="absolute -inset-1 rounded-full bg-emerald-500/20 blur-xs animate-neon-blink pointer-events-none" />
 
           {/* Floating TCT Particles on Hover */}
           <div className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300">
             <span 
-              className="absolute -top-4 -left-2 text-[9px] font-black text-amber-300 drop-shadow-[0_0_5px_rgba(245,158,11,0.9)] animate-particle" 
-              style={{ ['--tx' as string]: '-12px', ['--ty' as string]: '-22px' }}
+              className="absolute -top-3.5 -left-1.5 text-[8px] font-black text-amber-300 drop-shadow-[0_0_3px_rgba(245,158,11,0.8)] animate-particle" 
+              style={{ ['--tx' as string]: '-10px', ['--ty' as string]: '-18px' }}
             >
               TCT
             </span>
             <span 
-              className="absolute -top-5 right-0 text-[8px] font-black text-emerald-300 drop-shadow-[0_0_5px_rgba(16,185,129,0.9)] animate-particle delay-100" 
-              style={{ ['--tx' as string]: '14px', ['--ty' as string]: '-24px' }}
+              className="absolute -top-4 right-0 text-[7.5px] font-black text-emerald-300 drop-shadow-[0_0_3px_rgba(16,185,129,0.8)] animate-particle delay-100" 
+              style={{ ['--tx' as string]: '12px', ['--ty' as string]: '-20px' }}
             >
               ✦ TCT
-            </span>
-            <span 
-              className="absolute bottom-[-10px] -right-2 text-[8px] font-black text-amber-200 drop-shadow-[0_0_4px_rgba(245,158,11,0.8)] animate-particle delay-200" 
-              style={{ ['--tx' as string]: '10px', ['--ty' as string]: '18px' }}
-            >
-              TCT
             </span>
           </div>
           
           {/* Main WhatsApp Button (Half-Size: w-8 h-8 sm:w-9 sm:h-9) */}
-          <div className="relative w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-gradient-to-tr from-emerald-600 via-emerald-500 to-teal-400 p-1.5 flex items-center justify-center shadow-lg shadow-emerald-950/70 border border-white/50 animate-neon-blink transform group-hover:scale-110 group-active:scale-90 transition-transform duration-200">
-            <OfficialWhatsAppIcon className="w-5 h-5 text-white filter drop-shadow-sm" />
+          <div className="relative w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-gradient-to-tr from-emerald-600 via-emerald-500 to-teal-500 p-1.5 flex items-center justify-center shadow-md shadow-emerald-950/50 border border-emerald-300/40 transform group-hover:scale-105 group-active:scale-95 transition-transform duration-200">
+            <OfficialWhatsAppIcon className="w-5 h-5 text-white filter drop-shadow-xs" />
             
             {/* Live Online Ping Badge */}
             <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-amber-400 border border-slate-950 flex items-center justify-center shadow-xs">

@@ -26,21 +26,30 @@ interface StaffDashboardProps {
   onOpenProject: (project: ProductionProject) => void;
   onOpenAnalytics?: () => void;
   onUpdateProject?: (project: ProductionProject) => void;
+  onOpenNewProject?: () => void;
 }
 
 export const StaffDashboard: React.FC<StaffDashboardProps> = ({
   projects,
   currentStaff,
   onOpenProject,
-  onUpdateProject
+  onUpdateProject,
+  onOpenNewProject
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<'events' | 'calendar'>('events');
   const [qrProject, setQrProject] = useState<ProductionProject | null>(null);
 
-  // Filter projects where this technician is assigned
+  // Filter projects strictly for this staff member (assigned staff or contract advisor)
   const myProjects = projects.filter(p => {
     if (p.isArchived) return false;
-    return p.assignedStaff.some(s => s.id === currentStaff.id || s.name === currentStaff.name);
+    const staffNameLower = (currentStaff.name || '').toLowerCase().trim();
+    const isAssigned = p.assignedStaff && p.assignedStaff.some(s => 
+      s.id === currentStaff.id || 
+      (s.name && s.name.toLowerCase().trim() === staffNameLower) ||
+      (s.name && staffNameLower && s.name.toLowerCase().includes(staffNameLower))
+    );
+    const isContractHolder = p.contractHolder && staffNameLower && p.contractHolder.toLowerCase().includes(staffNameLower);
+    return isAssigned || isContractHolder;
   });
 
   // KPI Calculations for this staff member
@@ -62,33 +71,8 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
   const upcomingEvents = myProjects.filter(p => p.eventDate >= todayStr);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       
-      {/* Staff Welcome Banner */}
-      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-3xl p-5 sm:p-6 shadow-xl border border-slate-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div className="flex items-center space-x-4">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 text-slate-950 font-black text-xl flex items-center justify-center shadow-lg border-2 border-slate-900">
-            {currentStaff.name.charAt(0)}
-          </div>
-          <div>
-            <div className="flex items-center space-x-2">
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-400 text-slate-950 uppercase tracking-wide">
-                TÉCNICO ASIGNADO
-              </span>
-              <span className="text-xs text-slate-400 font-mono">
-                Corporación TCT
-              </span>
-            </div>
-            <h2 className="text-xl sm:text-2xl font-black text-white mt-0.5">
-              ¡Hola, {currentStaff.name}!
-            </h2>
-            <p className="text-xs text-slate-300">
-              Rol: <strong>{currentStaff.role}</strong> • Tienes <strong>{myProjects.length} eventos contratados</strong> bajo tu responsabilidad técnica.
-            </p>
-          </div>
-        </div>
-      </div>
-
       {/* Staff Personal KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
         
