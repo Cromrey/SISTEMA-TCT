@@ -276,9 +276,9 @@ export const ReportPrintModal: React.FC<ReportPrintModalProps> = ({
             </div>
           </div>
 
-          {/* SLA & Delivery Guarantees */}
+          {/* Plazos & Delivery Guarantees */}
           <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 text-[10px] space-y-1 page-break-inside-avoid">
-            <h4 className="font-black text-slate-900 uppercase text-[10px]">Garantías de Entrega & Plazos Oficiales (SLA TCT)</h4>
+            <h4 className="font-black text-slate-900 uppercase text-[10px]">Garantías de Entrega & Plazos Oficiales (TCT)</h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-slate-700">
               <div className="flex items-center gap-1.5">
                 <Clock className="w-3.5 h-3.5 text-purple-600" />

@@ -26,6 +26,7 @@ import { ComparativeAnalyticsModal } from './components/ComparativeAnalyticsModa
 import { ReportPrintModal } from './components/ReportPrintModal';
 import { ContractExportModal } from './components/ContractExportModal';
 import { AdminSettingsModal } from './components/AdminSettingsModal';
+import { useSwipeGesture } from './hooks/useSwipeGesture';
 import { RotateCcw, Sparkles, CheckCircle2, ShieldCheck, UserCheck } from 'lucide-react';
 
 const INITIAL_FALLBACK_STAFF: StaffMember[] = [
@@ -88,6 +89,51 @@ export default function App() {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3500);
   };
+
+  // Handle mobile / tablet gesture: swipe right-to-left to go back one step
+  const handleGoBack = () => {
+    if (selectedProjectForDetail) {
+      setSelectedProjectForDetail(null);
+      showToast('← Cerrar detalles de expediente');
+      return;
+    }
+    if (selectedProjectForContract) {
+      setSelectedProjectForContract(null);
+      showToast('← Cerrar contrato');
+      return;
+    }
+    if (selectedProjectForReport) {
+      setSelectedProjectForReport(null);
+      showToast('← Cerrar reporte');
+      return;
+    }
+    if (isNewProjectModalOpen) {
+      setIsNewProjectModalOpen(false);
+      showToast('← Cerrar nueva producción');
+      return;
+    }
+    if (isAnalyticsModalOpen) {
+      setIsAnalyticsModalOpen(false);
+      showToast('← Cerrar analítica');
+      return;
+    }
+    if (isRulesModalOpen) {
+      setIsRulesModalOpen(false);
+      showToast('← Cerrar configuración de reglas');
+      return;
+    }
+    if (isUsersModalOpen) {
+      setIsUsersModalOpen(false);
+      showToast('← Cerrar administración de usuarios');
+      return;
+    }
+    showToast('← Gestos táctiles: Regresar');
+  };
+
+  useSwipeGesture({
+    onSwipeLeft: handleGoBack,
+    enabled: !!currentUser
+  });
 
   // Trigger auto-logout on inactivity
   const handleAutoLogout = () => {
@@ -380,6 +426,7 @@ export default function App() {
             onOpenProject={(proj) => setSelectedProjectForDetail(proj)}
             onOpenAnalytics={() => setIsAnalyticsModalOpen(true)}
             onUpdateProject={handleUpdateProject}
+            onOpenNewProject={() => setIsNewProjectModalOpen(true)}
           />
         )}
 
@@ -391,7 +438,7 @@ export default function App() {
           <div className="flex items-center space-x-2">
             <span className="font-extrabold text-amber-400">CORPORACIÓN TCT</span>
             <span className="font-slogan text-amber-300/80 text-sm hidden sm:inline">• Marcando Historia</span>
-            <span className="text-slate-500">• Sistema de Monitoreo Audiovisual y Eventos</span>
+            <span className="text-slate-500">• Sistema Integrado de Gestion Audiovisual 2026. Derechos reservados .</span>
           </div>
           <div className="flex items-center space-x-4 text-[11px] text-slate-400">
             <span>6 Fases • 12 Pasos Secuenciales Oficiales</span>
@@ -414,9 +461,11 @@ export default function App() {
       {selectedProjectForDetail && (
         <ProjectDetailModal
           project={selectedProjectForDetail}
+          currentUser={currentUser}
+          currentRole={currentRole}
           onClose={() => setSelectedProjectForDetail(null)}
           onUpdateProject={handleUpdateProject}
-          onDeleteProject={handleDeleteProject}
+          onDeleteProject={currentRole === 'admin' ? handleDeleteProject : undefined}
           onOpenReportPrint={(proj) => setSelectedProjectForReport(proj)}
           onOpenContractExport={(proj) => setSelectedProjectForContract(proj)}
         />

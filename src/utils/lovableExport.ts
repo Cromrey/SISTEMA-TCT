@@ -50,7 +50,7 @@ CARACTERÍSTICAS TÉCNICAS:
 
 export const downloadLovableBundle = (): void => {
   const packageData: LovablePackage = {
-    title: 'Corporacion TCT - Sistema de Monitoreo Audiovisual',
+    title: 'Corporacion TCT - Sistema Integrado de Gestion Audiovisual 2026',
     version: '1.0.0',
     framework: 'React 19 + TypeScript + Tailwind CSS + Lucide Icons + Recharts',
     description: 'Sistema completo de seguimiento audiovisual con los 12 pasos oficiales de Corporación TCT, roles Admin/Técnico, regla 7:00 PM, Ingest, 15 días USB, 30 días Fotolibro y Reportes PDF.',

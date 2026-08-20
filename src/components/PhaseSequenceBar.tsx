@@ -55,9 +55,9 @@ export const PhaseSequenceBar: React.FC<PhaseSequenceBarProps> = ({
       case 6: return 'Falta: Bitácora de rodaje en locación';
       case 7: return project.finalBalance > 0 ? '⚠️ URGENTE: Cobro en campo antes de 7:00 PM' : 'Falta: Liquidar saldo en campo';
       case 8: return 'Falta: Ingest RAW y backup dual en NAS';
-      case 9: return 'Falta: Edición Video Master 4K (SLA 15 Días)';
+      case 9: return 'Falta: Edición Video Master 4K (Plazo 15 Días)';
       case 10: return 'Falta: Publicar enlaces de redes (TikTok / YouTube)';
-      case 11: return 'Falta: Maquetación Fotolibro (SLA 30 Días)';
+      case 11: return 'Falta: Maquetación Fotolibro (Plazo 30 Días)';
       case 12: return 'Falta: Entrega USB, Saldo S/. 0 y Conformidad';
       default: return 'Falta: Completar evidencias del paso';
     }

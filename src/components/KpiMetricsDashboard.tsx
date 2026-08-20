@@ -127,13 +127,13 @@ export const KpiMetricsDashboard: React.FC<KpiMetricsDashboardProps> = ({
 
   const overallAvgCycleDays = (closingTimes.reduce((acc, c) => acc + c.days, 0) / (closingTimes.length || 1)).toFixed(1);
 
-  // SLA Compliance Rate
-  const totalProjectsWithSLA = projects.filter(p => {
+  // Plazo Compliance Rate
+  const totalProjectsWithPlazos = projects.filter(p => {
     const diff = Math.round((nowTime - new Date(p.eventDate).getTime()) / 86400000);
     return diff > 0;
   });
-  const onTimeProjects = totalProjectsWithSLA.filter(p => !isProjectOverdue(p));
-  const slaComplianceRate = Math.round((onTimeProjects.length / (totalProjectsWithSLA.length || 1)) * 100);
+  const onTimeProjects = totalProjectsWithPlazos.filter(p => !isProjectOverdue(p));
+  const plazoComplianceRate = Math.round((onTimeProjects.length / (totalProjectsWithPlazos.length || 1)) * 100);
 
   // --- DATA FOR CHARTS ---
 
@@ -173,7 +173,7 @@ export const KpiMetricsDashboard: React.FC<KpiMetricsDashboardProps> = ({
   const timeByTypeChartData = Object.values(timeByTypeMap).map(item => ({
     type: item.type,
     avgDays: Math.round(item.totalDays / (item.count || 1)),
-    targetSla: item.type.includes('Boda') || item.type.includes('XV') ? 15 : 12,
+    targetPlazo: item.type.includes('Boda') || item.type.includes('XV') ? 15 : 12,
     count: item.count
   }));
 
@@ -298,12 +298,12 @@ export const KpiMetricsDashboard: React.FC<KpiMetricsDashboardProps> = ({
             <span className="text-xs font-extrabold text-blue-950">días promedio</span>
           </div>
           <div className="mt-2 flex items-center justify-between text-[11px] text-slate-500 font-medium">
-            <span>SLA Objetivo: 15 días USB</span>
+            <span>Plazo Objetivo: 15 días USB</span>
             <span className="text-blue-700 font-bold">Ciclo global: {overallAvgCycleDays}d</span>
           </div>
         </div>
 
-        {/* KPI Card 4: Cumplimiento de SLA */}
+        {/* KPI Card 4: Cumplimiento de Plazos */}
         <div 
           onClick={() => onSelectQuickFilter && onSelectQuickFilter('overdue')}
           className={`p-4 sm:p-5 transition-all cursor-pointer hover:bg-red-50/40 ${
@@ -311,14 +311,14 @@ export const KpiMetricsDashboard: React.FC<KpiMetricsDashboardProps> = ({
           }`}
         >
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">Cumplimiento de SLA</span>
+            <span className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">Cumplimiento de Plazos</span>
             <div className="p-2 bg-purple-100 rounded-xl text-purple-900">
               <Zap className="w-4 h-4" />
             </div>
           </div>
           <div className="mt-2 flex items-baseline justify-between">
-            <span className={`text-2xl sm:text-3xl font-black ${slaComplianceRate >= 80 ? 'text-purple-700' : 'text-red-600'}`}>
-              {slaComplianceRate}%
+            <span className={`text-2xl sm:text-3xl font-black ${plazoComplianceRate >= 80 ? 'text-purple-700' : 'text-red-600'}`}>
+              {plazoComplianceRate}%
             </span>
             <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-purple-100 text-purple-900">
               15d Video / 30d Libro

@@ -344,10 +344,10 @@ export const ComparativeAnalyticsModal: React.FC<ComparativeAnalyticsModalProps>
               </div>
             </div>
 
-            {/* Metric 3: On-Time SLA Deliveries (15 & 30 days) */}
+            {/* Metric 3: On-Time Delivery Plazos (15 & 30 days) */}
             <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs space-y-1">
               <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">
-                Entrega Puntual (SLA)
+                Entrega Puntual (Plazo Oficial)
               </span>
               <div className="flex items-baseline space-x-2">
                 <span className="text-2xl sm:text-3xl font-black text-purple-700">{onTimeRate}%</span>

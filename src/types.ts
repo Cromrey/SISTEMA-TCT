@@ -199,8 +199,15 @@ export interface ProductionProject {
   
   // Production specifics
   includesPhotobook: boolean;
+  includesPhotoshoot?: boolean; // Sesión fotográfica (1 cámara de foto, plazo 15 días)
   includesDrone: boolean;
   estimatedDeliveryDate: string;
+  
+  // Multiple event schedules / shifts if applicable
+  eventSchedules?: Array<{ date: string; startTime: string; endTime: string }>;
+  
+  // Client Authorization for Online Publication (SI / NO)
+  authorizeInternetPublishing?: boolean;
   
   // Staff & Equipment
   assignedStaff: AssignedStaff[];

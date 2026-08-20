@@ -374,10 +374,10 @@ export const GlobalPdfExportModal: React.FC<GlobalPdfExportModalProps> = ({
             <div className="space-y-4">
               <div>
                 <h2 className="text-base font-black text-slate-900 uppercase">
-                  Cronograma Maestro de Producción & Hitos SLA
+                  Cronograma Maestro de Producción & Hitos de Entrega
                 </h2>
                 <p className="text-xs text-slate-500">
-                  Control de tiempos, fechas límite de edición (SLA 15 días post-evento) y entrega final (SLA 30 días).
+                  Control de tiempos, fechas límite de edición (Plazo 15 días post-evento) y entrega final (Plazo 30 días).
                 </p>
               </div>
 
@@ -387,8 +387,8 @@ export const GlobalPdfExportModal: React.FC<GlobalPdfExportModalProps> = ({
                     <th className="p-2.5 rounded-l-lg">Expediente</th>
                     <th className="p-2.5">Fecha Evento</th>
                     <th className="p-2.5">Hito Cobro 7PM</th>
-                    <th className="p-2.5">SLA 15D (Edición USB)</th>
-                    <th className="p-2.5">SLA 30D (Fotolibro)</th>
+                    <th className="p-2.5">Plazo 15D (Edición USB)</th>
+                    <th className="p-2.5">Plazo 30D (Fotolibro)</th>
                     <th className="p-2.5">Líder Técnico</th>
                     <th className="p-2.5 rounded-r-lg">Estado</th>
                   </tr>
@@ -398,7 +398,7 @@ export const GlobalPdfExportModal: React.FC<GlobalPdfExportModalProps> = ({
                     const prog = getProjectProgress(p);
                     const leadStaff = p.assignedStaff[0]?.name || 'Por Asignar';
                     
-                    // SLA dates
+                    // Plazo dates
                     let eventD = new Date(p.eventDate + 'T12:00:00');
                     if (isNaN(eventD.getTime())) eventD = new Date();
                     
@@ -466,7 +466,7 @@ export const GlobalPdfExportModal: React.FC<GlobalPdfExportModalProps> = ({
                 <div className="p-4 rounded-2xl bg-emerald-950 text-white">
                   <div className="text-[11px] font-bold text-emerald-400 uppercase">Cumplimiento de Plazos</div>
                   <div className="text-2xl font-black font-mono text-emerald-300 mt-1">96.8%</div>
-                  <p className="text-[10px] text-emerald-200 mt-1">SLA 15 días USB y 30 días Fotolibro</p>
+                  <p className="text-[10px] text-emerald-200 mt-1">Plazo 15 días USB y 30 días Fotolibro</p>
                 </div>
 
                 <div className="p-4 rounded-2xl bg-slate-900 text-white">

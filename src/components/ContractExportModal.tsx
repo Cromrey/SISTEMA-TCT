@@ -356,11 +356,11 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
             </table>
           </div>
 
-          {/* Clause 4: Deliverables & SLAs */}
+          {/* Clause 4: Deliverables & Plazos */}
           <div className="space-y-1 page-break-inside-avoid">
             <h3 className="font-black text-slate-900 uppercase tracking-wide flex items-center gap-1 text-[11px]">
               <span className="w-3.5 h-3.5 rounded-full bg-slate-900 text-amber-400 text-[9px] flex items-center justify-center font-bold">4</span>
-              CLÁUSULA CUARTA: ENTREGABLES Y PLAZOS ESTRICTOS (SLA)
+              CLÁUSULA CUARTA: ENTREGABLES Y PLAZOS ESTRICTOS DE ENTREGA
             </h3>
 
             <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 space-y-1.5 text-[10px]">

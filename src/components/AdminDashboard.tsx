@@ -3,6 +3,7 @@ import { ProductionProject, SmartAlert, DecisionInsight, EventType, StepData, St
 import { TCTLogo } from './TCTLogo';
 import { KpiMetricsDashboard } from './KpiMetricsDashboard';
 import { SlaOverdueAlertsBanner } from './SlaOverdueAlertsBanner';
+import { MonthlyStaffContractComparisonChart } from './MonthlyStaffContractComparisonChart';
 import { 
   Film, 
   Banknote,
@@ -34,7 +35,8 @@ import {
   QrCode,
   Download,
   CalendarDays,
-  Trash2
+  Trash2,
+  Trophy
 } from 'lucide-react';
 import { CalendarView } from './CalendarView';
 import { ExecutiveSummaryModule } from './ExecutiveSummaryModule';
@@ -93,7 +95,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onSaveQuickFilter,
   allStaff = []
 }) => {
-  const [currentView, setCurrentView] = useState<'list' | 'timeline' | 'calendar' | 'executive'>('list');
+  const [currentView, setCurrentView] = useState<'list' | 'timeline' | 'calendar' | 'executive' | 'ranking'>('list');
   const [groupFilter, setGroupFilterState] = useState<MainGrouping>(savedQuickFilter as MainGrouping);
   const [specificPhaseFilter, setSpecificPhaseFilter] = useState<SpecificPhaseFilter>('all');
   const [selectedTypeFilter, setSelectedTypeFilter] = useState<EventType | 'all'>('all');
@@ -375,6 +377,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             </button>
 
             <button
+              onClick={() => setCurrentView('ranking')}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 ${
+                currentView === 'ranking' 
+                  ? 'bg-amber-500 text-slate-950 shadow-md font-black' 
+                  : 'text-slate-700 hover:text-slate-900 hover:bg-slate-200/60'
+              }`}
+            >
+              <Trophy className="w-3.5 h-3.5 text-amber-600" />
+              <span>Comparativa Mensual</span>
+              <span className="text-[10px] bg-amber-500/20 text-amber-900 px-1.5 py-0.2 rounded-full font-mono font-bold">
+                Asesores
+              </span>
+            </button>
+
+            <button
               onClick={() => setCurrentView('calendar')}
               className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 ${
                 currentView === 'calendar' ? 'bg-slate-900 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
@@ -612,7 +629,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
       </div>
 
-      {/* Main View: List of Projects vs Executive Summary vs Calendar vs Timeline Gantt */}
+      {/* Main View: List of Projects vs Executive Summary vs Calendar vs Timeline Gantt vs Ranking */}
       {currentView === 'timeline' ? (
         <TimelineGanttView
           projects={projects}
@@ -625,6 +642,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           onOpenProject={onOpenProject}
           onOpenReportPrint={onOpenReportPrint}
         />
+      ) : currentView === 'ranking' ? (
+        <div className="space-y-6">
+          <MonthlyStaffContractComparisonChart
+            projects={projects}
+            allStaff={allStaff}
+            onOpenProject={onOpenProject}
+          />
+        </div>
       ) : currentView === 'calendar' ? (
         <CalendarView
           projects={projects}

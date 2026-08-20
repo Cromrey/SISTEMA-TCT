@@ -87,7 +87,7 @@ export const SlaOverdueAlertsBanner: React.FC<SlaOverdueAlertsBannerProps> = ({
       });
     }
 
-    // 2. Check: Video Master 4K ProRes 15 Days SLA (Step 9)
+    // 2. Check: Video Master 4K ProRes 15 Days Plazo (Step 9)
     const step9 = proj.phases[3]?.steps[0];
     if (step9 && step9.status === 'in_progress') {
       if (diffDaysFromEvent > 15) {
@@ -97,7 +97,7 @@ export const SlaOverdueAlertsBanner: React.FC<SlaOverdueAlertsBannerProps> = ({
           project: proj,
           type: 'video_15d_sla',
           severity: 'critical',
-          title: `⚠️ Retraso en Video USB (Excede SLA de 15 Días por +${daysOver}d)`,
+          title: `⚠️ Retraso en Video USB (Excede Plazo de 15 Días por +${daysOver}d)`,
           description: `Han transcurrido ${diffDaysFromEvent} días desde el evento (${proj.eventDate}). La entrega en estuche USB 4K se encuentra vencida.`,
           daysOverdue: daysOver,
           actionRequired: 'Priorizar render en DaVinci/Premiere y notificar a cliente',
@@ -106,7 +106,7 @@ export const SlaOverdueAlertsBanner: React.FC<SlaOverdueAlertsBannerProps> = ({
       }
     }
 
-    // 3. Check: Photobook 30 Days SLA (Step 11)
+    // 3. Check: Photobook 30 Days Plazo (Step 11)
     const step11 = proj.phases[4]?.steps[0];
     if (proj.includesPhotobook && step11 && step11.status === 'in_progress') {
       if (diffDaysFromEvent > 30) {
@@ -116,7 +116,7 @@ export const SlaOverdueAlertsBanner: React.FC<SlaOverdueAlertsBannerProps> = ({
           project: proj,
           type: 'photobook_30d_sla',
           severity: 'warning',
-          title: `📖 Fotolibro Impreso Retrasado (+${daysOver}d sobre SLA)`,
+          title: `📖 Fotolibro Impreso Retrasado (+${daysOver}d sobre Plazo Oficial)`,
           description: `Han transcurrido ${diffDaysFromEvent} días desde el evento. Plazo máximo de imprenta: 30 días calendario.`,
           daysOverdue: daysOver,
           actionRequired: 'Acelerar maqueta y despacho de empastado de lujo',
@@ -143,7 +143,7 @@ export const SlaOverdueAlertsBanner: React.FC<SlaOverdueAlertsBannerProps> = ({
   });
 
   if (overdueIssues.length === 0) {
-    return null; // No alerts needed when all SLAs are on time
+    return null; // No alerts needed when all deadlines are on time
   }
 
   const criticalCount = overdueIssues.filter(i => i.severity === 'critical').length;
@@ -164,7 +164,7 @@ export const SlaOverdueAlertsBanner: React.FC<SlaOverdueAlertsBannerProps> = ({
           <div>
             <div className="flex items-center space-x-2 flex-wrap gap-1">
               <h3 className="text-xs sm:text-sm font-black tracking-wide text-white uppercase flex items-center gap-1.5">
-                Alertas de Plazos y SLA Vencidos TCT
+                Alertas de Plazos y Tiempos de Entrega Vencidos TCT
               </h3>
               <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-red-600 text-white animate-pulse">
                 {overdueIssues.length} {overdueIssues.length === 1 ? 'ALERTA' : 'ALERTAS ACTIVAS'}

@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { ProductionProject, StepData } from '../types';
+import { ProductionProject, StepData, AuthUser } from '../types';
 import { PhaseSequenceBar } from './PhaseSequenceBar';
 import { StepExecutionModal } from './StepExecutionModal';
 import { ProjectAuditLogView } from './ProjectAuditLogView';
@@ -39,6 +39,8 @@ import {
 
 interface ProjectDetailModalProps {
   project: ProductionProject;
+  currentUser?: AuthUser | null;
+  currentRole?: 'admin' | 'employee';
   onClose: () => void;
   onUpdateProject: (updated: ProductionProject) => void;
   onOpenReportPrint: (project: ProductionProject) => void;
@@ -50,6 +52,8 @@ type ModalTab = 'workflow' | 'commercial' | 'audit_logs' | 'staff_equipment';
 
 export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
   project,
+  currentUser,
+  currentRole = 'admin',
   onClose,
   onUpdateProject,
   onOpenReportPrint,
@@ -601,32 +605,39 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                     </div>
                   </div>
 
-                  {!isEditingCommercial ? (
-                    <button
-                      type="button"
-                      onClick={() => setIsEditingCommercial(true)}
-                      className="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-amber-400 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-colors shadow-xs"
-                    >
-                      <Edit3 className="w-3.5 h-3.5" />
-                      <span>Editar Datos Comerciales</span>
-                    </button>
+                  {currentRole === 'admin' ? (
+                    !isEditingCommercial ? (
+                      <button
+                        type="button"
+                        onClick={() => setIsEditingCommercial(true)}
+                        className="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-amber-400 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-colors shadow-xs"
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                        <span>Editar Datos Comerciales</span>
+                      </button>
+                    ) : (
+                      <div className="flex items-center space-x-2">
+                        <button
+                          type="button"
+                          onClick={() => setIsEditingCommercial(false)}
+                          className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors"
+                        >
+                          Cancelar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleSaveCommercialChanges}
+                          className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs rounded-xl flex items-center gap-1.5 transition-colors shadow-xs"
+                        >
+                          <Save className="w-3.5 h-3.5" />
+                          <span>Guardar Cambios</span>
+                        </button>
+                      </div>
+                    )
                   ) : (
-                    <div className="flex items-center space-x-2">
-                      <button
-                        type="button"
-                        onClick={() => setIsEditingCommercial(false)}
-                        className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors"
-                      >
-                        Cancelar
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleSaveCommercialChanges}
-                        className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs rounded-xl flex items-center gap-1.5 transition-colors shadow-xs"
-                      >
-                        <Save className="w-3.5 h-3.5" />
-                        <span>Guardar Cambios</span>
-                      </button>
+                    <div className="flex items-center gap-1 px-3 py-1 bg-slate-100 rounded-lg text-slate-600 text-xs font-semibold">
+                      <Lock className="w-3.5 h-3.5 text-amber-600" />
+                      <span>Solo lectura (Admin)</span>
                     </div>
                   )}
                 </div>

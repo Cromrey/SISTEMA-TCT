@@ -165,7 +165,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
       date: usbDate,
       time: '18:00 PM',
       type: 'usb_delivery',
-      title: `🎞️ Entrega de Video USB 4K (SLA 15 días)`,
+      title: `🎞️ Entrega de Video USB 4K (Plazo 15 días)`,
       description: `Trailer Highlight + Película Completa ProRes 4K masterizada`,
       status: isStep8Done ? 'completed' : usbDaysDiff < 0 ? 'overdue' : 'pending',
       daysRemaining: usbDaysDiff
@@ -183,7 +183,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
         date: bookDate,
         time: '18:00 PM',
         type: 'photobook_delivery',
-        title: `📖 Entrega de Fotolibro de Lujo (SLA 30 días)`,
+        title: `📖 Entrega de Fotolibro de Lujo (Plazo 30 días)`,
         description: `Impresión offset con tapa dura grabada y pliegos aprobados`,
         status: isStep9Done ? 'completed' : bookDaysDiff < 0 ? 'overdue' : 'pending',
         daysRemaining: bookDaysDiff

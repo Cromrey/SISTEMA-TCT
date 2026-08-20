@@ -653,7 +653,7 @@ export const TimelineGanttView: React.FC<TimelineGanttViewProps> = ({
 
                                 {task.slaDays && (
                                   <span className="text-[9px] font-black px-1.5 py-0.2 rounded bg-purple-100 text-purple-900 font-mono shrink-0">
-                                    SLA {task.slaDays}D
+                                    Plazo {task.slaDays}D
                                   </span>
                                 )}
                               </div>
@@ -826,7 +826,7 @@ export const TimelineGanttView: React.FC<TimelineGanttViewProps> = ({
             </div>
             <div className="flex items-center gap-1.5">
               <span className="w-3 h-3 rounded bg-red-600 inline-block" />
-              <span>Alerta SLA / Vencido</span>
+              <span>Alerta de Plazo / Vencido</span>
             </div>
             <div className="flex items-center gap-1.5">
               <span className="w-3 h-3 rounded bg-slate-300 inline-block" />
@@ -834,7 +834,7 @@ export const TimelineGanttView: React.FC<TimelineGanttViewProps> = ({
             </div>
             <div className="flex items-center gap-1.5">
               <span>🚩</span>
-              <span className="text-amber-300 font-bold">Hito Crítico (Cobro 7PM / SLA 15D / SLA 30D)</span>
+              <span className="text-amber-300 font-bold">Hito Crítico (Cobro 7PM / Plazo 15D / Plazo 30D)</span>
             </div>
           </div>
 
@@ -943,7 +943,7 @@ export const TimelineGanttView: React.FC<TimelineGanttViewProps> = ({
                       <span>Expandido (12 Pasos por Proyecto)</span>
                     </div>
                     <p className="text-[11px] text-slate-500 mt-1">
-                      Incluye todos los hitos, responsables, SLAs y fechas por fase.
+                      Incluye todos los hitos, responsables, plazos oficiales y fechas por fase.
                     </p>
                   </button>
 

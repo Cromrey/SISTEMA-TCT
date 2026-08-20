@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { UserRole, StaffMember, AuthUser } from '../types';
 import { TCTLogo } from './TCTLogo';
 import { 
@@ -8,7 +8,11 @@ import {
   Sliders,
   Users,
   LogOut,
-  User
+  User,
+  Maximize2,
+  Minimize2,
+  Clapperboard,
+  Video
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -45,6 +49,32 @@ export const Header: React.FC<HeaderProps> = ({
   onLogout,
   activeProjectsCount
 }) => {
+  const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(Boolean(document.fullscreenElement));
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    };
+  }, []);
+
+  const toggleFullscreen = async () => {
+    try {
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen();
+      } else {
+        if (document.exitFullscreen) {
+          await document.exitFullscreen();
+        }
+      }
+    } catch (err) {
+      console.warn('Fullscreen API not allowed or supported in this context:', err);
+    }
+  };
+
   // Find current active user job title or cargo
   const activeUser = allUsers.find(u => 
     (currentRole === 'employee' && u.fullName === currentStaff.name) || 
@@ -104,10 +134,10 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
           </div>
 
-          {/* Synthesized User Selector & Actions Panel (As requested in image.png) */}
+          {/* Synthesized User Selector & Actions Panel (Top-Right Controls) */}
           <div className="flex items-center space-x-1.5 sm:space-x-2.5 ml-auto flex-wrap justify-end gap-y-1.5">
             
-            {/* User Switcher Dropdown with Cargo Badge (Defaults to Admin unless changed) */}
+            {/* User Switcher Dropdown with Cargo Badge */}
             <div className="flex items-center bg-slate-950/90 hover:bg-slate-950 p-1 sm:p-1.5 rounded-xl border border-slate-800 shadow-inner">
               <div className="flex items-center space-x-1.5 px-1.5 py-0.5">
                 <div className={`w-5 h-5 sm:w-6 sm:h-6 rounded-lg flex items-center justify-center text-[10px] font-black shrink-0 ${
@@ -168,7 +198,7 @@ export const Header: React.FC<HeaderProps> = ({
               </div>
             </div>
 
-            {/* "Reglas" Master Rules Button (Visible for Admin users) */}
+            {/* Master Rules Button (Visible for Admin users) */}
             {currentRole === 'admin' && (
               <button
                 id="btn-open-rules-config"
@@ -181,26 +211,45 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
             )}
 
-            {/* New Project CTA */}
+            {/* Pantalla Completa (Fullscreen API) Toggle Button */}
+            <button
+              id="btn-fullscreen-toggle"
+              onClick={toggleFullscreen}
+              className="p-2 sm:p-2.5 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-amber-400 border border-slate-700 hover:border-amber-500/50 transition-all flex items-center justify-center text-xs font-bold shadow-xs shrink-0 cursor-pointer"
+              title={isFullscreen ? "Salir de Pantalla Completa" : "Modo Pantalla Completa (Inmersivo)"}
+              aria-label="Pantalla Completa"
+            >
+              {isFullscreen ? (
+                <Minimize2 className="w-4 h-4 text-amber-400" />
+              ) : (
+                <Maximize2 className="w-4 h-4 text-slate-300" />
+              )}
+            </button>
+
+            {/* Nueva Producción Icon-Only Button */}
             <button
               id="btn-new-project-header"
               onClick={onOpenNewProject}
-              className="flex items-center gap-1 sm:gap-1.5 px-3 py-1.5 sm:py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 text-xs font-black rounded-xl shadow-md hover:shadow-lg transition-all shrink-0 cursor-pointer whitespace-nowrap"
-              title="Registrar nueva producción y emitir contrato (Ctrl+N)"
+              className="relative p-2 sm:p-2.5 bg-gradient-to-tr from-amber-500 via-amber-400 to-amber-500 hover:from-amber-400 hover:to-amber-600 text-slate-950 rounded-xl shadow-md hover:shadow-amber-500/20 transition-all shrink-0 cursor-pointer flex items-center justify-center group border border-amber-300"
+              title="Nueva Producción / Emitir Contrato (Ctrl+N)"
+              aria-label="Nueva Producción"
             >
-              <PlusCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
-              <span className="whitespace-nowrap">+ Nueva Producción</span>
+              <Clapperboard className="w-4 h-4 text-slate-950 group-hover:scale-110 transition-transform" />
+              {/* Subtle small badge plus */}
+              <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-slate-950 text-amber-400 font-black text-[9px] rounded-full flex items-center justify-center border border-amber-400 shadow-xs">
+                +
+              </span>
             </button>
 
             {/* Logout Button */}
             <button
               id="btn-logout-header"
               onClick={onLogout}
-              className="p-1.5 sm:p-2 rounded-xl bg-red-950/50 hover:bg-red-600 text-red-300 hover:text-white border border-red-800/50 transition-all flex items-center justify-center text-xs font-bold shadow-xs shrink-0 group cursor-pointer"
+              className="p-2 sm:p-2.5 rounded-xl bg-red-950/50 hover:bg-red-600 text-red-300 hover:text-white border border-red-800/50 transition-all flex items-center justify-center text-xs font-bold shadow-xs shrink-0 group cursor-pointer"
               title="Cerrar sesión"
               aria-label="Cerrar sesión"
             >
-              <LogOut className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-red-300 group-hover:text-white transition-colors" />
+              <LogOut className="w-4 h-4 text-red-300 group-hover:text-white transition-colors" />
             </button>
 
           </div>

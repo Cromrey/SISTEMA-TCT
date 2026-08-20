@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { ProductionProject, EventType } from '../types';
+import { MonthlyStaffContractComparisonChart } from './MonthlyStaffContractComparisonChart';
 import { 
   PieChart, 
   Pie, 
@@ -429,6 +430,12 @@ export const ExecutiveSummaryModule: React.FC<ExecutiveSummaryModuleProps> = ({
         </div>
 
       </div>
+
+      {/* Recharts Bar Chart: Monthly Staff Contract Comparison Dashboard */}
+      <MonthlyStaffContractComparisonChart 
+        projects={projects}
+        onOpenProject={onOpenProject}
+      />
 
       {/* Main Charts Row 1: State Distribution & Employee Workload */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
