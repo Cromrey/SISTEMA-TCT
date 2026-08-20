@@ -35,7 +35,16 @@ export const PhaseSequenceBar: React.FC<PhaseSequenceBarProps> = ({
 
   const totalSteps = allSteps.length;
   const completedSteps = allSteps.filter(item => item.step.status === 'completed').length;
-  const progressPercent = Math.round((completedSteps / (totalSteps || 12)) * 100);
+  // Progress percentage formatted to 2 decimals (nn.nn %)
+  const rawProgress = (completedSteps / (totalSteps || 12)) * 100;
+  const progressPercent = rawProgress.toFixed(2);
+
+  // Check if project has required attachments (proforma / contract / voucher / technical files)
+  const totalAttachmentsCount = project.phases.reduce((acc, p) => 
+    acc + p.steps.reduce((sAcc, s) => sAcc + (s.attachments?.length || 0), 0), 
+    0
+  );
+  const hasAttachments = totalAttachmentsCount > 0;
 
   // Active step
   const activeStepItem = allSteps.find(item => item.step.status === 'in_progress') 
@@ -46,6 +55,9 @@ export const PhaseSequenceBar: React.FC<PhaseSequenceBarProps> = ({
 
   // Missing action alert helper
   const getMissingAlert = (stepNumber: number) => {
+    if (!hasAttachments) {
+      return '⚠️ OBLIGATORIO: Adjuntar archivos (Proforma / Contrato / Voucher) para validar el progreso.';
+    }
     switch (stepNumber) {
       case 1: return 'Falta: Ficha técnica y proforma oficial';
       case 2: return 'Falta: Voucher de adelanto y firma de contrato';
@@ -66,6 +78,26 @@ export const PhaseSequenceBar: React.FC<PhaseSequenceBarProps> = ({
   return (
     <div className="space-y-4">
       
+      {/* Missing Attachments Pulsing Alert Banner as requested */}
+      {!hasAttachments && (
+        <div className="p-3 sm:p-4 bg-amber-500/15 border-2 border-amber-400 text-amber-300 rounded-2xl flex items-center justify-between flex-wrap gap-2 animate-pulse shadow-lg">
+          <div className="flex items-center space-x-2.5">
+            <AlertCircle className="w-5 h-5 text-amber-400 shrink-0 animate-bounce" />
+            <div>
+              <p className="text-xs sm:text-sm font-black text-amber-200 uppercase tracking-wide">
+                ⚠️ ATENCIÓN: Se deben añadir los archivos adjuntos obligatorios
+              </p>
+              <p className="text-[11px] text-amber-300/90 font-medium">
+                Al emitir el contrato, debe adjuntar la proforma, voucher o contrato firmado. La barra de avance permanecerá tachada con una <strong>“❌”</strong> hasta subir los adjuntos y marcar las tareas como culminadas.
+              </p>
+            </div>
+          </div>
+          <span className="px-2.5 py-1 rounded-lg bg-amber-400 text-slate-950 font-black text-[10px] uppercase shadow-xs">
+            Adjuntos Requeridos
+          </span>
+        </div>
+      )}
+
       {/* Compact, Intuitive Progress Box */}
       <div className="bg-slate-950 text-white rounded-2xl p-4 sm:p-5 border border-slate-800 shadow-xl space-y-3">
         
@@ -89,26 +121,51 @@ export const PhaseSequenceBar: React.FC<PhaseSequenceBarProps> = ({
             </div>
           </div>
 
-          {/* Progress Percentage Display */}
+          {/* Progress Percentage Display with 2 Decimals (nn.nn %) and Strikethrough X logic */}
           <div className="flex items-center space-x-3 shrink-0 self-end sm:self-center">
             <div className="text-right">
-              <div className="text-2xl sm:text-3xl font-black text-amber-400 font-mono leading-none">
-                {progressPercent}<span className="text-sm font-bold text-amber-300">%</span>
-              </div>
+              {hasAttachments ? (
+                <div className="flex items-baseline justify-end gap-1">
+                  <span className="text-xs text-emerald-400 font-bold">✅</span>
+                  <div className="text-2xl sm:text-3xl font-black text-emerald-400 font-mono leading-none">
+                    {progressPercent}<span className="text-sm font-bold text-emerald-300">%</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-baseline justify-end gap-1.5">
+                  <span className="text-sm text-red-400 font-black bg-red-950/80 px-1 rounded border border-red-800">❌</span>
+                  <div className="text-2xl sm:text-3xl font-black text-slate-400 font-mono leading-none line-through decoration-red-500 decoration-2">
+                    {progressPercent}<span className="text-sm font-bold text-slate-500">%</span>
+                  </div>
+                </div>
+              )}
+              
               <span className="text-[10px] text-slate-300 font-bold bg-slate-800 px-2 py-0.5 rounded-md border border-slate-700 block mt-0.5">
-                {completedSteps} de {totalSteps} pasos
+                {hasAttachments 
+                  ? `${completedSteps} de ${totalSteps} pasos validados`
+                  : `${completedSteps} de ${totalSteps} (Faltan archivos adjuntos)`}
               </span>
             </div>
           </div>
 
         </div>
 
-        {/* Global Progress Bar */}
-        <div className="w-full bg-slate-800 rounded-full h-2.5 overflow-hidden p-0.5 border border-slate-700">
+        {/* Global Progress Bar with Crossed X state when missing attachments */}
+        <div className="relative w-full bg-slate-800 rounded-full h-3.5 overflow-hidden p-0.5 border border-slate-700">
           <div 
-            className="h-full bg-gradient-to-r from-amber-400 via-emerald-400 to-teal-400 rounded-full transition-all duration-700 shadow-sm"
+            className={`h-full rounded-full transition-all duration-700 shadow-sm ${
+              hasAttachments
+                ? 'bg-gradient-to-r from-amber-400 via-emerald-400 to-teal-400'
+                : 'bg-gradient-to-r from-slate-600 to-amber-600/70 opacity-60'
+            }`}
             style={{ width: `${progressPercent}%` }}
           />
+
+          {!hasAttachments && (
+            <div className="absolute inset-0 flex items-center justify-center bg-red-950/40 text-[10px] font-black text-red-300 tracking-wider">
+              <span>❌ PROGRESO TACHADO: ADJUNTAR ARCHIVOS OBLIGATORIOS</span>
+            </div>
+          )}
         </div>
 
         {/* Alerta de lo que falta para continuar al siguiente paso */}

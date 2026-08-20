@@ -335,74 +335,76 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3 pb-3 border-b border-slate-100">
           
           {/* View switcher */}
-          <div className="flex items-center space-x-1.5 bg-slate-100 p-1 rounded-xl flex-wrap gap-y-1">
+          <div className="flex items-center space-x-1 sm:space-x-1.5 bg-slate-100 p-1 rounded-xl flex-wrap gap-y-1">
             <button
               onClick={() => setCurrentView('list')}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 ${
+              className={`px-2.5 sm:px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 ${
                 currentView === 'list' ? 'bg-slate-900 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
               }`}
+              title="Expedientes"
             >
-              <Film className="w-3.5 h-3.5" />
-              <span>Expedientes ({filteredProjects.length})</span>
+              <Film className="w-3.5 h-3.5 shrink-0" />
+              <span className="hidden sm:inline">Expedientes</span>
+              <span className="text-[10px] bg-slate-800 text-white px-1.5 py-0.2 rounded-full font-mono font-bold">
+                {filteredProjects.length}
+              </span>
             </button>
 
             <button
               onClick={() => setCurrentView('timeline')}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 ${
+              className={`px-2.5 sm:px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 ${
                 currentView === 'timeline' 
                   ? 'bg-amber-500 text-slate-950 shadow-md font-black' 
                   : 'text-slate-700 hover:text-slate-900 hover:bg-slate-200/60'
               }`}
+              title="Cronograma Gantt (12 Pasos)"
             >
-              <Clock className="w-3.5 h-3.5" />
-              <span>Cronograma Gantt</span>
-              <span className="text-[10px] bg-slate-950/15 text-slate-900 px-1.5 py-0.2 rounded-full font-mono font-bold">
+              <Clock className="w-3.5 h-3.5 shrink-0" />
+              <span className="hidden sm:inline">Cronograma Gantt</span>
+              <span className="text-[10px] bg-slate-950/15 text-slate-900 px-1.5 py-0.2 rounded-full font-mono font-bold hidden md:inline">
                 12 Pasos
               </span>
             </button>
             
             <button
               onClick={() => setCurrentView('executive')}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 ${
+              className={`px-2.5 sm:px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 ${
                 currentView === 'executive' 
                   ? 'bg-amber-500 text-slate-950 shadow-md font-black' 
                   : 'text-slate-700 hover:text-slate-900 hover:bg-slate-200/60'
               }`}
+              title="Resumen Ejecutivo (Gráficos)"
             >
-              <BarChart3 className="w-3.5 h-3.5 text-slate-950" />
-              <span>Resumen Ejecutivo</span>
-              <span className="text-[10px] bg-slate-950/15 text-slate-900 px-1.5 py-0.2 rounded-full font-mono font-bold">
-                Gráficos
-              </span>
+              <BarChart3 className="w-3.5 h-3.5 text-slate-950 shrink-0" />
+              <span className="hidden sm:inline">Resumen Ejecutivo</span>
             </button>
 
             <button
               onClick={() => setCurrentView('ranking')}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 ${
+              className={`px-2.5 sm:px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 ${
                 currentView === 'ranking' 
                   ? 'bg-amber-500 text-slate-950 shadow-md font-black' 
                   : 'text-slate-700 hover:text-slate-900 hover:bg-slate-200/60'
               }`}
+              title="Comparativa Mensual de Empleados (Recharts)"
             >
-              <Trophy className="w-3.5 h-3.5 text-amber-600" />
-              <span>Comparativa Mensual</span>
-              <span className="text-[10px] bg-amber-500/20 text-amber-900 px-1.5 py-0.2 rounded-full font-mono font-bold">
-                Asesores
-              </span>
+              <Trophy className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+              <span className="hidden sm:inline">Comparativa Mensual</span>
             </button>
 
             <button
               onClick={() => setCurrentView('calendar')}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 ${
+              className={`px-2.5 sm:px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 ${
                 currentView === 'calendar' ? 'bg-slate-900 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
               }`}
+              title="Calendario de Eventos"
             >
-              <Calendar className="w-3.5 h-3.5" />
-              <span>Calendario de Eventos</span>
+              <Calendar className="w-3.5 h-3.5 shrink-0" />
+              <span className="hidden sm:inline">Calendario</span>
             </button>
           </div>
 
-          {/* Action buttons */}
+          {/* Action buttons with responsive text toggle */}
           <div className="flex items-center space-x-2 shrink-0 flex-wrap gap-y-1.5">
             {/* Botón de Exportación PDF Oficial TCT */}
             <button
@@ -410,27 +412,29 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 setPdfReportType('projects_list');
                 setIsPdfModalOpen(true);
               }}
-              className="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-amber-400 text-xs font-black flex items-center gap-1.5 shadow-sm transition-all border border-slate-700 cursor-pointer"
+              className="px-2.5 sm:px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-amber-400 text-xs font-black flex items-center gap-1.5 shadow-sm transition-all border border-slate-700 cursor-pointer"
               title="Exportar a PDF Oficial TCT (Expedientes, Cronograma Gantt, KPI, Calendario, Cobranzas)"
             >
-              <Printer className="w-4 h-4 text-amber-400" />
-              <span>Exportar a PDF</span>
+              <Printer className="w-4 h-4 text-amber-400 shrink-0" />
+              <span className="hidden md:inline">Exportar a PDF</span>
             </button>
 
             <button
               onClick={onOpenAnalytics}
-              className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+              className="px-2.5 sm:px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+              title="Toma de Decisiones & Insights IA"
             >
-              <TrendingUp className="w-4 h-4 text-amber-600" />
-              <span>Toma de Decisiones</span>
+              <TrendingUp className="w-4 h-4 text-amber-600 shrink-0" />
+              <span className="hidden md:inline">Toma de Decisiones</span>
             </button>
 
             <button
               onClick={onOpenNewProject}
-              className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 text-xs font-black flex items-center gap-1.5 shadow-md transition-all cursor-pointer"
+              className="px-3 sm:px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 text-xs font-black flex items-center gap-1.5 shadow-md transition-all cursor-pointer"
+              title="Nueva Producción / Emitir Contrato"
             >
-              <PlusCircle className="w-4 h-4" />
-              <span>+ Nueva Producción</span>
+              <PlusCircle className="w-4 h-4 shrink-0" />
+              <span className="hidden sm:inline">+ Nueva Producción</span>
             </button>
           </div>
 
