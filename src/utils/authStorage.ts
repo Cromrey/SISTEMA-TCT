@@ -103,21 +103,11 @@ export function getStoredUsers(): AuthUser[] {
       return DEFAULT_AUTH_USERS;
     }
     
-    // Ensure all standard official TCT staff accounts exist in the storage list
+    // Ensure root admin TCT account always exists
     let updatedList = [...parsed];
-    let hadMissing = false;
-    
-    DEFAULT_AUTH_USERS.forEach(defUser => {
-      const exists = updatedList.some(
-        u => u.username?.toLowerCase() === defUser.username.toLowerCase() || u.id === defUser.id
-      );
-      if (!exists) {
-        updatedList.push(defUser);
-        hadMissing = true;
-      }
-    });
-
-    if (hadMissing) {
+    const hasRootAdmin = updatedList.some(u => u.username?.toUpperCase() === 'TCT');
+    if (!hasRootAdmin) {
+      updatedList.unshift(DEFAULT_AUTH_USERS[0]);
       localStorage.setItem(AUTH_USERS_STORAGE_KEY, JSON.stringify(updatedList));
     }
     
@@ -371,4 +361,60 @@ export function usersToStaffMembers(users: AuthUser[]): StaffMember[] {
       phone: u.phone || '+51 900 000 000',
       confirmed: true
     }));
+}
+
+export interface UserAssignmentsReport {
+  staffProductions: Array<{ id: string; title: string; uniqueCode: string; contractNumber?: string; eventDate: string; eventLocation?: string; role?: string }>;
+  holderContracts: Array<{ id: string; title: string; uniqueCode: string; contractNumber?: string; eventDate: string; clientName: string }>;
+  totalContracts: number;
+  totalStaffAssignments: number;
+}
+
+export function getUserProjectAssignments(user: AuthUser, projects: any[]): UserAssignmentsReport {
+  const staffProductions: Array<{ id: string; title: string; uniqueCode: string; contractNumber?: string; eventDate: string; eventLocation?: string; role?: string }> = [];
+  const holderContracts: Array<{ id: string; title: string; uniqueCode: string; contractNumber?: string; eventDate: string; clientName: string }> = [];
+
+  const targetName = (user.fullName || '').toLowerCase().trim();
+  const targetUsername = (user.username || '').toLowerCase().trim();
+
+  projects.forEach((p: any) => {
+    // Check if staff in assignedStaff
+    if (p.assignedStaff && Array.isArray(p.assignedStaff)) {
+      const assigned = p.assignedStaff.find((s: any) => 
+        (s.id && s.id === user.id) ||
+        (s.name && (s.name.toLowerCase().trim() === targetName || s.name.toLowerCase().trim() === targetUsername))
+      );
+      if (assigned) {
+        staffProductions.push({
+          id: p.id,
+          title: p.title || 'Sin título',
+          uniqueCode: p.uniqueCode || 'N/A',
+          contractNumber: p.contractNumber || 'S/N',
+          eventDate: p.eventDate || 'Por definir',
+          eventLocation: p.eventLocation || '',
+          role: assigned.role || user.jobTitle
+        });
+      }
+    }
+
+    // Check if contract holder
+    const holder = (p.contractHolder || '').toLowerCase();
+    if (holder && (holder.includes(targetName) || (targetUsername.length > 2 && holder.includes(targetUsername)))) {
+      holderContracts.push({
+        id: p.id,
+        title: p.title || 'Sin título',
+        uniqueCode: p.uniqueCode || 'N/A',
+        contractNumber: p.contractNumber || 'S/N',
+        eventDate: p.eventDate || 'Por definir',
+        clientName: p.clientName || 'Cliente'
+      });
+    }
+  });
+
+  return {
+    staffProductions,
+    holderContracts,
+    totalContracts: holderContracts.length,
+    totalStaffAssignments: staffProductions.length
+  };
 }

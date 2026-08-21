@@ -58,12 +58,10 @@ const EVENT_TYPES: EventType[] = [
 ];
 
 const PAYMENT_METHODS = [
-  'Transferencia BCP',
-  'Transferencia BBVA',
-  'Transferencia Interbank',
+  'Transferencia bancaria',
+  'Depósito bancario',
   'Yape / Plin',
-  'Efectivo en Oficina',
-  'Tarjeta Débito/Crédito'
+  'Efectivo en Oficina'
 ];
 
 export const NewProjectModal: React.FC<NewProjectModalProps> = ({
@@ -85,14 +83,14 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
     : (advisorOptions[0] || 'Ing. Michael RomeroReyes - Administrador General');
 
   const [eventType, setEventType] = useState<EventType>('Boda');
-  const [title, setTitle] = useState('Boda Especial: ');
+  const [title, setTitle] = useState('');
   
   // Client details
   const [clientName, setClientName] = useState('');
   const [clientDni, setClientDni] = useState('');
   const [clientPhone, setClientPhone] = useState('');
   const [clientEmail, setClientEmail] = useState('');
-  const [eventLocation, setEventLocation] = useState('Salón de Eventos / Lima');
+  const [eventLocation, setEventLocation] = useState('');
   const [eventAddress, setEventAddress] = useState('');
   
   // Multiple event schedule dates & coverage times
@@ -131,14 +129,16 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
   const [extraHourRate, setExtraHourRate] = useState<number>(masterRules.standardExtraHourRate || 150);
   const [additionalEquipmentNotes, setAdditionalEquipmentNotes] = useState<string>('');
 
-  // Initial deposit
+  // Initial deposit & payment method details
   const [initialDepositStr, setInitialDepositStr] = useState<string>('');
-  const [paymentMethodDeposit, setPaymentMethodDeposit] = useState<string>('Transferencia BCP');
+  const [paymentMethodDeposit, setPaymentMethodDeposit] = useState<string>('Transferencia bancaria');
+  const [depositOperationCode, setDepositOperationCode] = useState<string>('');
+  const [depositBankName, setDepositBankName] = useState<string>('');
 
-  // Deliverables (Exact requested labels)
-  const [includesPhotobook, setIncludesPhotobook] = useState(true);
+  // Deliverables - Desactivados inicialmente (false por defecto)
+  const [includesPhotobook, setIncludesPhotobook] = useState(false);
   const [includesPhotoshoot, setIncludesPhotoshoot] = useState(false);
-  const [includesDrone, setIncludesDrone] = useState(true);
+  const [includesDrone, setIncludesDrone] = useState(false);
 
   // Client Authorization for Online Publication (SI / NO)
   const [authorizeInternetPublishing, setAuthorizeInternetPublishing] = useState<boolean>(true);
@@ -283,15 +283,15 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
       quotationCode: quotationCode.trim(),
       contractNumber,
       contractHolder: contractHolder.trim(),
-      title: title.trim() || `${eventType}: ${clientName}`,
+      title: title.trim() || `${eventType}: ${clientName || 'Producción Audiovisual'}`,
       clientName: clientName.trim(),
       clientDniRuc: clientDni.trim(),
       clientPhone: clientPhone.trim() ? `+51 ${clientPhone.trim()}` : '',
       clientEmail: clientEmail.trim(),
       eventType,
       eventDate: primaryEventDate,
-      eventLocation: eventLocation.trim(),
-      eventAddress: eventAddress.trim() || eventLocation.trim(),
+      eventLocation: eventLocation.trim() || 'Por definir',
+      eventAddress: eventAddress.trim() || eventLocation.trim() || 'Por definir',
       eventTime: formattedScheduleString,
       eventStartTime: eventSchedules[0]?.startTime || '16:00',
       eventEndTime: eventSchedules[0]?.endTime || '02:00',
@@ -307,6 +307,8 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
       totalBudget: computedTotal,
       initialDeposit: initialDepositNum,
       paymentMethodDeposit,
+      depositOperationCode: depositOperationCode.trim(),
+      depositBankName: depositBankName.trim(),
       fieldPayment: 0,
       finalBalance,
       currency: 'PEN',
@@ -546,12 +548,7 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
                 <button
                   type="button"
                   key={type}
-                  onClick={() => {
-                    setEventType(type);
-                    if (title.startsWith('Boda') || title.startsWith('XV') || title.startsWith('Evento')) {
-                      setTitle(`${type}: `);
-                    }
-                  }}
+                  onClick={() => setEventType(type)}
                   className={`p-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
                     eventType === type 
                       ? 'bg-amber-500 text-slate-950 border-amber-600 shadow-xs font-black' 
@@ -570,8 +567,8 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Ej: Boda Real: Carolina & Fernando"
-                  className="w-full p-2.5 text-xs font-bold border border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                  placeholder="Título de la producción (Ej: Boda Real: Carolina & Fernando)"
+                  className="w-full p-2.5 text-xs font-bold border border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:outline-none placeholder:text-slate-400 placeholder:font-normal bg-white"
                   required
                 />
               </div>
@@ -582,8 +579,8 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
                   type="text"
                   value={eventLocation}
                   onChange={(e) => setEventLocation(e.target.value)}
-                  placeholder="Hacienda Villa, Cieneguilla"
-                  className="w-full p-2.5 text-xs border border-slate-300 rounded-xl font-medium"
+                  placeholder="Salón / Distrito / Locación (Ej: Hacienda Villa, Cieneguilla)"
+                  className="w-full p-2.5 text-xs border border-slate-300 rounded-xl font-medium focus:ring-2 focus:ring-amber-500 focus:outline-none placeholder:text-slate-400 placeholder:font-normal bg-white"
                 />
               </div>
             </div>
@@ -875,8 +872,8 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
                 </span>
               </div>
 
-              <div>
-                <label className="text-slate-400 text-[11px] block font-bold mb-1">ADELANTO INICIAL (S/.)</label>
+              <div className="space-y-1.5">
+                <label className="text-slate-400 text-[11px] block font-bold">ADELANTO INICIAL (S/.)</label>
                 <input
                   type="text"
                   inputMode="decimal"
@@ -888,12 +885,41 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
                 <select
                   value={paymentMethodDeposit}
                   onChange={(e) => setPaymentMethodDeposit(e.target.value)}
-                  className="w-full mt-1.5 bg-slate-800 border border-slate-700 rounded-lg text-[10px] text-amber-300 font-bold p-1"
+                  className="w-full bg-slate-800 border border-slate-700 rounded-lg text-[10px] text-amber-300 font-bold p-1"
                 >
                   {PAYMENT_METHODS.map(m => (
                     <option key={m} value={m}>{m}</option>
                   ))}
                 </select>
+
+                {/* Operation Code & Bank Inputs for deposits */}
+                <div className="grid grid-cols-2 gap-1.5 pt-1">
+                  <div>
+                    <label className="text-slate-400 text-[9.5px] block font-bold mb-0.5">
+                      Cód. Operación:
+                    </label>
+                    <input
+                      type="text"
+                      value={depositOperationCode}
+                      onChange={(e) => setDepositOperationCode(e.target.value)}
+                      placeholder="Ej: OP-849201"
+                      className="w-full bg-slate-800/90 border border-slate-700 rounded-md px-1.5 py-1 text-[10px] text-amber-300 font-mono placeholder:text-slate-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-slate-400 text-[9.5px] block font-bold mb-0.5">
+                      Banco Procedencia:
+                    </label>
+                    <input
+                      type="text"
+                      value={depositBankName}
+                      onChange={(e) => setDepositBankName(e.target.value)}
+                      placeholder="Ej: BCP, BBVA, Interbank"
+                      className="w-full bg-slate-800/90 border border-slate-700 rounded-md px-1.5 py-1 text-[10px] text-amber-300 font-medium placeholder:text-slate-500"
+                    />
+                  </div>
+                </div>
               </div>
 
               <div>

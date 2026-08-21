@@ -402,14 +402,31 @@ export const ProjectQrCheckinModal: React.FC<ProjectQrCheckinModalProps> = ({
 
               {/* Assigned Staff List with Live Check-in Status */}
               <div className="space-y-2">
-                <h5 className="text-xs font-black text-slate-700 flex items-center gap-1.5">
-                  <UserCheck className="w-4 h-4 text-amber-600" />
-                  <span>Equipo de Producción Asignado:</span>
-                </h5>
+                <div className="flex items-center justify-between">
+                  <h5 className="text-xs font-black text-slate-700 flex items-center gap-1.5">
+                    <UserCheck className="w-4 h-4 text-amber-600" />
+                    <span>Personal Asignado por Administración (Contrato {project.contractNumber}):</span>
+                  </h5>
+                  {totalStaff > 0 && (
+                    <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
+                      {totalStaff} asignado(s)
+                    </span>
+                  )}
+                </div>
 
                 {project.assignedStaff.length === 0 ? (
-                  <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 text-center text-xs text-slate-400">
-                    No hay personal asignado a este proyecto aún. Asigna personal en el Paso 3 (Reserva de Personal y Equipos).
+                  <div className="p-4 bg-red-50 rounded-2xl border-2 border-red-400 text-red-950 flex items-start gap-3 shadow-xs animate-pulse">
+                    <div className="p-2 rounded-xl bg-red-600 text-white shrink-0 mt-0.5">
+                      <AlertCircle className="w-5 h-5" />
+                    </div>
+                    <div className="space-y-1">
+                      <div className="text-xs font-black text-red-900 uppercase tracking-wide">
+                        Error: Falta asignar personal técnico a esta producción
+                      </div>
+                      <p className="text-[11px] text-red-800 leading-relaxed font-medium">
+                        El administrador aún no ha registrado al equipo técnico para el Contrato <strong>{project.contractNumber}</strong> ({project.title}). Debe asignar el personal en el <strong>Paso 3 (Reserva de Personal y Equipos)</strong> para que puedan registrar su asistencia mediante este código QR.
+                      </p>
+                    </div>
                   </div>
                 ) : (
                   <div className="divide-y divide-slate-100 border border-slate-200 rounded-2xl overflow-hidden bg-white shadow-xs">
@@ -439,7 +456,7 @@ export const ProjectQrCheckinModal: React.FC<ProjectQrCheckinModalProps> = ({
                               <div className="text-[11px] font-bold text-amber-700 flex items-center gap-1">
                                 <span>{staff.role}</span>
                                 <span className="text-slate-400">•</span>
-                                <span className="text-slate-500">{staff.phone}</span>
+                                <span className="text-slate-500">{staff.phone || 'Sin teléfono'}</span>
                               </div>
                             </div>
                           </div>
@@ -458,7 +475,7 @@ export const ProjectQrCheckinModal: React.FC<ProjectQrCheckinModalProps> = ({
                             ) : (
                               <button
                                 onClick={() => handlePerformCheckIn(staff, 'on_time')}
-                                className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-amber-400 text-xs font-black flex items-center gap-1 shadow-xs transition-all"
+                                className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-amber-400 text-xs font-black flex items-center gap-1 shadow-xs transition-all cursor-pointer"
                               >
                                 <Smartphone className="w-3.5 h-3.5" />
                                 <span>Check-in</span>

@@ -182,6 +182,8 @@ export interface ProductionProject {
   totalBudget: number; // Precio final pactado
   initialDeposit: number;
   paymentMethodDeposit?: string;
+  depositOperationCode?: string; // Código de Operación bancaria
+  depositBankName?: string; // Banco de procedencia
   depositReceiptUrl?: string;
   depositReceiptName?: string;
   fieldPayment: number;

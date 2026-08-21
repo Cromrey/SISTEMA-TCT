@@ -342,7 +342,16 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
                 </tr>
                 <tr>
                   <td className="p-1.5 font-bold text-slate-900">1. Adelanto Inicial (Firma / Reserva)</td>
-                  <td className="p-1.5 text-slate-600">{currentData.paymentMethodDeposit || 'Transferencia Bancaria / Efectivo'}</td>
+                  <td className="p-1.5 text-slate-600">
+                    {currentData.paymentMethodDeposit || 'Transferencia Bancaria'}
+                    {(currentData.depositBankName || currentData.depositOperationCode) && (
+                      <span className="text-[9px] text-slate-500 block font-mono">
+                        {currentData.depositBankName ? `Banco: ${currentData.depositBankName}` : ''}
+                        {currentData.depositBankName && currentData.depositOperationCode ? ' • ' : ''}
+                        {currentData.depositOperationCode ? `Op: ${currentData.depositOperationCode}` : ''}
+                      </span>
+                    )}
+                  </td>
                   <td className="p-1.5 text-right font-mono font-bold text-emerald-700">S/. {currentData.initialDeposit.toLocaleString()}</td>
                 </tr>
                 <tr className="bg-amber-50/60 font-bold">
@@ -384,32 +393,32 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
                 </div>
               </div>
 
-              <p className="text-[9px] text-slate-600 italic">
-                * Conforme al Paso 12 del flujo oficial, CORPORACIÓN TCT conservará los archivos RAW originales por 30 días posteriores a la entrega final.
+              <p className="text-[9.5px] text-slate-700 font-medium italic border-t border-slate-200 pt-1.5">
+                * Conforme al Paso 12 del flujo oficial, CORPORACIÓN TCT conservará los archivos MASTER FINAL entregados por 05 días posteriores a la entrega final, posterior a elllo eliminará definitivamente el material de sus computadora.
               </p>
             </div>
           </div>
 
-          {/* Official Signatures */}
-          <div className="pt-4 border-t-2 border-slate-950 grid grid-cols-2 gap-6 text-center text-[10px] page-break-inside-avoid">
-            <div className="space-y-6">
-              <div className="h-9 border-b border-slate-400 w-44 mx-auto flex items-end justify-center pb-0.5">
-                <span className="font-mono text-[9px] text-slate-400">Firma & Sello Corporativo</span>
+          {/* Official Signatures with increased space for electronic / physical signature */}
+          <div className="pt-6 border-t-2 border-slate-950 grid grid-cols-2 gap-8 text-center text-[10px] page-break-inside-avoid">
+            <div className="space-y-4">
+              <div className="h-24 sm:h-28 border-b-2 border-dashed border-slate-400 w-52 mx-auto flex items-end justify-center pb-2 bg-slate-50/50 rounded-t-lg">
+                <span className="font-mono text-[9px] text-slate-400">Espacio para Firma & Sello Corporativo</span>
               </div>
               <div>
                 <p className="font-black text-slate-900 uppercase">CORPORACIÓN TCT S.A.C.</p>
-                <p className="text-[9px] text-slate-500">Director de Producción / Asesor Comercial</p>
+                <p className="text-[9px] text-slate-500 font-medium">Director de Producción / Asesor Comercial</p>
                 <p className="text-[8px] text-slate-400 font-mono">RUC: 20608941253</p>
               </div>
             </div>
 
-            <div className="space-y-6">
-              <div className="h-9 border-b border-slate-400 w-44 mx-auto flex items-end justify-center pb-0.5">
-                <span className="font-mono text-[9px] text-slate-400">Firma del Cliente</span>
+            <div className="space-y-4">
+              <div className="h-24 sm:h-28 border-b-2 border-dashed border-slate-400 w-52 mx-auto flex items-end justify-center pb-2 bg-slate-50/50 rounded-t-lg">
+                <span className="font-mono text-[9px] text-slate-400">Espacio para Firma Física / Electrónica</span>
               </div>
               <div>
                 <p className="font-black text-slate-900 uppercase">{currentData.clientName}</p>
-                <p className="text-[9px] text-slate-500">DNI / RUC: {currentData.clientDniRuc || '__________________'}</p>
+                <p className="text-[9px] text-slate-500 font-medium">DNI / RUC: {currentData.clientDniRuc || '__________________'}</p>
                 <p className="text-[8px] text-slate-400">El Contratante</p>
               </div>
             </div>

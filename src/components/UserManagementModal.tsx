@@ -4,8 +4,11 @@ import {
   getStoredUsers, 
   createOrUpdateUser, 
   deleteUser, 
-  resetUsersToDefaults 
+  resetUsersToDefaults,
+  getUserProjectAssignments,
+  UserAssignmentsReport
 } from '../utils/authStorage';
+import { getStoredProjects } from '../utils/storage';
 import { TCTLogo } from './TCTLogo';
 import { 
   X, 
@@ -26,7 +29,11 @@ import {
   Eye, 
   EyeOff,
   Sparkles,
-  User
+  User,
+  AlertTriangle,
+  Calendar,
+  MapPin,
+  FileText
 } from 'lucide-react';
 
 interface UserManagementModalProps {
@@ -70,9 +77,13 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
   const [formError, setFormError] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
+  // Deletion confirm modal sub-state with detailed assignments report
+  const [userToDelete, setUserToDelete] = useState<AuthUser | null>(null);
+  const [deleteReport, setDeleteReport] = useState<UserAssignmentsReport | null>(null);
+
   const showToast = (msg: string) => {
     setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3000);
+    setTimeout(() => setToastMessage(null), 3500);
   };
 
   const refreshUsersList = () => {
@@ -131,7 +142,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
     });
 
     if (result.success) {
-      showToast(editingUserId ? `✓ Usuario "${formUsername}" actualizado con éxito.` : `✓ Nuevo usuario "${formUsername}" creado con éxito.`);
+      showToast(editingUserId ? `✓ Usuario "${formUsername}" actualizado al instante.` : `✓ Nuevo usuario "${formUsername}" creado y actualizado al instante.`);
       setIsEditing(false);
       refreshUsersList();
     } else {
@@ -164,21 +175,31 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
     }
   };
 
-  // Delete user
-  const handleDeleteUser = (u: AuthUser) => {
+  // Delete user trigger - prepares assignment details report
+  const handleInitiateDeleteUser = (u: AuthUser) => {
     if (u.username.toUpperCase() === 'TCT') {
       showToast('⚠️ No se puede eliminar el usuario principal "TCT".');
       return;
     }
 
-    if (window.confirm(`¿Está seguro de eliminar al usuario "${u.fullName}" (@${u.username})?`)) {
-      const result = deleteUser(u.id);
-      if (result.success) {
-        showToast(`✓ Usuario "${u.username}" eliminado.`);
-        refreshUsersList();
-      } else {
-        showToast(`❌ Error: ${result.error}`);
-      }
+    const allProjects = getStoredProjects();
+    const report = getUserProjectAssignments(u, allProjects);
+    setUserToDelete(u);
+    setDeleteReport(report);
+  };
+
+  // Confirm delete execution
+  const handleConfirmDelete = () => {
+    if (!userToDelete) return;
+    const deletedName = userToDelete.fullName;
+    const result = deleteUser(userToDelete.id);
+    if (result.success) {
+      showToast(`✓ Usuario "${deletedName}" eliminado y datos actualizados al instante.`);
+      setUserToDelete(null);
+      setDeleteReport(null);
+      refreshUsersList();
+    } else {
+      showToast(`❌ Error: ${result.error}`);
     }
   };
 
@@ -489,9 +510,9 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                       {!isRootAdmin && (
                         <button
                           type="button"
-                          onClick={() => handleDeleteUser(u)}
-                          className="p-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 hover:text-red-800 transition-colors"
-                          title="Eliminar usuario"
+                          onClick={() => handleInitiateDeleteUser(u)}
+                          className="p-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 hover:text-red-800 transition-colors cursor-pointer"
+                          title="Eliminar usuario y verificar contratos/producciones asignadas"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -536,6 +557,148 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
         </div>
 
       </div>
+
+      {/* Deletion Confirmation Modal with Contracts & Staff Productions Summary */}
+      {userToDelete && deleteReport && (
+        <div className="fixed inset-0 z-70 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 animate-fadeIn">
+          <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl border-2 border-red-500 overflow-hidden text-slate-900 flex flex-col max-h-[90vh]">
+            
+            {/* Header */}
+            <div className="px-6 py-4 bg-red-600 text-white flex items-center justify-between shrink-0">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 rounded-xl bg-white text-red-600 font-black">
+                  <AlertTriangle className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black leading-tight">
+                    Confirmar Eliminación de Usuario
+                  </h3>
+                  <p className="text-xs text-red-100 font-medium">
+                    Verificación de contratos y personal técnico asignado
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => { setUserToDelete(null); setDeleteReport(null); }}
+                className="p-1 rounded-lg text-white/80 hover:text-white hover:bg-red-700 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 overflow-y-auto space-y-4 text-xs">
+              
+              {/* User Summary Card */}
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 flex items-center space-x-3">
+                <div className="w-12 h-12 rounded-2xl bg-slate-900 text-amber-400 font-black text-sm flex items-center justify-center shrink-0">
+                  {userToDelete.fullName.slice(0, 2).toUpperCase()}
+                </div>
+                <div>
+                  <div className="text-sm font-black text-slate-900">{userToDelete.fullName}</div>
+                  <div className="text-slate-500 font-medium">@{userToDelete.username} • {userToDelete.jobTitle || 'Personal'}</div>
+                  <span className={`inline-block px-2 py-0.5 mt-1 rounded text-[10px] font-black uppercase ${
+                    userToDelete.role === 'admin' ? 'bg-amber-100 text-amber-900' : 'bg-blue-100 text-blue-900'
+                  }`}>
+                    {userToDelete.role === 'admin' ? 'Administrador' : 'Personal Técnico'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Assignment Metric Badges */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 bg-amber-50 rounded-2xl border border-amber-200">
+                  <div className="flex items-center gap-1.5 text-amber-900 font-bold">
+                    <FileText className="w-4 h-4 text-amber-600" />
+                    <span>Contratos Vinculados:</span>
+                  </div>
+                  <div className="text-xl font-black text-amber-950 mt-1">
+                    {deleteReport.totalContracts} contrato(s)
+                  </div>
+                </div>
+
+                <div className="p-3 bg-blue-50 rounded-2xl border border-blue-200">
+                  <div className="flex items-center gap-1.5 text-blue-900 font-bold">
+                    <UserCheck className="w-4 h-4 text-blue-600" />
+                    <span>Producciones Asignado:</span>
+                  </div>
+                  <div className="text-xl font-black text-blue-950 mt-1">
+                    {deleteReport.totalStaffAssignments} evento(s)
+                  </div>
+                </div>
+              </div>
+
+              {/* Detailed Staff Productions List */}
+              {deleteReport.staffProductions.length > 0 ? (
+                <div className="space-y-2">
+                  <div className="font-black text-slate-900 flex items-center gap-1.5">
+                    <Briefcase className="w-4 h-4 text-red-600" />
+                    <span>Producciones donde irá como personal técnico:</span>
+                  </div>
+                  <div className="max-h-44 overflow-y-auto space-y-1.5 pr-1">
+                    {deleteReport.staffProductions.map((prod, idx) => (
+                      <div key={idx} className="p-2.5 bg-slate-100/90 rounded-xl border border-slate-200 flex flex-col gap-1">
+                        <div className="font-black text-slate-900 flex items-center justify-between">
+                          <span className="truncate">{prod.title}</span>
+                          <span className="font-mono text-[10px] text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200 shrink-0">
+                            {prod.uniqueCode}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3 text-[11px] text-slate-600">
+                          <span className="flex items-center gap-1">
+                            <Calendar className="w-3 h-3 text-slate-400" />
+                            {prod.eventDate}
+                          </span>
+                          {prod.eventLocation && (
+                            <span className="flex items-center gap-1 truncate">
+                              <MapPin className="w-3 h-3 text-slate-400" />
+                              {prod.eventLocation}
+                            </span>
+                          )}
+                          <span className="font-bold text-blue-700 ml-auto">
+                            Rol: {prod.role}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="p-3 bg-emerald-50 text-emerald-800 rounded-xl border border-emerald-200 font-medium">
+                  ✓ Este usuario no tiene producciones técnicas asignadas actualmente.
+                </div>
+              )}
+
+              {/* Warning Notice */}
+              <div className="p-3 bg-red-50 text-red-900 rounded-xl border border-red-200 text-[11px] leading-relaxed">
+                <strong>Advertencia:</strong> Al eliminar este usuario, dejará de figurar en el directorio institucional y se actualizarán inmediatamente las listas del sistema.
+              </div>
+
+            </div>
+
+            {/* Action Buttons */}
+            <div className="p-4 bg-slate-100 border-t border-slate-200 flex items-center justify-end gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => { setUserToDelete(null); setDeleteReport(null); }}
+                className="px-4 py-2.5 rounded-xl bg-white border border-slate-300 text-slate-700 font-bold hover:bg-slate-50 transition-colors"
+              >
+                Cancelar
+              </button>
+
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                className="px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-black shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>Sí, Eliminar Usuario</span>
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
 
       {/* Sub-modal: Form for Create or Edit User */}
       {isEditing && (

@@ -22,7 +22,8 @@ import {
   deleteUser, 
   resetUsersToDefaults,
   deleteAllEmployeesExceptAdmin,
-  deleteUsersByFilter
+  deleteUsersByFilter,
+  getUserProjectAssignments
 } from '../utils/authStorage';
 import { 
   resetToDemoData, 
@@ -608,10 +609,31 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
       notifySuccess('⚠️ No se puede eliminar el usuario principal "TCT".');
       return;
     }
-    if (window.confirm(`¿Está seguro de eliminar al usuario "${u.fullName}" (@${u.username})?`)) {
+
+    const allProjects = getStoredProjects();
+    const report = getUserProjectAssignments(u, allProjects);
+
+    let message = `¿Está seguro de eliminar al usuario "${u.fullName}" (@${u.username})?\n\n`;
+    message += `📊 Resumen de asignaciones en el sistema:\n`;
+    message += `• Contratos vinculados: ${report.totalContracts}\n`;
+    message += `• Producciones asignado como personal técnico: ${report.totalStaffAssignments}\n`;
+
+    if (report.staffProductions.length > 0) {
+      message += `\n📋 Producciones donde asistirá como técnico:\n`;
+      report.staffProductions.slice(0, 5).forEach((p, i) => {
+        message += `  ${i + 1}. ${p.title} (${p.eventDate}) - ${p.role}\n`;
+      });
+      if (report.staffProductions.length > 5) {
+        message += `  ... y ${report.staffProductions.length - 5} producción(es) más.\n`;
+      }
+    }
+
+    message += `\nEsta acción actualizará el sistema y los registros de usuarios al instante. ¿Desea proceder?`;
+
+    if (window.confirm(message)) {
       const result = deleteUser(u.id);
       if (result.success) {
-        notifySuccess(`✓ Usuario "${u.username}" eliminado.`);
+        notifySuccess(`✓ Usuario "${u.username}" eliminado y datos actualizados al instante.`);
         refreshUsersList();
       }
     }
