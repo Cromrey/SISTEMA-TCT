@@ -27,7 +27,6 @@ import {
   ChevronRight,
   ShieldCheck,
   Layers,
-  CheckSquare,
   Sparkles,
   Phone,
   Mail,
@@ -49,7 +48,7 @@ interface ProjectDetailModalProps {
   onDeleteProject?: (projectId: string) => void;
 }
 
-type ModalTab = 'workflow_seq' | 'workflow_phases' | 'commercial' | 'audit_logs' | 'staff_equipment';
+type ModalTab = 'workflow' | 'commercial' | 'audit_logs' | 'staff_equipment';
 
 export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
   project,
@@ -61,7 +60,7 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
   onOpenContractExport,
   onDeleteProject
 }) => {
-  const [activeTab, setActiveTab] = useState<ModalTab>('workflow_seq');
+  const [activeTab, setActiveTab] = useState<ModalTab>('workflow');
   const [selectedStepCoord, setSelectedStepCoord] = useState<{ phaseIndex: number; stepIndex: number } | null>(null);
   const [isEditingCommercial, setIsEditingCommercial] = useState(false);
   const [showProformaPreview, setShowProformaPreview] = useState(false);
@@ -300,33 +299,17 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
           
           <button
             type="button"
-            onClick={() => setActiveTab('workflow_seq')}
+            onClick={() => setActiveTab('workflow')}
             className={`px-3 sm:px-4 py-2.5 rounded-t-xl text-xs font-black transition-all flex items-center gap-1.5 shrink-0 border-b-2 ${
-              activeTab === 'workflow_seq'
+              activeTab === 'workflow'
                 ? 'bg-slate-50 text-slate-900 border-amber-500'
                 : 'text-slate-300 hover:text-white border-transparent hover:bg-slate-800/50'
             }`}
           >
             <Layers className="w-4 h-4 text-amber-500" />
-            <span>1. Flujo Secuencial</span>
+            <span>Flujo de 12 Pasos</span>
             <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-amber-400/20 text-amber-300 font-mono">
               {progressPercent}%
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('workflow_phases')}
-            className={`px-3 sm:px-4 py-2.5 rounded-t-xl text-xs font-black transition-all flex items-center gap-1.5 shrink-0 border-b-2 ${
-              activeTab === 'workflow_phases'
-                ? 'bg-slate-50 text-slate-900 border-amber-500'
-                : 'text-slate-300 hover:text-white border-transparent hover:bg-slate-800/50'
-            }`}
-          >
-            <CheckSquare className="w-4 h-4 text-emerald-400" />
-            <span>2. Detalle y Formulario por Fases</span>
-            <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-emerald-400/20 text-emerald-300 font-mono">
-              6 Fases
             </span>
           </button>
 
@@ -340,7 +323,23 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
             }`}
           >
             <FileText className="w-4 h-4 text-blue-400" />
-            <span>3. Expediente Comercial</span>
+            <span>Expediente Comercial</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('audit_logs')}
+            className={`px-3 sm:px-4 py-2.5 rounded-t-xl text-xs font-black transition-all flex items-center gap-1.5 shrink-0 border-b-2 ${
+              activeTab === 'audit_logs'
+                ? 'bg-slate-50 text-slate-900 border-amber-500'
+                : 'text-slate-300 hover:text-white border-transparent hover:bg-slate-800/50'
+            }`}
+          >
+            <ShieldCheck className="w-4 h-4 text-emerald-400" />
+            <span>Registro de Auditoría (Logs)</span>
+            <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-emerald-500/20 text-emerald-300 font-mono">
+              {project.auditLogs?.length || 0}
+            </span>
           </button>
 
           <button
@@ -353,23 +352,7 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
             }`}
           >
             <Camera className="w-4 h-4 text-purple-400" />
-            <span>4. Personal & Equipos</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('audit_logs')}
-            className={`px-3 sm:px-4 py-2.5 rounded-t-xl text-xs font-black transition-all flex items-center gap-1.5 shrink-0 border-b-2 ${
-              activeTab === 'audit_logs'
-                ? 'bg-slate-50 text-slate-900 border-amber-500'
-                : 'text-slate-300 hover:text-white border-transparent hover:bg-slate-800/50'
-            }`}
-          >
-            <ShieldCheck className="w-4 h-4 text-teal-400" />
-            <span>5. Auditoría (Logs)</span>
-            <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-emerald-500/20 text-emerald-300 font-mono">
-              {project.auditLogs?.length || 0}
-            </span>
+            <span>Personal & Equipos</span>
           </button>
 
         </div>
@@ -377,8 +360,8 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
         {/* Modal Scrollable Content */}
         <div className="p-3 sm:p-5 lg:p-6 overflow-y-auto space-y-5 flex-1 bg-slate-50">
           
-          {/* TAB 1: WORKFLOW SEQUENTIAL (Flujo Secuencial de 12 Pasos) */}
-          {activeTab === 'workflow_seq' && (
+          {/* TAB 1: WORKFLOW (Flujo de 12 Pasos) */}
+          {activeTab === 'workflow' && (
             <div className="space-y-5">
               
               {/* Active Step Hero Alert Banner */}
@@ -407,24 +390,14 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2 w-full sm:w-auto">
-                      <button
-                        type="button"
-                        onClick={() => setSelectedStepCoord({ phaseIndex: activeStepObj.phaseIdx, stepIndex: activeStepObj.stepIdx })}
-                        className="flex-1 sm:flex-initial px-4 py-2.5 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 rounded-xl font-black text-xs transition-all shadow-md flex items-center justify-center gap-2 shrink-0"
-                      >
-                        <span>Abrir Checklist & Evidencia</span>
-                        <ChevronRight className="w-4 h-4" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setActiveTab('workflow_phases')}
-                        className="px-3 py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-bold text-xs transition-all border border-slate-700 shrink-0"
-                        title="Ver detalle por fases"
-                      >
-                        Ver Fases ➔
-                      </button>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedStepCoord({ phaseIndex: activeStepObj.phaseIdx, stepIndex: activeStepObj.stepIdx })}
+                      className="w-full sm:w-auto px-4 py-2.5 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 rounded-xl font-black text-xs transition-all shadow-md flex items-center justify-center gap-2 shrink-0"
+                    >
+                      <span>Abrir Checklist & Evidencia</span>
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
               )}
@@ -483,7 +456,7 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
               <div>
                 <div className="flex items-center justify-between mb-2 flex-wrap gap-1">
                   <h3 className="text-xs font-black text-slate-900 uppercase tracking-wide">
-                    Línea Secuencial Corporación TCT (12 Pasos)
+                    Flujo Secuencial Corporación TCT (12 Pasos)
                   </h3>
                   <span className="text-[11px] text-slate-500 italic hidden sm:inline">
                     * El paso activo en seguimiento resalta con parpadeo y borde dorado
@@ -495,136 +468,119 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                 />
               </div>
 
-            </div>
-          )}
-
-          {/* TAB 2: DETALLE Y FORMULARIO POR FASES */}
-          {activeTab === 'workflow_phases' && (
-            <div className="space-y-5">
-              <div className="flex items-center justify-between flex-wrap gap-2 bg-white p-4 rounded-2xl border border-slate-200">
-                <div>
-                  <h3 className="text-xs sm:text-sm font-black text-slate-900 uppercase tracking-wide">
-                    Detalle y Formularios Operativos por Fases (6 Fases Oficiales)
-                  </h3>
-                  <p className="text-[11px] text-slate-500 mt-0.5">
-                    Haga clic en cualquier paso para abrir el formulario, checklists, evidencias técnicas y archivos adjuntos.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('workflow_seq')}
-                  className="px-3 py-1.5 bg-slate-900 text-amber-400 font-bold text-xs rounded-xl hover:bg-slate-800 transition-all flex items-center gap-1.5"
-                >
-                  <Layers className="w-3.5 h-3.5" />
-                  <span>Ver Flujo Secuencial</span>
-                </button>
-              </div>
-
               {/* Detailed 6 Phases Breakdown Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 sm:gap-4">
-                {project.phases.map((phase, pIdx) => (
-                  <div key={phase.phaseNumber} className="bg-white rounded-3xl p-3.5 sm:p-4 border border-slate-200 shadow-xs space-y-3">
-                    <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                      <div className="flex items-center space-x-2">
-                        <span 
-                          className="w-7 h-7 rounded-xl text-white font-extrabold text-xs flex items-center justify-center shadow-xs shrink-0"
-                          style={{ backgroundColor: phase.color }}
-                        >
-                          {phase.phaseNumber}
-                        </span>
-                        <h4 className="text-xs sm:text-sm font-black text-slate-900 truncate">
-                          {phase.name}
-                        </h4>
-                      </div>
-                    </div>
+              <div className="space-y-4">
+                <h3 className="text-xs font-black text-slate-900 uppercase tracking-wide">
+                  Detalle y Formularios por Fases
+                </h3>
 
-                    <p className="text-[11px] text-slate-500 line-clamp-1">
-                      {phase.description}
-                    </p>
-
-                    <div className="space-y-2">
-                      {phase.steps.map((step, sIdx) => {
-                        const globalIdx = allSteps.findIndex(item => item.step.stepNumber === step.stepNumber);
-                        const isFirstStep = globalIdx === 0;
-                        const prevStep = !isFirstStep ? allSteps[globalIdx - 1] : null;
-                        const isLocked = !isFirstStep && prevStep && prevStep.step.status !== 'completed';
-
-                        const isComplete = step.status === 'completed';
-                        const isActive = step.stepNumber === activeStepNumber && !isComplete;
-
-                        return (
-                          <div
-                            key={step.id}
-                            onClick={() => setSelectedStepCoord({ phaseIndex: pIdx, stepIndex: sIdx })}
-                            className={`p-3 rounded-2xl border transition-all cursor-pointer ${
-                              isComplete
-                                ? 'bg-emerald-50/70 border-emerald-200 hover:border-emerald-400'
-                                : isActive
-                                ? 'bg-amber-50/80 border-amber-400 ring-2 ring-amber-400/20 shadow-xs'
-                                : isLocked
-                                ? 'bg-slate-50 border-slate-200 opacity-70'
-                                : 'bg-white border-slate-200 hover:border-slate-300'
-                            }`}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 sm:gap-4">
+                  {project.phases.map((phase, pIdx) => (
+                    <div key={phase.phaseNumber} className="bg-white rounded-3xl p-3.5 sm:p-4 border border-slate-200 shadow-xs space-y-3">
+                      <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                        <div className="flex items-center space-x-2">
+                          <span 
+                            className="w-7 h-7 rounded-xl text-white font-extrabold text-xs flex items-center justify-center shadow-xs shrink-0"
+                            style={{ backgroundColor: phase.color }}
                           >
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="flex items-start space-x-2.5">
-                                <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-black shrink-0 mt-0.5 ${
-                                  isComplete
-                                    ? 'bg-emerald-600 text-white'
-                                    : isActive
-                                    ? 'bg-amber-500 text-slate-950'
-                                    : 'bg-slate-200 text-slate-700'
-                                }`}>
-                                  {isComplete ? <Check className="w-3.5 h-3.5" /> : step.stepNumber}
-                                </div>
+                            {phase.phaseNumber}
+                          </span>
+                          <h4 className="text-xs sm:text-sm font-black text-slate-900 truncate">
+                            {phase.name}
+                          </h4>
+                        </div>
+                      </div>
 
-                                <div>
-                                  <div className="flex items-center gap-1.5 flex-wrap">
-                                    <span className="text-xs font-black text-slate-900">
-                                      {step.title}
-                                    </span>
-                                    {step.status === 'completed' && (
-                                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.2 rounded">
-                                        ✓ Completado
-                                      </span>
-                                    )}
-                                    {isActive && (
-                                      <span className="text-[10px] font-black text-amber-900 bg-amber-200 px-1.5 py-0.2 rounded animate-pulse">
-                                        ⚡ En curso
-                                      </span>
-                                    )}
+                      <p className="text-[11px] text-slate-500 line-clamp-1">
+                        {phase.description}
+                      </p>
+
+                      <div className="space-y-2">
+                        {phase.steps.map((step, sIdx) => {
+                          const globalIdx = allSteps.findIndex(item => item.step.stepNumber === step.stepNumber);
+                          const isFirstStep = globalIdx === 0;
+                          const prevStep = !isFirstStep ? allSteps[globalIdx - 1] : null;
+                          const isLocked = !isFirstStep && prevStep && prevStep.step.status !== 'completed';
+
+                          const isComplete = step.status === 'completed';
+                          const isActive = step.stepNumber === activeStepNumber && !isComplete;
+                          const hasAttachments = step.attachments && step.attachments.length > 0;
+
+                          return (
+                            <div
+                              key={step.id}
+                              onClick={() => setSelectedStepCoord({ phaseIndex: pIdx, stepIndex: sIdx })}
+                              className={`p-3 rounded-2xl border transition-all cursor-pointer ${
+                                isComplete
+                                  ? 'bg-emerald-50/70 border-emerald-200 hover:border-emerald-400'
+                                  : isActive
+                                  ? 'bg-amber-50/80 border-amber-400 ring-2 ring-amber-400/20 shadow-xs'
+                                  : isLocked
+                                  ? 'bg-slate-50 border-slate-200 opacity-70'
+                                  : 'bg-white border-slate-200 hover:border-slate-300'
+                              }`}
+                            >
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="flex items-start space-x-2.5">
+                                  <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-black shrink-0 mt-0.5 ${
+                                    isComplete
+                                      ? 'bg-emerald-600 text-white'
+                                      : isActive
+                                      ? 'bg-amber-500 text-slate-950'
+                                      : 'bg-slate-200 text-slate-700'
+                                  }`}>
+                                    {isComplete ? <Check className="w-3.5 h-3.5" /> : step.stepNumber}
                                   </div>
-                                  <p className="text-[11px] text-slate-500 line-clamp-1 mt-0.5">
-                                    {step.description}
-                                  </p>
+
+                                  <div>
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                      <span className="text-xs font-black text-slate-900">
+                                        {step.title}
+                                      </span>
+                                      {step.status === 'completed' && (
+                                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.2 rounded">
+                                          ✓ Completado
+                                        </span>
+                                      )}
+                                      {isActive && (
+                                        <span className="text-[10px] font-black text-amber-900 bg-amber-200 px-1.5 py-0.2 rounded animate-pulse">
+                                          ⚡ En curso
+                                        </span>
+                                      )}
+                                    </div>
+                                    <p className="text-[11px] text-slate-500 line-clamp-1 mt-0.5">
+                                      {step.description}
+                                    </p>
+                                  </div>
                                 </div>
+
+                                <ChevronRight className="w-4 h-4 text-slate-400 shrink-0 mt-1" />
                               </div>
 
-                              <ChevronRight className="w-4 h-4 text-slate-400 shrink-0 mt-1" />
+                              {/* Ingest or field payment indicators */}
+                              {step.ingestData && (
+                                <div className="mt-2 bg-yellow-100/70 p-1.5 rounded-lg text-[10px] font-bold text-yellow-900 flex justify-between">
+                                  <span>Ingest: {step.ingestData.sdCardsCount} Tarjetas ({step.ingestData.totalGigabytes} GB)</span>
+                                  <span>{step.ingestData.backupVerified ? '✅ RAID OK' : '⏳ Pendiente'}</span>
+                                </div>
+                              )}
+
+                              {step.fieldPaymentData && (
+                                <div className="mt-2 bg-red-100/70 p-1.5 rounded-lg text-[10px] font-bold text-red-900 flex justify-between">
+                                  <span>Cobro 7PM: {step.fieldPaymentData.paymentStatus === 'paid' ? `Cancelado (S/. ${step.fieldPaymentData.amountCollected.toLocaleString()})` : 'Pendiente'}</span>
+                                  <span>{step.fieldPaymentData.paymentMethod}</span>
+                                </div>
+                              )}
                             </div>
+                          );
+                        })}
+                      </div>
 
-                            {/* Ingest or field payment indicators */}
-                            {step.ingestData && (
-                              <div className="mt-2 bg-yellow-100/70 p-1.5 rounded-lg text-[10px] font-bold text-yellow-900 flex justify-between">
-                                <span>Ingest: {step.ingestData.sdCardsCount} Tarjetas ({step.ingestData.totalGigabytes} GB)</span>
-                                <span>{step.ingestData.backupVerified ? '✅ RAID OK' : '⏳ Pendiente'}</span>
-                              </div>
-                            )}
-
-                            {step.fieldPaymentData && (
-                              <div className="mt-2 bg-red-100/70 p-1.5 rounded-lg text-[10px] font-bold text-red-900 flex justify-between">
-                                <span>Cobro 7PM: {step.fieldPaymentData.paymentStatus === 'paid' ? `Cancelado (S/. ${step.fieldPaymentData.amountCollected.toLocaleString()})` : 'Pendiente'}</span>
-                                <span>{step.fieldPaymentData.paymentMethod}</span>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
                     </div>
-
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
+
             </div>
           )}
 

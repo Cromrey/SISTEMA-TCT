@@ -92,7 +92,7 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
   const [clientDni, setClientDni] = useState('');
   const [clientPhone, setClientPhone] = useState('');
   const [clientEmail, setClientEmail] = useState('');
-  const [eventLocation, setEventLocation] = useState('');
+  const [eventLocation, setEventLocation] = useState('Salón de Eventos / Lima');
   const [eventAddress, setEventAddress] = useState('');
   
   // Multiple event schedule dates & coverage times
@@ -241,25 +241,17 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
       errors.push('El Celular debe tener 9 dígitos numéricos y comenzar con 9 (ej. 987654321).');
     }
 
-    // 4. Address and Location validation (Obligatorio)
-    if (!eventAddress.trim()) {
-      errors.push('La dirección del local del evento se debe rellenar obligatoriamente.');
-    }
-    if (!eventLocation.trim()) {
-      errors.push('El campo Salón / Distrito / Locación es obligatorio.');
-    }
-
-    // 5. If discount > 0, reason is strictly required
+    // 4. If discount > 0, reason is strictly required
     if (discountAmountNum > 0 && !discountReason.trim()) {
       errors.push('De haber descuento, es obligatorio registrar el Motivo del Descuento.');
     }
 
-    // 6. If list price varies from original package price, additional equipment / special clauses note is strictly required
+    // 5. If list price varies from original package price, additional equipment / special clauses note is strictly required
     if (listPriceNum !== originalPackageBasePrice && !additionalEquipmentNotes.trim()) {
       errors.push('Al variar el precio original de lista base de la proforma (S/. ' + originalPackageBasePrice + '), es obligatorio registrar la justificación en "Equipos Adicionales / Cláusulas Especiales".');
     }
 
-    // 7. At least one valid date
+    // 6. At least one valid date
     if (eventSchedules.length === 0 || !eventSchedules[0].date) {
       errors.push('Debe registrar al menos una fecha de evento.');
     }
@@ -299,7 +291,7 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
       eventType,
       eventDate: primaryEventDate,
       eventLocation: eventLocation.trim(),
-      eventAddress: eventAddress.trim(),
+      eventAddress: eventAddress.trim() || eventLocation.trim(),
       eventTime: formattedScheduleString,
       eventStartTime: eventSchedules[0]?.startTime || '16:00',
       eventEndTime: eventSchedules[0]?.endTime || '02:00',
@@ -339,29 +331,6 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
     try {
       confetti({ particleCount: 70, spread: 60 });
     } catch (err) {}
-
-    // Auto-clear / Reset all form fields upon generating contract as requested
-    setTitle('Boda Especial: ');
-    setClientName('');
-    setClientDni('');
-    setClientPhone('');
-    setClientEmail('');
-    setEventLocation('');
-    setEventAddress('');
-    setDiscountAmountStr('');
-    setDiscountReason('');
-    setExtraHoursCountStr('');
-    setAdditionalEquipmentNotes('');
-    setInitialDepositStr('');
-    setValidationErrors([]);
-    setEventSchedules([
-      {
-        id: `day-${Date.now()}-1`,
-        date: defaultEventDate,
-        startTime: '16:00',
-        endTime: '02:00'
-      }
-    ]);
 
     onCreateProject(newProject);
   };
@@ -596,30 +565,25 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
               <div>
-                <label className="block text-slate-700 font-bold mb-1">Título de la Producción *</label>
+                <label className="block text-slate-700 font-bold mb-1">Título de la Producción</label>
                 <input
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="Ej: Boda Real: Carolina & Fernando"
-                  className={`w-full p-2.5 text-xs font-bold border rounded-xl focus:ring-2 focus:ring-amber-500 focus:outline-none transition-all ${
-                    !title.trim() ? 'border-amber-400 bg-amber-50/60 ring-2 ring-amber-400/70 animate-pulse' : 'border-slate-300'
-                  }`}
+                  className="w-full p-2.5 text-xs font-bold border border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:outline-none"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-slate-700 font-bold mb-1">Salón / Distrito / Locación *</label>
+                <label className="block text-slate-700 font-bold mb-1">Salón / Distrito / Locación</label>
                 <input
                   type="text"
                   value={eventLocation}
                   onChange={(e) => setEventLocation(e.target.value)}
                   placeholder="Hacienda Villa, Cieneguilla"
-                  className={`w-full p-2.5 text-xs border rounded-xl font-medium transition-all ${
-                    !eventLocation.trim() ? 'border-amber-400 bg-amber-50/60 ring-2 ring-amber-400/70 animate-pulse' : 'border-slate-300'
-                  }`}
-                  required
+                  className="w-full p-2.5 text-xs border border-slate-300 rounded-xl font-medium"
                 />
               </div>
             </div>
@@ -701,18 +665,13 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
             </div>
 
             <div>
-              <label className="block text-slate-700 font-bold mb-1 text-xs">
-                Dirección Exacta del Evento (Obligatorio) *
-              </label>
+              <label className="block text-slate-700 font-bold mb-1 text-xs">Dirección Exacta del Evento</label>
               <input
                 type="text"
                 value={eventAddress}
                 onChange={(e) => setEventAddress(e.target.value)}
-                placeholder="Av. Manuel Valle Km 5.5, Lurín (o dirección exacta del local)"
-                className={`w-full p-2.5 text-xs border rounded-xl transition-all ${
-                  !eventAddress.trim() ? 'border-amber-400 bg-amber-50/60 ring-2 ring-amber-400/70 animate-pulse' : 'border-slate-300'
-                }`}
-                required
+                placeholder="Av. Manuel Valle Km 5.5, Lurín"
+                className="w-full p-2 text-xs border border-slate-300 rounded-xl"
               />
             </div>
           </div>
@@ -739,9 +698,9 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
                   value={clientName}
                   onChange={(e) => setClientName(e.target.value)}
                   placeholder="Ej: Luciana Morales Prado"
-                  className={`w-full p-2 border rounded-xl font-bold transition-all ${
-                    !clientName.trim() || clientName.trim().split(/\s+/).filter(Boolean).length < 3
-                      ? 'border-amber-400 bg-amber-50/60 ring-2 ring-amber-400/70 animate-pulse'
+                  className={`w-full p-2 border rounded-xl font-bold ${
+                    clientName.trim() && clientName.trim().split(/\s+/).filter(Boolean).length < 3
+                      ? 'border-amber-400 bg-amber-50/50'
                       : 'border-slate-300'
                   }`}
                   required
@@ -761,11 +720,7 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
                   onChange={(e) => handleDniChange(e.target.value)}
                   maxLength={8}
                   placeholder="74839201"
-                  className={`w-full p-2 border rounded-xl font-mono font-bold transition-all ${
-                    clientDni.length !== 8
-                      ? 'border-amber-400 bg-amber-50/60 ring-2 ring-amber-400/70 animate-pulse'
-                      : 'border-slate-300'
-                  }`}
+                  className="w-full p-2 border border-slate-300 rounded-xl font-mono font-bold"
                   required
                 />
                 <span className="text-[10px] text-slate-400 block mt-0.5">
@@ -787,11 +742,7 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
                     onChange={(e) => handlePhoneChange(e.target.value)}
                     maxLength={9}
                     placeholder="987654321"
-                    className={`w-full p-2 border rounded-r-xl font-mono font-bold transition-all ${
-                      clientPhone.length !== 9 || !clientPhone.startsWith('9')
-                        ? 'border-amber-400 bg-amber-50/60 ring-2 ring-amber-400/70 animate-pulse'
-                        : 'border-slate-300'
-                    }`}
+                    className="w-full p-2 border border-slate-300 rounded-r-xl font-mono font-bold"
                     required
                   />
                 </div>

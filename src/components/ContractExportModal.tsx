@@ -276,49 +276,26 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
           <div className="space-y-1 page-break-inside-avoid">
             <h3 className="font-black text-slate-900 uppercase tracking-wide flex items-center gap-1 text-[11px]">
               <span className="w-3.5 h-3.5 rounded-full bg-slate-900 text-amber-400 text-[9px] flex items-center justify-center font-bold">2</span>
-              CLÁUSULA SEGUNDA: DEL OBJETO DEL SERVICIO, FECHAS, HORARIOS Y LOCACIÓN
+              CLÁUSULA SEGUNDA: DEL OBJETO DEL SERVICIO, FECHA Y LOCACIÓN
             </h3>
 
-            <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 space-y-2 text-[10px]">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                <div>
-                  <span className="text-[9px] uppercase font-bold text-slate-500 block">Tipo de Evento & Paquete</span>
-                  <p className="font-black text-slate-900 text-[11px]">{currentData.eventType}</p>
-                  <p className="text-blue-700 font-bold">{currentData.selectedPackageName || 'Paquete Integral TCT'}</p>
-                </div>
-
-                <div>
-                  <span className="text-[9px] uppercase font-bold text-slate-500 block">Fecha Principal</span>
-                  <p className="font-black text-slate-900 text-[11px]">{currentData.eventDate}</p>
-                  <p className="text-slate-700 font-medium">({currentData.standardHours || 8} horas estándar)</p>
-                </div>
-
-                <div>
-                  <span className="text-[9px] uppercase font-bold text-slate-500 block">Locación y Dirección Exacta</span>
-                  <p className="font-bold text-slate-900">{currentData.eventLocation || 'Salón Principal'}</p>
-                  <p className="text-slate-700 font-semibold">{currentData.eventAddress || currentData.eventLocation || 'Lima Metropolitana'}</p>
-                </div>
+            <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 grid grid-cols-1 sm:grid-cols-3 gap-2 text-[10px]">
+              <div>
+                <span className="text-[9px] uppercase font-bold text-slate-500 block">Tipo de Evento & Paquete</span>
+                <p className="font-black text-slate-900 text-[11px]">{currentData.eventType}</p>
+                <p className="text-blue-700 font-bold">{currentData.selectedPackageName || 'Paquete Integral TCT'}</p>
               </div>
 
-              {/* All Registered Dates and Working Hours */}
-              <div className="bg-white p-2 rounded-lg border border-slate-200">
-                <span className="text-[9px] uppercase font-black text-slate-700 block mb-1">
-                  📅 Cronograma de Jornadas y Horarios de Trabajo Registrados:
-                </span>
-                {currentData.eventSchedules && currentData.eventSchedules.length > 0 ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-1.5">
-                    {currentData.eventSchedules.map((sch, i) => (
-                      <div key={i} className="p-1 bg-slate-50 rounded border border-slate-200 text-[9px]">
-                        <span className="font-bold text-slate-900">Día {i + 1} ({sch.date}): </span>
-                        <span className="font-mono text-amber-800 font-bold">{sch.startTime} a {sch.endTime}</span>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-[9px] font-mono text-slate-700 font-bold">
-                    {currentData.eventTime || `${currentData.eventStartTime || '16:00'} - ${currentData.eventEndTime || '02:00'}`}
-                  </p>
-                )}
+              <div>
+                <span className="text-[9px] uppercase font-bold text-slate-500 block">Fecha y Horario de Cobertura</span>
+                <p className="font-black text-slate-900 text-[11px]">{currentData.eventDate}</p>
+                <p className="text-slate-700 font-bold">{currentData.eventTime} ({currentData.standardHours || 8} horas base)</p>
+              </div>
+
+              <div>
+                <span className="text-[9px] uppercase font-bold text-slate-500 block">Locación y Dirección Exacta</span>
+                <p className="font-bold text-slate-900">{currentData.eventLocation}</p>
+                <p className="text-slate-600">{currentData.eventAddress || 'Lima Metropolitana'}</p>
               </div>
             </div>
           </div>
@@ -377,74 +354,39 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
                 </tr>
               </tbody>
             </table>
-
-            {/* Additional Equipment Details in Contract if registered */}
-            {currentData.additionalEquipmentNotes && currentData.additionalEquipmentNotes.trim() && (
-              <div className="p-2 bg-purple-50 rounded-lg border border-purple-200 text-[9px]">
-                <span className="font-bold text-purple-950 block uppercase">
-                  🛠️ Detalle de Equipos Adicionales y Cláusulas Especiales Acordadas:
-                </span>
-                <p className="text-purple-900 font-medium whitespace-pre-line mt-0.5">
-                  {currentData.additionalEquipmentNotes}
-                </p>
-              </div>
-            )}
           </div>
 
           {/* Clause 4: Deliverables & Plazos */}
           <div className="space-y-1 page-break-inside-avoid">
             <h3 className="font-black text-slate-900 uppercase tracking-wide flex items-center gap-1 text-[11px]">
               <span className="w-3.5 h-3.5 rounded-full bg-slate-900 text-amber-400 text-[9px] flex items-center justify-center font-bold">4</span>
-              CLÁUSULA CUARTA: ENTREGABLES, SESIÓN FOTOGRÁFICA Y PLAZOS ESTRICTOS
+              CLÁUSULA CUARTA: ENTREGABLES Y PLAZOS ESTRICTOS DE ENTREGA
             </h3>
 
-            <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 space-y-2 text-[10px]">
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-1.5">
+            <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 space-y-1.5 text-[10px]">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 <div className="p-1.5 bg-white rounded-lg border border-slate-200">
-                  <span className="font-bold text-slate-900 block text-[10px]">🎬 Video Master & Trailer</span>
-                  <span className="text-[9px] text-purple-700 font-bold">Plazo: 15 días hábiles</span>
-                  <p className="text-[8px] text-slate-500">Resguardo en Servidor</p>
+                  <span className="font-bold text-slate-900 block">🎬 Video Master & Trailer</span>
+                  <span className="text-[10px] text-purple-700 font-bold">Plazo: 15 días hábiles</span>
+                  <p className="text-[9px] text-slate-500">Enlace digital y resguardo en Servidor</p>
                 </div>
 
                 <div className="p-1.5 bg-white rounded-lg border border-slate-200">
-                  <span className="font-bold text-slate-900 block text-[10px]">📸 Sesión Fotográfica</span>
-                  <span className={`text-[9px] font-bold ${currentData.includesPhotoshoot ? 'text-emerald-700' : 'text-slate-400'}`}>
-                    {currentData.includesPhotoshoot ? 'INCLUIDA (Plazo: 15 días)' : 'NO INCLUIDA'}
-                  </span>
-                  <p className="text-[8px] text-slate-500">1 Cámara de Foto Pro</p>
+                  <span className="font-bold text-slate-900 block">📖 Fotolibro Impreso</span>
+                  <span className="text-[10px] text-pink-700 font-bold">{currentData.includesPhotobook ? 'Plazo: 30 días hábiles' : 'No incluido en paquete'}</span>
+                  <p className="text-[9px] text-slate-500">Maquetación, aprobación y encuadernado</p>
                 </div>
 
                 <div className="p-1.5 bg-white rounded-lg border border-slate-200">
-                  <span className="font-bold text-slate-900 block text-[10px]">📖 Fotolibro Impreso</span>
-                  <span className="text-[9px] text-pink-700 font-bold">{currentData.includesPhotobook ? 'Plazo: 30 días hábiles' : 'No incluido'}</span>
-                  <p className="text-[8px] text-slate-500">Maquetación y encuadernado</p>
-                </div>
-
-                <div className="p-1.5 bg-white rounded-lg border border-slate-200">
-                  <span className="font-bold text-slate-900 block text-[10px]">💾 USB 3.0 & Estuche</span>
-                  <span className="text-[9px] text-emerald-700 font-bold">Saldo S/. 0</span>
-                  <p className="text-[8px] text-slate-500">Alta definición 4K</p>
+                  <span className="font-bold text-slate-900 block">💾 Estuche Madera & USB 3.0</span>
+                  <span className="text-[10px] text-emerald-700 font-bold">Entrega con Saldo S/. 0</span>
+                  <p className="text-[9px] text-slate-500">Material final en alta definición 4K</p>
                 </div>
               </div>
 
-              {/* Highlighting Internet Publication Clause as Requested */}
-              <div className={`p-2 rounded-lg border text-center ${
-                currentData.authorizeInternetPublishing !== false
-                  ? 'bg-amber-100/80 border-amber-400 text-amber-950'
-                  : 'bg-red-50 border-red-300 text-red-950'
-              }`}>
-                <span className="font-black text-[11px] tracking-wide block uppercase">
-                  🌐 AUTORIZACIÓN DE PUBLICACIÓN EN INTERNET Y REDES SOCIALES:
-                </span>
-                <span className="font-black text-xs uppercase px-2 py-0.5 rounded bg-white border border-slate-300 inline-block mt-1 shadow-2xs">
-                  {currentData.authorizeInternetPublishing !== false
-                    ? '✅ SÍ AUTORIZA LA PUBLICACIÓN DEL EVENTO EN INTERNET'
-                    : '❌ NO AUTORIZA LA PUBLICACIÓN EN INTERNET (USO PRIVADO EXCLUSIVO)'}
-                </span>
-                <p className="text-[8px] mt-0.5 text-slate-600">
-                  Cláusula contractual relativa a derechos de exhibición en portafolio de Corporación TCT.
-                </p>
-              </div>
+              <p className="text-[9px] text-slate-600 italic">
+                * Conforme al Paso 12 del flujo oficial, CORPORACIÓN TCT conservará los archivos RAW originales por 30 días posteriores a la entrega final.
+              </p>
             </div>
           </div>
 
