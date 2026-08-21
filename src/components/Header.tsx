@@ -12,7 +12,9 @@ import {
   Maximize2,
   Minimize2,
   Clapperboard,
-  Video
+  Video,
+  ArrowLeft,
+  ArrowRight
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -33,6 +35,10 @@ interface HeaderProps {
   searchQuery?: string;
   onSearchChange?: (query: string) => void;
   activeProjectsCount: number;
+  onGoBack?: () => void;
+  onGoForward?: () => void;
+  canGoBack?: boolean;
+  canGoForward?: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -47,7 +53,11 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenNewProject,
   onOpenRulesModal,
   onLogout,
-  activeProjectsCount
+  activeProjectsCount,
+  onGoBack,
+  onGoForward,
+  canGoBack = true,
+  canGoForward = true
 }) => {
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
 
@@ -119,18 +129,48 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="w-full max-w-7xl mx-auto px-2 sm:px-4 lg:px-6">
         <div className="flex items-center justify-between min-h-16 py-2 gap-2 sm:gap-4 flex-wrap sm:flex-nowrap">
           
-          {/* Official TCT Logo & Calligraphy Slogan Branding */}
+          {/* Left Block: Logo, Slogan and Forward/Back History Navigation Controls */}
           <div className="flex items-center space-x-2 sm:space-x-3 shrink-0">
-            <TCTLogo size="md" variant="icon-only" />
-            <div className="flex flex-col justify-center">
-              <div className="flex items-center space-x-1.5">
-                <span className="font-black text-sm sm:text-base md:text-lg tracking-wider text-white flex items-center leading-none">
-                  CORPORACIÓN TCT
+            {/* Top Navigation Icons (Atrás y Adelante) */}
+            <div className="flex items-center space-x-1 bg-slate-950/80 p-1 rounded-xl border border-slate-800 shadow-inner">
+              <button
+                id="btn-nav-history-back"
+                onClick={onGoBack}
+                disabled={!canGoBack}
+                className="p-1.5 sm:px-2.5 sm:py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-amber-400 disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center gap-1 text-xs font-bold shadow-xs cursor-pointer"
+                title="Ir Atrás (Deslizar de Derecha a Izquierda)"
+                aria-label="Ir Atrás"
+              >
+                <ArrowLeft className="w-4 h-4 text-amber-400" />
+                <span className="hidden md:inline text-[11px]">Atrás</span>
+              </button>
+
+              <button
+                id="btn-nav-history-forward"
+                onClick={onGoForward}
+                disabled={!canGoForward}
+                className="p-1.5 sm:px-2.5 sm:py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-amber-400 disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center gap-1 text-xs font-bold shadow-xs cursor-pointer"
+                title="Avanzar Adelante (Deslizar de Izquierda a Derecha)"
+                aria-label="Avanzar Adelante"
+              >
+                <ArrowRight className="w-4 h-4 text-amber-400" />
+                <span className="hidden md:inline text-[11px]">Adelante</span>
+              </button>
+            </div>
+
+            {/* Official TCT Logo & Calligraphy Slogan Branding */}
+            <div className="flex items-center space-x-2">
+              <TCTLogo size="md" variant="icon-only" />
+              <div className="flex flex-col justify-center">
+                <div className="flex items-center space-x-1.5">
+                  <span className="font-black text-sm sm:text-base md:text-lg tracking-wider text-white flex items-center leading-none">
+                    CORPORACIÓN TCT
+                  </span>
+                </div>
+                <span className="font-slogan text-xs sm:text-sm md:text-base text-amber-300 font-medium tracking-wide leading-tight select-none drop-shadow-sm mt-0.5">
+                  Marcando Historia
                 </span>
               </div>
-              <span className="font-slogan text-xs sm:text-sm md:text-base text-amber-300 font-medium tracking-wide leading-tight select-none drop-shadow-sm mt-0.5">
-                Marcando Historia
-              </span>
             </div>
           </div>
 
@@ -203,11 +243,12 @@ export const Header: React.FC<HeaderProps> = ({
               <button
                 id="btn-open-rules-config"
                 onClick={onOpenRulesModal}
-                className="p-2 sm:p-2.5 rounded-xl bg-slate-800 hover:bg-slate-750 text-amber-300 hover:text-amber-200 border border-slate-700 hover:border-amber-500/60 transition-all flex items-center justify-center text-xs font-black shadow-xs shrink-0 cursor-pointer"
-                title="Reglas del Sistema (Configuración, Usuarios, Autoguardado)"
+                className="p-2 sm:px-3 sm:py-2.5 rounded-xl bg-slate-800 hover:bg-slate-750 text-amber-300 hover:text-amber-200 border border-slate-700 hover:border-amber-500/60 transition-all flex items-center justify-center gap-1.5 text-xs font-black shadow-xs shrink-0 cursor-pointer"
+                title="Reglas del Sistema (Configuración de Empresa, Asignación de Personal, Paquetes, Checklists)"
                 aria-label="Reglas del Sistema"
               >
                 <Sliders className="w-4 h-4 text-amber-400" />
+                <span className="hidden lg:inline text-[11px]">Reglas TCT</span>
               </button>
             )}
 
@@ -215,28 +256,35 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               id="btn-fullscreen-toggle"
               onClick={toggleFullscreen}
-              className="p-2 sm:p-2.5 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-amber-400 border border-slate-700 hover:border-amber-500/50 transition-all flex items-center justify-center text-xs font-bold shadow-xs shrink-0 cursor-pointer"
+              className="p-2 sm:px-2.5 sm:py-2.5 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-amber-400 border border-slate-700 hover:border-amber-500/50 transition-all flex items-center justify-center gap-1 text-xs font-bold shadow-xs shrink-0 cursor-pointer"
               title={isFullscreen ? "Salir de Pantalla Completa" : "Modo Pantalla Completa (Inmersivo)"}
               aria-label="Pantalla Completa"
             >
               {isFullscreen ? (
-                <Minimize2 className="w-4 h-4 text-amber-400" />
+                <>
+                  <Minimize2 className="w-4 h-4 text-amber-400" />
+                  <span className="hidden xl:inline text-[11px]">Salir Fullscreen</span>
+                </>
               ) : (
-                <Maximize2 className="w-4 h-4 text-slate-300" />
+                <>
+                  <Maximize2 className="w-4 h-4 text-slate-300" />
+                  <span className="hidden xl:inline text-[11px]">Pantalla Completa</span>
+                </>
               )}
             </button>
 
-            {/* Nueva Producción Icon-Only Button */}
+            {/* Nueva Producción Button */}
             <button
               id="btn-new-project-header"
               onClick={onOpenNewProject}
-              className="relative p-2 sm:p-2.5 bg-gradient-to-tr from-amber-500 via-amber-400 to-amber-500 hover:from-amber-400 hover:to-amber-600 text-slate-950 rounded-xl shadow-md hover:shadow-amber-500/20 transition-all shrink-0 cursor-pointer flex items-center justify-center group border border-amber-300"
+              className="relative p-2 sm:px-3.5 sm:py-2.5 bg-gradient-to-tr from-amber-500 via-amber-400 to-amber-500 hover:from-amber-400 hover:to-amber-600 text-slate-950 rounded-xl shadow-md hover:shadow-amber-500/20 transition-all shrink-0 cursor-pointer flex items-center justify-center gap-1.5 group border border-amber-300 font-black text-xs"
               title="Nueva Producción / Emitir Contrato (Ctrl+N)"
               aria-label="Nueva Producción"
             >
               <Clapperboard className="w-4 h-4 text-slate-950 group-hover:scale-110 transition-transform" />
-              {/* Subtle small badge plus */}
-              <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-slate-950 text-amber-400 font-black text-[9px] rounded-full flex items-center justify-center border border-amber-400 shadow-xs">
+              <span className="hidden sm:inline">Nueva Producción</span>
+              {/* Subtle small badge plus on mobile */}
+              <span className="sm:hidden absolute -top-1 -right-1 w-3.5 h-3.5 bg-slate-950 text-amber-400 font-black text-[9px] rounded-full flex items-center justify-center border border-amber-400 shadow-xs">
                 +
               </span>
             </button>
@@ -245,11 +293,12 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               id="btn-logout-header"
               onClick={onLogout}
-              className="p-2 sm:p-2.5 rounded-xl bg-red-950/50 hover:bg-red-600 text-red-300 hover:text-white border border-red-800/50 transition-all flex items-center justify-center text-xs font-bold shadow-xs shrink-0 group cursor-pointer"
+              className="p-2 sm:px-3 sm:py-2.5 rounded-xl bg-red-950/50 hover:bg-red-600 text-red-300 hover:text-white border border-red-800/50 transition-all flex items-center justify-center gap-1.5 text-xs font-bold shadow-xs shrink-0 group cursor-pointer"
               title="Cerrar sesión"
               aria-label="Cerrar sesión"
             >
-              <LogOut className="w-4 h-4 text-red-300 group-hover:text-white transition-colors" />
+              <LogOut className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
+              <span className="hidden md:inline text-[11px]">Salir</span>
             </button>
 
           </div>

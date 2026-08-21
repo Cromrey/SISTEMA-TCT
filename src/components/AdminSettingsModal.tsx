@@ -9,12 +9,15 @@ import {
   UserRole,
   AuthUser,
   ProductionProject,
-  StaffMember
+  StaffMember,
+  TCTCompanyInfo,
+  TCTCompanyBankAccount
 } from '../types';
 import { 
   getStoredRules, 
   saveMasterRules, 
-  resetMasterRulesToDefault 
+  resetMasterRulesToDefault,
+  INITIAL_COMPANY_INFO
 } from '../utils/rulesStorage';
 import { 
   getStoredUsers, 
@@ -86,10 +89,17 @@ import {
   Briefcase,
   Keyboard,
   Command,
-  Zap
+  Zap,
+  Building2,
+  Building,
+  Landmark,
+  CreditCard,
+  QrCode,
+  UserMinus,
+  Film
 } from 'lucide-react';
 
-export type SettingsTab = 'checklists' | 'equipment' | 'packages' | 'services' | 'formats' | 'users' | 'shortcuts' | 'system';
+export type SettingsTab = 'company' | 'staff_assignment' | 'checklists' | 'equipment' | 'packages' | 'services' | 'formats' | 'users' | 'shortcuts' | 'system';
 
 interface AdminSettingsModalProps {
   onClose: () => void;
@@ -135,6 +145,23 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
   const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab);
   const [searchQuery, setSearchQuery] = useState('');
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  // --- Company Information State ---
+  const [companyInfo, setCompanyInfo] = useState<TCTCompanyInfo>(rules.companyInfo || INITIAL_COMPANY_INFO);
+  const [newBankName, setNewBankName] = useState('');
+  const [newBankAccountNum, setNewBankAccountNum] = useState('');
+  const [newBankCci, setNewBankCci] = useState('');
+  const [newBankCurrency, setNewBankCurrency] = useState<'PEN' | 'USD'>('PEN');
+
+  // --- Personnel & Equipment Assignment State ---
+  const [projectsList, setProjectsList] = useState<ProductionProject[]>(getStoredProjects());
+  const [selectedAssignProjectId, setSelectedAssignProjectId] = useState<string>(
+    getStoredProjects()[0]?.id || ''
+  );
+  const [assignUserSelection, setAssignUserSelection] = useState<string>('');
+  const [assignRoleSelection, setAssignRoleSelection] = useState<string>('Director de Cámara');
+  const [assignCustomName, setAssignCustomName] = useState<string>('');
+  const [assignCustomPhone, setAssignCustomPhone] = useState<string>('+51 900 000 000');
 
   // --- Checklist Management State ---
   const [selectedStepNumber, setSelectedStepNumber] = useState<number>(1);
@@ -248,9 +275,166 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
     notifySuccess('Atajos de teclado restablecidos a la configuración de fábrica');
   };
 
+  // -------------------------------------------------------------
+  // 0. COMPANY INFO (CORPORACIÓN TCT) MANAGEMENT
+  // -------------------------------------------------------------
+  const handleSaveCompanyInfo = () => {
+    const updatedRules: TCTMasterRules = {
+      ...rules,
+      companyInfo: { ...companyInfo }
+    };
+    saveMasterRules(updatedRules);
+    setRules(updatedRules);
+    if (onRulesUpdated) onRulesUpdated();
+    notifySuccess('✓ Datos institucionales de Corporación TCT actualizados correctamente');
+  };
+
+  const handleResetCompanyInfo = () => {
+    if (window.confirm('¿Restaurar los datos oficiales institucionales de Corporación TCT a los valores predeterminados?')) {
+      const resetInfo = { ...INITIAL_COMPANY_INFO };
+      setCompanyInfo(resetInfo);
+      const updatedRules: TCTMasterRules = {
+        ...rules,
+        companyInfo: resetInfo
+      };
+      saveMasterRules(updatedRules);
+      setRules(updatedRules);
+      if (onRulesUpdated) onRulesUpdated();
+      notifySuccess('🔄 Datos de Corporación TCT restablecidos a los valores oficiales de fábrica');
+    }
+  };
+
+  const handleAddBankAccount = () => {
+    if (!newBankName.trim() || !newBankAccountNum.trim()) {
+      alert('Por favor ingrese el nombre del banco y el número de cuenta.');
+      return;
+    }
+    const newAcc: TCTCompanyBankAccount = {
+      id: `bank_${Date.now()}`,
+      bankName: newBankName.trim(),
+      accountType: 'Corriente',
+      accountNumber: newBankAccountNum.trim(),
+      holderName: companyInfo.legalName || 'Corporación TCT S.A.C.',
+      cci: newBankCci.trim() || undefined,
+      currency: newBankCurrency
+    };
+    const updatedAccounts = [...(companyInfo.bankAccounts || []), newAcc];
+    setCompanyInfo({ ...companyInfo, bankAccounts: updatedAccounts });
+    setNewBankName('');
+    setNewBankAccountNum('');
+    setNewBankCci('');
+    notifySuccess(`✓ Cuenta ${newAcc.bankName} añadida`);
+  };
+
+  const handleDeleteBankAccount = (bankId: string) => {
+    const updatedAccounts = (companyInfo.bankAccounts || []).filter(b => b.id !== bankId);
+    setCompanyInfo({ ...companyInfo, bankAccounts: updatedAccounts });
+    notifySuccess('Cuenta bancaria eliminada');
+  };
+
+  // -------------------------------------------------------------
+  // 0.1 PERSONAL & EQUIPMENT ASSIGNMENT MANAGEMENT
+  // -------------------------------------------------------------
+  const selectedAssignProject = projectsList.find(p => p.id === selectedAssignProjectId) || projectsList[0];
+
+  const handleAddStaffToProject = () => {
+    if (!selectedAssignProject) return;
+
+    let staffToAdd: StaffMember;
+    if (assignUserSelection === 'custom') {
+      if (!assignCustomName.trim()) {
+        alert('Por favor ingrese el nombre del personal.');
+        return;
+      }
+      staffToAdd = {
+        id: `staff_${Date.now()}`,
+        name: assignCustomName.trim(),
+        role: assignRoleSelection,
+        phone: assignCustomPhone.trim() || '+51 900 000 000',
+        confirmed: true
+      };
+    } else {
+      const selectedUser = usersList.find(u => u.id === assignUserSelection);
+      if (!selectedUser) {
+        alert('Seleccione un usuario o personal técnico de la lista.');
+        return;
+      }
+      staffToAdd = {
+        id: selectedUser.id,
+        name: selectedUser.fullName,
+        role: assignRoleSelection || selectedUser.jobTitle || 'Técnico de Producción',
+        phone: selectedUser.phone || '+51 900 000 000',
+        confirmed: true
+      };
+    }
+
+    // Check if already in project
+    const currentStaffList = selectedAssignProject.assignedStaff || [];
+    if (currentStaffList.some(s => s.name.toLowerCase() === staffToAdd.name.toLowerCase())) {
+      alert(`El personal "${staffToAdd.name}" ya se encuentra asignado a esta producción.`);
+      return;
+    }
+
+    const updatedStaffList = [...currentStaffList, staffToAdd];
+    const updatedProject: ProductionProject = {
+      ...selectedAssignProject,
+      assignedStaff: updatedStaffList,
+      directorName: assignRoleSelection.includes('Director') ? staffToAdd.name : selectedAssignProject.directorName,
+      leadPhotographer: assignRoleSelection.includes('Fotógrafo') ? staffToAdd.name : selectedAssignProject.leadPhotographer,
+      dronePilot: assignRoleSelection.includes('Dron') ? staffToAdd.name : selectedAssignProject.dronePilot,
+      leadEditor: assignRoleSelection.includes('Editor') ? staffToAdd.name : selectedAssignProject.leadEditor,
+      updatedAt: new Date().toISOString()
+    };
+
+    const updatedProjects = projectsList.map(p => p.id === updatedProject.id ? updatedProject : p);
+    setProjectsList(updatedProjects);
+    saveProjects(updatedProjects);
+    if (onProjectsChange) onProjectsChange(updatedProjects);
+    setAssignCustomName('');
+    notifySuccess(`✓ ${staffToAdd.name} (${staffToAdd.role}) asignado a ${selectedAssignProject.title}`);
+  };
+
+  const handleRemoveStaffFromProject = (staffId: string) => {
+    if (!selectedAssignProject) return;
+    const updatedStaffList = (selectedAssignProject.assignedStaff || []).filter(s => s.id !== staffId);
+    const updatedProject: ProductionProject = {
+      ...selectedAssignProject,
+      assignedStaff: updatedStaffList,
+      updatedAt: new Date().toISOString()
+    };
+    const updatedProjects = projectsList.map(p => p.id === updatedProject.id ? updatedProject : p);
+    setProjectsList(updatedProjects);
+    saveProjects(updatedProjects);
+    if (onProjectsChange) onProjectsChange(updatedProjects);
+    notifySuccess('Personal retirado de la producción');
+  };
+
+  const handleToggleEquipmentForProject = (eqItem: EquipmentItem) => {
+    if (!selectedAssignProject) return;
+    const currentEq = selectedAssignProject.assignedEquipment || [];
+    const exists = currentEq.some(e => e.id === eqItem.id);
+    let updatedEq: EquipmentItem[];
+    if (exists) {
+      updatedEq = currentEq.filter(e => e.id !== eqItem.id);
+    } else {
+      updatedEq = [...currentEq, { ...eqItem, status: 'Checked-Out' }];
+    }
+    const updatedProject: ProductionProject = {
+      ...selectedAssignProject,
+      assignedEquipment: updatedEq,
+      updatedAt: new Date().toISOString()
+    };
+    const updatedProjects = projectsList.map(p => p.id === updatedProject.id ? updatedProject : p);
+    setProjectsList(updatedProjects);
+    saveProjects(updatedProjects);
+    if (onProjectsChange) onProjectsChange(updatedProjects);
+    notifySuccess(exists ? `Equipo ${eqItem.name} desasignado` : `✓ Equipo ${eqItem.name} asignado a producción`);
+  };
+
   const handleSaveAll = () => {
     const updatedRules: TCTMasterRules = {
       ...rules,
+      companyInfo: { ...companyInfo },
       standardExtraHourRate: Number(standardExtraHourRate),
       maxDiscountPercentageAllowed: Number(maxDiscountPercentage)
     };
@@ -831,84 +1015,126 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
         )}
 
         {/* Tab Navigation */}
-        <div className="bg-slate-100 px-4 sm:px-6 py-2 border-b border-slate-200 flex items-center space-x-2 overflow-x-auto shrink-0 scrollbar-none">
+        <div className="bg-slate-100 px-3 sm:px-6 py-2 border-b border-slate-200 flex items-center space-x-1.5 sm:space-x-2 overflow-x-auto shrink-0 scrollbar-none">
+          
+          {/* TAB 0: DATOS EMPRESA CORPORACIÓN TCT */}
+          <button
+            onClick={() => setActiveTab('company')}
+            className={`px-3 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+              activeTab === 'company'
+                ? 'bg-amber-500 text-slate-950 shadow-md ring-2 ring-amber-400'
+                : 'text-amber-900 bg-amber-100/60 hover:bg-amber-200/80'
+            }`}
+            title="Datos Oficiales de Corporación TCT (RUC, Cuentas, Representante, Locación)"
+          >
+            <Building2 className="w-4 h-4 text-amber-900" />
+            <span className="hidden sm:inline">1. Empresa TCT</span>
+            <span className="sm:hidden">Empresa</span>
+          </button>
+
+          {/* TAB 0.1: ASIGNACIÓN DE PERSONAL & EQUIPOS */}
+          <button
+            onClick={() => setActiveTab('staff_assignment')}
+            className={`px-3 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+              activeTab === 'staff_assignment'
+                ? 'bg-indigo-600 text-white shadow-md'
+                : 'text-indigo-900 bg-indigo-50 hover:bg-indigo-100'
+            }`}
+            title="Asignación de Personal Técnico y Equipos por Contrato"
+          >
+            <UserCheck className="w-4 h-4" />
+            <span className="hidden sm:inline">2. Asignación Personal</span>
+            <span className="sm:hidden">Personal</span>
+          </button>
+
+          {/* TAB 1: CHECKLISTS */}
           <button
             onClick={() => setActiveTab('checklists')}
-            className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 whitespace-nowrap ${
+            className={`px-3 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
               activeTab === 'checklists'
                 ? 'bg-slate-900 text-amber-400 shadow-sm'
                 : 'text-slate-600 hover:bg-slate-200'
             }`}
           >
             <ListChecks className="w-4 h-4" />
-            <span>1. Checklists (12 Pasos)</span>
+            <span className="hidden sm:inline">3. Checklists (12 Pasos)</span>
+            <span className="sm:hidden">Checklists</span>
           </button>
 
+          {/* TAB 2: INVENTARIO */}
           <button
             onClick={() => setActiveTab('equipment')}
-            className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 whitespace-nowrap ${
+            className={`px-3 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
               activeTab === 'equipment'
                 ? 'bg-slate-900 text-amber-400 shadow-sm'
                 : 'text-slate-600 hover:bg-slate-200'
             }`}
           >
             <Camera className="w-4 h-4" />
-            <span>2. Inventario</span>
+            <span className="hidden sm:inline">4. Inventario</span>
+            <span className="sm:hidden">Equipos</span>
             <span className="px-1.5 py-0.2 rounded-full bg-slate-800 text-[10px] text-amber-300">
               {rules.equipmentCatalog.length}
             </span>
           </button>
 
+          {/* TAB 3: PROFORMAS */}
           <button
             onClick={() => setActiveTab('packages')}
-            className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 whitespace-nowrap ${
+            className={`px-3 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
               activeTab === 'packages'
                 ? 'bg-slate-900 text-amber-400 shadow-sm'
                 : 'text-slate-600 hover:bg-slate-200'
             }`}
           >
             <Package className="w-4 h-4" />
-            <span>3. Proformas</span>
+            <span className="hidden sm:inline">5. Proformas</span>
+            <span className="sm:hidden">Paquetes</span>
             <span className="px-1.5 py-0.2 rounded-full bg-slate-800 text-[10px] text-amber-300">
               {rules.packages.length}
             </span>
           </button>
 
+          {/* TAB 4: TARIFAS */}
           <button
             onClick={() => setActiveTab('services')}
-            className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 whitespace-nowrap ${
+            className={`px-3 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
               activeTab === 'services'
                 ? 'bg-slate-900 text-amber-400 shadow-sm'
                 : 'text-slate-600 hover:bg-slate-200'
             }`}
           >
             <Coins className="w-4 h-4" />
-            <span>4. Tarifas & Asesores</span>
+            <span className="hidden sm:inline">6. Tarifas & Asesores</span>
+            <span className="sm:hidden">Tarifas</span>
           </button>
 
+          {/* TAB 5: FORMATOS */}
           <button
             onClick={() => setActiveTab('formats')}
-            className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 whitespace-nowrap ${
+            className={`px-3 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
               activeTab === 'formats'
                 ? 'bg-slate-900 text-amber-400 shadow-sm'
                 : 'text-slate-600 hover:bg-slate-200'
             }`}
           >
             <FileText className="w-4 h-4" />
-            <span>5. Formatos</span>
+            <span className="hidden sm:inline">7. Formatos</span>
+            <span className="sm:hidden">Formatos</span>
           </button>
 
           {/* TAB 6: USUARIOS */}
           <button
             onClick={() => setActiveTab('users')}
-            className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+            className={`px-3 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
               activeTab === 'users'
                 ? 'bg-blue-600 text-white shadow-sm'
                 : 'text-blue-700 bg-blue-50 hover:bg-blue-100'
             }`}
           >
             <Users className="w-4 h-4" />
-            <span>6. Administrar Usuarios</span>
+            <span className="hidden sm:inline">8. Usuarios & Cargos</span>
+            <span className="sm:hidden">Usuarios</span>
             <span className="px-1.5 py-0.2 rounded-full bg-blue-900 text-[10px] text-blue-200">
               {usersList.length}
             </span>
@@ -917,35 +1143,526 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
           {/* TAB 7: ATAJOS DE TECLADO */}
           <button
             onClick={() => setActiveTab('shortcuts')}
-            className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+            className={`px-3 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
               activeTab === 'shortcuts'
                 ? 'bg-amber-600 text-white shadow-sm'
                 : 'text-amber-800 bg-amber-50 hover:bg-amber-100'
             }`}
           >
             <Keyboard className="w-4 h-4" />
-            <span>7. Atajos de Teclado</span>
-            <span className="px-1.5 py-0.2 rounded-full bg-amber-900 text-[10px] text-amber-200">
-              {shortcutsList.filter(s => s.enabled).length} Activos
-            </span>
+            <span className="hidden sm:inline">9. Atajos</span>
+            <span className="sm:hidden">Atajos</span>
           </button>
 
-          {/* TAB 8: SISTEMA & AUTOGUARDADO */}
+          {/* TAB 8: SISTEMA */}
           <button
             onClick={() => setActiveTab('system')}
-            className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+            className={`px-3 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
               activeTab === 'system'
                 ? 'bg-emerald-700 text-white shadow-sm'
                 : 'text-emerald-800 bg-emerald-50 hover:bg-emerald-100'
             }`}
           >
             <Database className="w-4 h-4" />
-            <span>8. Sistema & Demo</span>
+            <span className="hidden sm:inline">10. Base de Datos</span>
+            <span className="sm:hidden">Datos</span>
           </button>
         </div>
 
         {/* Main Content Area */}
-        <div className="flex-1 p-6 overflow-y-auto bg-slate-50 space-y-6">
+        <div className="flex-1 p-4 sm:p-6 overflow-y-auto bg-slate-50 space-y-6">
+
+          {/* ========================================================= */}
+          {/* TAB 0: DATOS OFICIALES CORPORACIÓN TCT */}
+          {/* ========================================================= */}
+          {activeTab === 'company' && (
+            <div className="space-y-6 animate-in fade-in">
+              <div className="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200 shadow-xs space-y-5">
+                <div className="flex items-center justify-between flex-wrap gap-2 pb-4 border-b border-slate-100">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 rounded-2xl bg-amber-500/20 text-amber-800 flex items-center justify-center">
+                      <Building2 className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h4 className="font-black text-slate-900 text-base">
+                        Datos Institucionales de Corporación TCT
+                      </h4>
+                      <p className="text-xs text-slate-500">
+                        Estos datos se aplican automáticamente en los Contratos Oficiales, Proformas, Actas de Conformidad y Documentos Legales emitidos.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={handleResetCompanyInfo}
+                      className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      <span>Restaurar Fábrica</span>
+                    </button>
+                    <button
+                      onClick={handleSaveCompanyInfo}
+                      className="px-4 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-black rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <Save className="w-4 h-4" />
+                      <span>Guardar Empresa</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Razón Social Legal:</label>
+                    <input
+                      type="text"
+                      value={companyInfo.legalName}
+                      onChange={(e) => setCompanyInfo({ ...companyInfo, legalName: e.target.value })}
+                      className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 focus:bg-white focus:border-amber-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Nombre Comercial:</label>
+                    <input
+                      type="text"
+                      value={companyInfo.commercialName}
+                      onChange={(e) => setCompanyInfo({ ...companyInfo, commercialName: e.target.value })}
+                      className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 focus:bg-white focus:border-amber-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Número de RUC:</label>
+                    <input
+                      type="text"
+                      value={companyInfo.ruc}
+                      onChange={(e) => setCompanyInfo({ ...companyInfo, ruc: e.target.value })}
+                      className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 focus:bg-white focus:border-amber-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Slogan / Lema Oficial:</label>
+                    <input
+                      type="text"
+                      value={companyInfo.slogan}
+                      onChange={(e) => setCompanyInfo({ ...companyInfo, slogan: e.target.value })}
+                      className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 focus:bg-white focus:border-amber-500 focus:outline-none font-slogan text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Representante Legal / Titular Contrato:</label>
+                    <input
+                      type="text"
+                      value={companyInfo.legalRepresentative}
+                      onChange={(e) => setCompanyInfo({ ...companyInfo, legalRepresentative: e.target.value })}
+                      className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 focus:bg-white focus:border-amber-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Director General de Producción:</label>
+                    <input
+                      type="text"
+                      value={companyInfo.productionDirector}
+                      onChange={(e) => setCompanyInfo({ ...companyInfo, productionDirector: e.target.value })}
+                      className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 focus:bg-white focus:border-amber-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Dirección Fiscal / Sede de Operaciones:</label>
+                    <input
+                      type="text"
+                      value={companyInfo.fiscalAddress}
+                      onChange={(e) => setCompanyInfo({ ...companyInfo, fiscalAddress: e.target.value, address: e.target.value })}
+                      className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 focus:bg-white focus:border-amber-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Teléfono Principal de Contacto:</label>
+                    <input
+                      type="text"
+                      value={companyInfo.phoneMain}
+                      onChange={(e) => setCompanyInfo({ ...companyInfo, phoneMain: e.target.value, phone: e.target.value })}
+                      className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 focus:bg-white focus:border-amber-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Teléfono Secundario / WhatsApp:</label>
+                    <input
+                      type="text"
+                      value={companyInfo.phoneSecondary || ''}
+                      onChange={(e) => setCompanyInfo({ ...companyInfo, phoneSecondary: e.target.value })}
+                      className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 focus:bg-white focus:border-amber-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Correo Electrónico Oficial:</label>
+                    <input
+                      type="email"
+                      value={companyInfo.email}
+                      onChange={(e) => setCompanyInfo({ ...companyInfo, email: e.target.value })}
+                      className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 focus:bg-white focus:border-amber-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Sitio Web / Portal:</label>
+                    <input
+                      type="text"
+                      value={companyInfo.website}
+                      onChange={(e) => setCompanyInfo({ ...companyInfo, website: e.target.value })}
+                      className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 focus:bg-white focus:border-amber-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Días de Custodia del Master en Servidor (Contrato):</label>
+                    <input
+                      type="number"
+                      value={companyInfo.contractMasterStorageDays || 60}
+                      onChange={(e) => setCompanyInfo({ ...companyInfo, contractMasterStorageDays: Number(e.target.value) })}
+                      className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 focus:bg-white focus:border-amber-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                {/* Bank Accounts Section */}
+                <div className="pt-4 border-t border-slate-200 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h5 className="font-black text-slate-900 text-xs sm:text-sm flex items-center gap-1.5">
+                      <Landmark className="w-4 h-4 text-amber-600" />
+                      <span>Cuentas Bancarias Oficiales para Depósito / Transferencia</span>
+                    </h5>
+                    <span className="text-[11px] font-bold text-slate-500">
+                      {companyInfo.bankAccounts?.length || 0} cuentas registradas
+                    </span>
+                  </div>
+
+                  {/* List of existing accounts */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {(companyInfo.bankAccounts || []).map((acc) => (
+                      <div key={acc.id} className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 flex items-start justify-between">
+                        <div>
+                          <div className="flex items-center space-x-2">
+                            <span className="font-black text-xs text-slate-900">{acc.bankName}</span>
+                            <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 text-[10px] font-black">
+                              {acc.currency === 'USD' ? 'Dólares ($)' : 'Soles (S/)'}
+                            </span>
+                          </div>
+                          <p className="text-xs font-bold text-slate-700 mt-1 font-mono">
+                            N° Cuenta: {acc.accountNumber}
+                          </p>
+                          {acc.cci && (
+                            <p className="text-[11px] font-medium text-slate-500 font-mono">
+                              CCI: {acc.cci}
+                            </p>
+                          )}
+                          <p className="text-[10px] text-slate-400 mt-0.5">
+                            Titular: {acc.accountHolder}
+                          </p>
+                        </div>
+
+                        <button
+                          onClick={() => handleDeleteBankAccount(acc.id)}
+                          className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                          title="Eliminar cuenta bancaria"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Add New Bank Account Box */}
+                  <div className="p-4 bg-amber-50/50 rounded-2xl border border-amber-200/80 space-y-3">
+                    <h6 className="font-black text-xs text-amber-900 flex items-center gap-1.5">
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Añadir Nueva Cuenta Bancaria Institucional</span>
+                    </h6>
+                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5">
+                      <div>
+                        <input
+                          type="text"
+                          placeholder="Banco (ej. BCP, BBVA, Interbank)"
+                          value={newBankName}
+                          onChange={(e) => setNewBankName(e.target.value)}
+                          className="w-full bg-white border border-slate-300 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-800"
+                        />
+                      </div>
+                      <div>
+                        <input
+                          type="text"
+                          placeholder="N° de Cuenta Corriente / Ahorros"
+                          value={newBankAccountNum}
+                          onChange={(e) => setNewBankAccountNum(e.target.value)}
+                          className="w-full bg-white border border-slate-300 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-800"
+                        />
+                      </div>
+                      <div>
+                        <input
+                          type="text"
+                          placeholder="Código Interbancario (CCI)"
+                          value={newBankCci}
+                          onChange={(e) => setNewBankCci(e.target.value)}
+                          className="w-full bg-white border border-slate-300 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-800"
+                        />
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <select
+                          value={newBankCurrency}
+                          onChange={(e) => setNewBankCurrency(e.target.value as 'PEN' | 'USD')}
+                          className="bg-white border border-slate-300 rounded-xl px-2 py-1.5 text-xs font-bold text-slate-800"
+                        >
+                          <option value="PEN">Soles (PEN)</option>
+                          <option value="USD">Dólares (USD)</option>
+                        </select>
+                        <button
+                          onClick={handleAddBankAccount}
+                          className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs rounded-xl shadow-xs transition-all cursor-pointer whitespace-nowrap"
+                        >
+                          + Añadir
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+
+              </div>
+            </div>
+          )}
+
+          {/* ========================================================= */}
+          {/* TAB 0.1: ASIGNACIÓN DE PERSONAL & EQUIPOS POR CONTRATO */}
+          {/* ========================================================= */}
+          {activeTab === 'staff_assignment' && (
+            <div className="space-y-6 animate-in fade-in">
+              <div className="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200 shadow-xs space-y-5">
+                
+                {/* Project Selector Bar */}
+                <div className="flex items-center justify-between flex-wrap gap-3 pb-4 border-b border-slate-100">
+                  <div>
+                    <span className="px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 font-bold text-[10px] border border-indigo-200">
+                      Asignación Operativa
+                    </span>
+                    <h4 className="font-black text-slate-900 text-base mt-1">
+                      Personal Técnico & Equipos por Producción
+                    </h4>
+                    <p className="text-xs text-slate-500">
+                      Asigna camarógrafos, fotógrafos, pilotos y equipos a cada contrato. Se sincroniza con el código QR y credenciales de acceso.
+                    </p>
+                  </div>
+
+                  <div className="flex items-center space-x-2 w-full sm:w-auto">
+                    <label className="text-xs font-bold text-slate-700 shrink-0">Contrato / Producción:</label>
+                    <select
+                      value={selectedAssignProjectId}
+                      onChange={(e) => setSelectedAssignProjectId(e.target.value)}
+                      className="bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-black text-slate-900 focus:outline-none focus:border-indigo-500 w-full sm:w-auto max-w-sm"
+                    >
+                      {projectsList.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.contractNumber || p.uniqueCode} • {p.title} ({p.clientName})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {selectedAssignProject ? (
+                  <div className="space-y-6">
+                    {/* Selected Project Summary Card */}
+                    <div className="p-4 bg-slate-900 text-white rounded-2xl flex items-center justify-between flex-wrap gap-2">
+                      <div>
+                        <div className="flex items-center space-x-2">
+                          <span className="px-2 py-0.5 rounded-lg bg-amber-400 text-slate-950 font-black text-xs">
+                            {selectedAssignProject.contractNumber || selectedAssignProject.uniqueCode}
+                          </span>
+                          <h4 className="font-black text-sm text-white">
+                            {selectedAssignProject.title}
+                          </h4>
+                        </div>
+                        <p className="text-xs text-slate-400 mt-1">
+                          Cliente: {selectedAssignProject.clientName} • Locación: {selectedAssignProject.eventLocation || 'No especificada'}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center space-x-2 text-xs font-bold text-amber-300 bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-700">
+                        <span>Personal Asignado: {selectedAssignProject.assignedStaff?.length || 0}</span>
+                        <span>•</span>
+                        <span>Equipos: {selectedAssignProject.assignedEquipment?.length || 0}</span>
+                      </div>
+                    </div>
+
+                    {/* Section A: Assigned Staff List & Add Form */}
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <h5 className="font-black text-slate-900 text-xs sm:text-sm flex items-center gap-1.5">
+                          <Users className="w-4 h-4 text-indigo-600" />
+                          <span>Personal Técnico Asignado ({selectedAssignProject.assignedStaff?.length || 0})</span>
+                        </h5>
+                      </div>
+
+                      {/* Staff Cards */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                        {(selectedAssignProject.assignedStaff || []).map((st) => (
+                          <div key={st.id} className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 flex items-center justify-between shadow-xs">
+                            <div className="flex items-center space-x-3">
+                              <div className="w-9 h-9 rounded-xl bg-indigo-100 text-indigo-800 flex items-center justify-center font-black text-xs">
+                                👷
+                              </div>
+                              <div>
+                                <h6 className="font-black text-xs text-slate-900">{st.name}</h6>
+                                <span className="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 font-black text-[10px] border border-indigo-200 inline-block mt-0.5">
+                                  {st.role}
+                                </span>
+                                <p className="text-[10px] text-slate-500 font-mono mt-0.5">{st.phone}</p>
+                              </div>
+                            </div>
+
+                            <button
+                              onClick={() => handleRemoveStaffFromProject(st.id)}
+                              className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                              title="Retirar de esta producción"
+                            >
+                              <UserMinus className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ))}
+
+                        {(!selectedAssignProject.assignedStaff || selectedAssignProject.assignedStaff.length === 0) && (
+                          <div className="col-span-full p-4 bg-amber-50 border border-amber-200 rounded-2xl text-amber-800 text-xs font-bold flex items-center gap-2">
+                            <AlertCircle className="w-4 h-4 text-amber-600" />
+                            <span>No hay personal técnico asignado a este contrato aún. Asigne el equipo técnico abajo.</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Add Staff Form */}
+                      <div className="p-4 bg-indigo-50/50 rounded-2xl border border-indigo-200/80 space-y-3">
+                        <h6 className="font-black text-xs text-indigo-900 flex items-center gap-1.5">
+                          <UserPlus className="w-4 h-4" />
+                          <span>Asignar Miembro del Equipo a este Contrato</span>
+                        </h6>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                          <div>
+                            <label className="block text-[11px] font-bold text-slate-700 mb-1">Seleccionar Usuario:</label>
+                            <select
+                              value={assignUserSelection}
+                              onChange={(e) => setAssignUserSelection(e.target.value)}
+                              className="w-full bg-white border border-slate-300 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-800"
+                            >
+                              <option value="">-- Seleccionar de Usuarios --</option>
+                              {usersList.map((u) => (
+                                <option key={u.id} value={u.id}>
+                                  {u.fullName} ({u.jobTitle || u.role})
+                                </option>
+                              ))}
+                              <option value="custom">-- Otro Personal (Manual) --</option>
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="block text-[11px] font-bold text-slate-700 mb-1">Cargo en la Producción:</label>
+                            <select
+                              value={assignRoleSelection}
+                              onChange={(e) => setAssignRoleSelection(e.target.value)}
+                              className="w-full bg-white border border-slate-300 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-800"
+                            >
+                              {JOB_TITLE_PRESETS.map((cargo) => (
+                                <option key={cargo} value={cargo}>{cargo}</option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div className="flex items-end">
+                            <button
+                              onClick={handleAddStaffToProject}
+                              className="w-full py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs rounded-xl shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                            >
+                              <Plus className="w-4 h-4" />
+                              <span>Asignar a Producción</span>
+                            </button>
+                          </div>
+                        </div>
+
+                        {assignUserSelection === 'custom' && (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2">
+                            <input
+                              type="text"
+                              placeholder="Nombre Completo del Técnico"
+                              value={assignCustomName}
+                              onChange={(e) => setAssignCustomName(e.target.value)}
+                              className="bg-white border border-slate-300 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-800"
+                            />
+                            <input
+                              type="text"
+                              placeholder="Teléfono / WhatsApp"
+                              value={assignCustomPhone}
+                              onChange={(e) => setAssignCustomPhone(e.target.value)}
+                              className="bg-white border border-slate-300 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-800"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Section B: Equipment Checkout Checklist */}
+                    <div className="space-y-4 pt-4 border-t border-slate-200">
+                      <div className="flex items-center justify-between">
+                        <h5 className="font-black text-slate-900 text-xs sm:text-sm flex items-center gap-1.5">
+                          <Camera className="w-4 h-4 text-amber-600" />
+                          <span>Equipos Audiovisuales Asignados ({selectedAssignProject.assignedEquipment?.length || 0})</span>
+                        </h5>
+                        <span className="text-xs text-slate-500 font-bold">
+                          Marque los equipos del catálogo que saldrán a esta locación
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 max-h-60 overflow-y-auto p-1">
+                        {rules.equipmentCatalog.map((eq) => {
+                          const isAssigned = (selectedAssignProject.assignedEquipment || []).some(e => e.id === eq.id);
+                          return (
+                            <label
+                              key={eq.id}
+                              className={`p-3 rounded-2xl border flex items-center space-x-3 cursor-pointer transition-all ${
+                                isAssigned 
+                                  ? 'bg-amber-50/80 border-amber-400 text-slate-950 font-bold shadow-xs' 
+                                  : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                              }`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={isAssigned}
+                                onChange={() => handleToggleEquipmentForProject(eq)}
+                                className="w-4 h-4 rounded text-amber-600 focus:ring-amber-500"
+                              />
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs font-black truncate">{eq.name}</p>
+                                <p className="text-[10px] text-slate-500">{eq.category} • S/N: {eq.serialNumber}</p>
+                              </div>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-500">No hay proyectos disponibles.</p>
+                )}
+
+              </div>
+            </div>
+          )}
 
           {/* ========================================================= */}
           {/* TAB 1: CHECKLISTS DE LOS 12 PASOS */}

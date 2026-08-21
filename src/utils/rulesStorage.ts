@@ -1,7 +1,52 @@
-import { TCTMasterRules, TCTMasterPackage, EquipmentItem, MasterStepChecklistRule, TemplateDocumentFormat } from '../types';
+import { TCTMasterRules, TCTMasterPackage, EquipmentItem, MasterStepChecklistRule, TemplateDocumentFormat, TCTCompanyInfo } from '../types';
 import { getIdbItem, setIdbItem, STORES } from './indexedDb';
 
 const RULES_STORAGE_KEY = 'tct_master_rules_v1';
+
+export const INITIAL_COMPANY_INFO: TCTCompanyInfo = {
+  legalName: 'CORPORACIÓN TCT S.A.C.',
+  commercialName: 'CORPORACIÓN TCT',
+  slogan: 'Marcando Historia',
+  ruc: '20608941253',
+  legalRepresentative: 'Ing. Michael RomeroReyes',
+  productionDirector: 'Director de Producción / Asesor Comercial',
+  address: 'Av. Las Palmeras 451, Of. 302, Los Olivos, Lima - Perú',
+  fiscalAddress: 'Av. Las Palmeras 451, Of. 302, Los Olivos, Lima - Perú',
+  phoneMain: '+51 912 345 678',
+  phoneSecondary: '+51 987 654 321',
+  email: 'contacto@corporaciontct.com',
+  website: 'https://corporaciontct.com',
+  contractMasterStorageDays: 5,
+  bankAccounts: [
+    {
+      id: 'bank-bcp-soles',
+      bankName: 'BCP (Banco de Crédito del Perú)',
+      accountType: 'Corriente',
+      accountNumber: '193-98217361-0-45',
+      cci: '002-193-0098217361045-12',
+      holderName: 'CORPORACION TCT S.A.C.',
+      currency: 'PEN'
+    },
+    {
+      id: 'bank-bbva-soles',
+      bankName: 'BBVA Continental',
+      accountType: 'Ahorros',
+      accountNumber: '0011-0482-0200847291',
+      cci: '011-482-000200847291-55',
+      holderName: 'CORPORACION TCT S.A.C.',
+      currency: 'PEN'
+    },
+    {
+      id: 'bank-interbank-soles',
+      bankName: 'Interbank',
+      accountType: 'Corriente',
+      accountNumber: '200-3001892841',
+      cci: '003-200-003001892841-89',
+      holderName: 'CORPORACION TCT S.A.C.',
+      currency: 'PEN'
+    }
+  ]
+};
 
 export const INITIAL_PACKAGES: TCTMasterPackage[] = [
   {
@@ -491,6 +536,7 @@ FORMA DE PAGO: 40% Reserva / 40% En evento (7:00 PM) / 20% Contra entrega físic
 ];
 
 export const INITIAL_RULES: TCTMasterRules = {
+  companyInfo: INITIAL_COMPANY_INFO,
   packages: INITIAL_PACKAGES,
   equipmentCatalog: INITIAL_EQUIPMENT_CATALOG,
   stepChecklists: INITIAL_STEP_CHECKLISTS,
@@ -514,9 +560,10 @@ export const getStoredRules = (): TCTMasterRules => {
     const raw = localStorage.getItem(RULES_STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      const combined = {
+      const combined: TCTMasterRules = {
         ...INITIAL_RULES,
         ...parsed,
+        companyInfo: parsed.companyInfo ? { ...INITIAL_COMPANY_INFO, ...parsed.companyInfo } : INITIAL_COMPANY_INFO,
         packages: parsed.packages || INITIAL_PACKAGES,
         equipmentCatalog: parsed.equipmentCatalog || INITIAL_EQUIPMENT_CATALOG,
         stepChecklists: parsed.stepChecklists || INITIAL_STEP_CHECKLISTS,

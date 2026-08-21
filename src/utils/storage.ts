@@ -388,3 +388,69 @@ export const generateDecisionInsights = (projects: ProductionProject[]): Decisio
     }
   ];
 };
+
+export interface ProjectProgressInfo {
+  percentNumber: number; // numeric percentage with 2 decimals e.g. 16.67
+  formattedPercent: string; // "16.67 %"
+  completedSteps: number;
+  totalSteps: number;
+  isValidated: boolean; // True if required attachments exist and task marked completed
+  isPendingAttachments: boolean; // True if contract is issued or step 1/2 in progress without uploaded attachments
+  validationMessage: string;
+}
+
+/**
+ * Calculates project progress with 2 decimals (nn.nn %) and determines attachment validation status.
+ * Per TCT rules, upon contract issuance, mandatory attachments (signed contract / deposit voucher / proforma)
+ * must be uploaded and marked completed to validate real production progress.
+ */
+export const getProjectProgressInfo = (project: ProductionProject): ProjectProgressInfo => {
+  let totalSteps = 0;
+  let completedSteps = 0;
+
+  project.phases?.forEach(phase => {
+    phase.steps?.forEach(step => {
+      totalSteps++;
+      if (step.status === 'completed') {
+        completedSteps++;
+      }
+    });
+  });
+
+  if (totalSteps === 0) totalSteps = 12;
+  const rawPercent = (completedSteps / totalSteps) * 100;
+  const percentNumber = Number(rawPercent.toFixed(2));
+  const formattedPercent = `${percentNumber.toFixed(2)} %`;
+
+  // Check Step 1 and Step 2 attachments
+  const step1 = project.phases?.[0]?.steps?.[0];
+  const step2 = project.phases?.[0]?.steps?.[1];
+
+  const hasStep1Attachments = Boolean(project.proformaAttachmentUrl || (step1?.attachments && step1.attachments.length > 0));
+  const hasStep2Attachments = Boolean(step2?.attachments && step2.attachments.length > 0);
+
+  // If a project has contract number or has completed steps / in progress, but lacks uploaded attachments:
+  const requiresAttachments = Boolean(
+    project.contractNumber || 
+    project.quotationCode || 
+    completedSteps > 0 || 
+    step1?.status === 'completed' || 
+    step2?.status === 'completed'
+  );
+  
+  const hasUploadedRequiredFiles = hasStep1Attachments || hasStep2Attachments;
+  const isPendingAttachments = requiresAttachments && !hasUploadedRequiredFiles;
+  const isValidated = !isPendingAttachments;
+
+  return {
+    percentNumber,
+    formattedPercent,
+    completedSteps,
+    totalSteps,
+    isValidated,
+    isPendingAttachments,
+    validationMessage: isPendingAttachments 
+      ? '⚠️ ATENCIÓN: Debe añadir los archivos adjuntos (Contrato firmado / Comprobante de pago) para validar el porcentaje de avance de la producción real.'
+      : '✓ Porcentaje de avance validado con archivos adjuntos reglamentarios.'
+  };
+};

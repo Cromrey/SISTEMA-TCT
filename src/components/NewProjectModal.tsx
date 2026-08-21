@@ -146,6 +146,18 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
   // Form Validation Errors
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
+  // Sequential field guide: find the current empty required field
+  const nameWords = clientName.trim().split(/\s+/).filter(Boolean);
+  const nextRequiredField = !title.trim() 
+    ? 'title'
+    : nameWords.length < 3 
+    ? 'name' 
+    : !/^\d{8}$/.test(clientDni.trim()) 
+    ? 'dni' 
+    : !/^9\d{8}$/.test(clientPhone.trim()) 
+    ? 'phone' 
+    : '';
+
   // Parse numeric values safely with up to 2 decimal places
   const listPriceNum = listPriceStr === '' ? 0 : Number(parseFloat(listPriceStr).toFixed(2)) || 0;
   const discountAmountNum = discountAmountStr === '' ? 0 : Number(parseFloat(discountAmountStr).toFixed(2)) || 0;
@@ -562,13 +574,24 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
               <div>
-                <label className="block text-slate-700 font-bold mb-1">Título de la Producción</label>
+                <label className="block text-slate-700 font-bold mb-1 flex items-center justify-between">
+                  <span>Título de la Producción *</span>
+                  {nextRequiredField === 'title' && (
+                    <span className="text-[10px] text-amber-700 bg-amber-100 px-1.5 py-0.2 rounded font-black animate-pulse">
+                      Paso 1: Escriba el título
+                    </span>
+                  )}
+                </label>
                 <input
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="Título de la producción (Ej: Boda Real: Carolina & Fernando)"
-                  className="w-full p-2.5 text-xs font-bold border border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:outline-none placeholder:text-slate-400 placeholder:font-normal bg-white"
+                  className={`w-full p-2.5 text-xs font-bold rounded-xl focus:ring-2 focus:ring-amber-500 focus:outline-none placeholder:text-slate-400 placeholder:font-normal bg-white transition-all ${
+                    nextRequiredField === 'title'
+                      ? 'border-2 border-amber-400 bg-amber-50/30 ring-2 ring-amber-400/40 animate-pulse'
+                      : 'border border-slate-300'
+                  }`}
                   required
                 />
               </div>
@@ -687,29 +710,41 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
             
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
               <div>
-                <label className="block text-slate-700 font-bold mb-1">
-                  Nombre Completo <span className="text-amber-600">(Mínimo 3 nombres)</span> *
+                <label className="block text-slate-700 font-bold mb-1 flex items-center justify-between">
+                  <span>Nombre Completo *</span>
+                  {nextRequiredField === 'name' && (
+                    <span className="text-[10px] text-amber-700 bg-amber-100 px-1.5 py-0.2 rounded font-black animate-pulse">
+                      Paso 2
+                    </span>
+                  )}
                 </label>
                 <input
                   type="text"
                   value={clientName}
                   onChange={(e) => setClientName(e.target.value)}
                   placeholder="Ej: Luciana Morales Prado"
-                  className={`w-full p-2 border rounded-xl font-bold ${
-                    clientName.trim() && clientName.trim().split(/\s+/).filter(Boolean).length < 3
+                  className={`w-full p-2 border rounded-xl font-bold transition-all ${
+                    nextRequiredField === 'name'
+                      ? 'border-2 border-amber-400 bg-amber-50/30 ring-2 ring-amber-400/40 animate-pulse'
+                      : clientName.trim() && clientName.trim().split(/\s+/).filter(Boolean).length < 3
                       ? 'border-amber-400 bg-amber-50/50'
                       : 'border-slate-300'
                   }`}
                   required
                 />
                 <span className="text-[10px] text-slate-400 block mt-0.5">
-                  {clientName.trim() ? `${clientName.trim().split(/\s+/).filter(Boolean).length} palabras ingresadas` : 'Nombres y apellidos'}
+                  {clientName.trim() ? `${clientName.trim().split(/\s+/).filter(Boolean).length} palabras ingresadas (mínimo 3)` : 'Mínimo 3 nombres y apellidos'}
                 </span>
               </div>
 
               <div>
-                <label className="block text-slate-700 font-bold mb-1">
-                  DNI (8 dígitos) *
+                <label className="block text-slate-700 font-bold mb-1 flex items-center justify-between">
+                  <span>DNI (8 dígitos) *</span>
+                  {nextRequiredField === 'dni' && (
+                    <span className="text-[10px] text-amber-700 bg-amber-100 px-1.5 py-0.2 rounded font-black animate-pulse">
+                      Paso 3
+                    </span>
+                  )}
                 </label>
                 <input
                   type="text"
@@ -717,7 +752,11 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
                   onChange={(e) => handleDniChange(e.target.value)}
                   maxLength={8}
                   placeholder="74839201"
-                  className="w-full p-2 border border-slate-300 rounded-xl font-mono font-bold"
+                  className={`w-full p-2 border rounded-xl font-mono font-bold transition-all ${
+                    nextRequiredField === 'dni'
+                      ? 'border-2 border-amber-400 bg-amber-50/30 ring-2 ring-amber-400/40 animate-pulse'
+                      : 'border-slate-300'
+                  }`}
                   required
                 />
                 <span className="text-[10px] text-slate-400 block mt-0.5">
@@ -726,8 +765,13 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
               </div>
 
               <div>
-                <label className="block text-slate-700 font-bold mb-1">
-                  Celular (9 dígitos, inicia en 9) *
+                <label className="block text-slate-700 font-bold mb-1 flex items-center justify-between">
+                  <span>Celular (9 dígitos) *</span>
+                  {nextRequiredField === 'phone' && (
+                    <span className="text-[10px] text-amber-700 bg-amber-100 px-1.5 py-0.2 rounded font-black animate-pulse">
+                      Paso 4
+                    </span>
+                  )}
                 </label>
                 <div className="flex items-center">
                   <span className="bg-slate-100 border border-r-0 border-slate-300 px-2 py-2 rounded-l-xl text-slate-600 font-mono text-xs font-bold">
@@ -739,12 +783,16 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
                     onChange={(e) => handlePhoneChange(e.target.value)}
                     maxLength={9}
                     placeholder="987654321"
-                    className="w-full p-2 border border-slate-300 rounded-r-xl font-mono font-bold"
+                    className={`w-full p-2 border rounded-r-xl font-mono font-bold transition-all ${
+                      nextRequiredField === 'phone'
+                        ? 'border-2 border-amber-400 bg-amber-50/30 ring-2 ring-amber-400/40 animate-pulse'
+                        : 'border-slate-300'
+                    }`}
                     required
                   />
                 </div>
                 <span className="text-[10px] text-slate-400 block mt-0.5">
-                  {clientPhone.length}/9 dígitos
+                  {clientPhone.length}/9 dígitos (inicia con 9)
                 </span>
               </div>
 

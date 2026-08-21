@@ -341,7 +341,35 @@ export interface TemplateDocumentFormat {
   updatedAt: string;
 }
 
+export interface TCTCompanyBankAccount {
+  id: string;
+  bankName: string; // e.g. "BCP", "BBVA", "Interbank", "Banco de la Nación"
+  accountType: 'Corriente' | 'Ahorros' | 'Detracciones';
+  accountNumber: string;
+  cci?: string;
+  holderName: string;
+  currency: 'PEN' | 'USD';
+}
+
+export interface TCTCompanyInfo {
+  legalName: string; // "CORPORACIÓN TCT S.A.C."
+  commercialName: string; // "CORPORACIÓN TCT"
+  slogan: string; // "Marcando Historia"
+  ruc: string; // "20608941253"
+  legalRepresentative: string; // "Ing. Michael RomeroReyes"
+  productionDirector: string; // "Director de Producción"
+  address: string; // "Lima, Perú"
+  fiscalAddress?: string;
+  phoneMain: string; // "+51 912 345 678"
+  phoneSecondary?: string;
+  email: string; // "contacto@corporaciontct.com"
+  website?: string;
+  bankAccounts: TCTCompanyBankAccount[];
+  contractMasterStorageDays: number; // default 5 days
+}
+
 export interface TCTMasterRules {
+  companyInfo?: TCTCompanyInfo;
   packages: TCTMasterPackage[];
   equipmentCatalog: EquipmentItem[];
   stepChecklists: MasterStepChecklistRule[];

@@ -90,7 +90,7 @@ export default function App() {
     setTimeout(() => setToastMessage(null), 3500);
   };
 
-  // Handle mobile / tablet gesture: swipe right-to-left to go back one step
+  // Handle navigation history: Go Back (Swipe right-to-left or Header Back button)
   const handleGoBack = () => {
     if (selectedProjectForDetail) {
       setSelectedProjectForDetail(null);
@@ -127,11 +127,30 @@ export default function App() {
       showToast('← Cerrar administración de usuarios');
       return;
     }
-    showToast('← Gestos táctiles: Regresar');
+    showToast('← Vista principal de proyectos');
+  };
+
+  // Handle navigation history: Go Forward (Swipe left-to-right or Header Forward button)
+  const handleGoForward = () => {
+    // If no modal open, open the latest active project or open new project wizard
+    if (!selectedProjectForDetail && !selectedProjectForContract && !selectedProjectForReport && !isNewProjectModalOpen && !isAnalyticsModalOpen && !isRulesModalOpen && !isUsersModalOpen) {
+      const activeProj = projects.find(p => !p.isArchived);
+      if (activeProj) {
+        setSelectedProjectForDetail(activeProj);
+        showToast(`→ Abrir producción: ${activeProj.title}`);
+        return;
+      } else {
+        setIsNewProjectModalOpen(true);
+        showToast('→ Iniciar Nueva Producción');
+        return;
+      }
+    }
+    showToast('→ Avanzar al siguiente elemento');
   };
 
   useSwipeGesture({
     onSwipeLeft: handleGoBack,
+    onSwipeRight: handleGoForward,
     enabled: !!currentUser
   });
 
@@ -383,7 +402,7 @@ export default function App() {
         onOpenNewProject={() => setIsNewProjectModalOpen(true)}
         onOpenAnalytics={() => setIsAnalyticsModalOpen(true)}
         onOpenRulesModal={() => {
-          setRulesInitialTab('checklists');
+          setRulesInitialTab('company');
           setIsRulesModalOpen(true);
         }}
         onOpenUsersManagement={() => {
@@ -395,6 +414,8 @@ export default function App() {
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         activeProjectsCount={projects.filter(p => !p.isArchived).length}
+        onGoBack={handleGoBack}
+        onGoForward={handleGoForward}
       />
 
       {/* Main Workspace with responsive full-width padding */}

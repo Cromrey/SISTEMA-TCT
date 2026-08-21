@@ -1,5 +1,6 @@
 import React from 'react';
 import { ProductionProject, StepData, PhaseData } from '../types';
+import { getProjectProgressInfo } from '../utils/projectProgress';
 import { 
   CheckCircle2, 
   Clock, 
@@ -11,7 +12,9 @@ import {
   CheckSquare,
   ShieldCheck,
   Zap,
-  ArrowRight
+  ArrowRight,
+  AlertTriangle,
+  XCircle
 } from 'lucide-react';
 
 interface PhaseSequenceBarProps {
@@ -25,6 +28,8 @@ export const PhaseSequenceBar: React.FC<PhaseSequenceBarProps> = ({
   onStepClick,
   compact = false
 }) => {
+  const progressInfo = getProjectProgressInfo(project);
+
   // Flatten all 12 steps
   const allSteps: { phase: PhaseData; step: StepData; phaseIdx: number; stepIdx: number }[] = [];
   project.phases.forEach((ph, pIdx) => {
@@ -35,7 +40,6 @@ export const PhaseSequenceBar: React.FC<PhaseSequenceBarProps> = ({
 
   const totalSteps = allSteps.length;
   const completedSteps = allSteps.filter(item => item.step.status === 'completed').length;
-  const progressPercent = Math.round((completedSteps / (totalSteps || 12)) * 100);
 
   // Active step
   const activeStepItem = allSteps.find(item => item.step.status === 'in_progress') 
@@ -66,6 +70,32 @@ export const PhaseSequenceBar: React.FC<PhaseSequenceBarProps> = ({
   return (
     <div className="space-y-4">
       
+      {/* Contrasting Blinking Validation Warning Banner if Attachments are Missing */}
+      {!progressInfo.isValidated && (
+        <div className="bg-gradient-to-r from-amber-500 via-red-500 to-amber-500 p-0.5 rounded-2xl shadow-lg animate-pulse">
+          <div className="bg-slate-950 text-white p-3.5 sm:p-4 rounded-[14px] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border border-amber-400/40">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-400/30 shrink-0">
+                <AlertTriangle className="w-5 h-5 text-amber-400 animate-bounce" />
+              </div>
+              <div>
+                <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest block">
+                  AVISO IMPORTANTE DE VALIDACIÓN DE AVANCE
+                </span>
+                <p className="text-xs sm:text-sm font-bold text-amber-100 mt-0.5">
+                  Se debe añadir los archivos adjuntos obligatorios (documentos/sustentos técnicos) y marcar la respectiva tarea como culminada para habilitar el avance en firme.
+                </p>
+              </div>
+            </div>
+
+            <span className="px-3 py-1 bg-red-600/30 border border-red-500/50 rounded-xl text-red-300 text-xs font-mono font-black shrink-0 flex items-center gap-1.5 self-end sm:self-center">
+              <XCircle className="w-3.5 h-3.5" />
+              <span>Avance Bloqueado</span>
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Compact, Intuitive Progress Box */}
       <div className="bg-slate-950 text-white rounded-2xl p-4 sm:p-5 border border-slate-800 shadow-xl space-y-3">
         
@@ -89,12 +119,19 @@ export const PhaseSequenceBar: React.FC<PhaseSequenceBarProps> = ({
             </div>
           </div>
 
-          {/* Progress Percentage Display */}
+          {/* Progress Percentage Display with 2 decimals nn.nn % and conditional Strikethrough 'x' */}
           <div className="flex items-center space-x-3 shrink-0 self-end sm:self-center">
             <div className="text-right">
-              <div className="text-2xl sm:text-3xl font-black text-amber-400 font-mono leading-none">
-                {progressPercent}<span className="text-sm font-bold text-amber-300">%</span>
-              </div>
+              {progressInfo.isValidated ? (
+                <div className="text-2xl sm:text-3xl font-black text-amber-400 font-mono leading-none">
+                  {progressInfo.formattedPercentage}
+                </div>
+              ) : (
+                <div className="text-xl sm:text-2xl font-black text-red-400 font-mono leading-none flex items-center justify-end gap-1.5" title="Avance en pausa: se requieren adjuntos técnicos">
+                  <span className="text-xs bg-red-950 text-red-300 px-1.5 py-0.5 rounded border border-red-800 font-sans">❌ Bloqueado</span>
+                  <span className="line-through opacity-70">{progressInfo.formattedPercentage}</span>
+                </div>
+              )}
               <span className="text-[10px] text-slate-300 font-bold bg-slate-800 px-2 py-0.5 rounded-md border border-slate-700 block mt-0.5">
                 {completedSteps} de {totalSteps} pasos
               </span>
@@ -106,8 +143,12 @@ export const PhaseSequenceBar: React.FC<PhaseSequenceBarProps> = ({
         {/* Global Progress Bar */}
         <div className="w-full bg-slate-800 rounded-full h-2.5 overflow-hidden p-0.5 border border-slate-700">
           <div 
-            className="h-full bg-gradient-to-r from-amber-400 via-emerald-400 to-teal-400 rounded-full transition-all duration-700 shadow-sm"
-            style={{ width: `${progressPercent}%` }}
+            className={`h-full rounded-full transition-all duration-700 shadow-sm ${
+              progressInfo.isValidated
+                ? 'bg-gradient-to-r from-amber-400 via-emerald-400 to-teal-400'
+                : 'bg-gradient-to-r from-red-500 to-amber-500 opacity-60'
+            }`}
+            style={{ width: `${progressInfo.rawPercentage}%` }}
           />
         </div>
 
@@ -254,3 +295,4 @@ export const PhaseSequenceBar: React.FC<PhaseSequenceBarProps> = ({
     </div>
   );
 };
+
