@@ -594,21 +594,23 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
             </button>
           </div>
 
-          {/* Staff Filter Dropdown */}
-          <div className="flex items-center space-x-2 shrink-0">
-            <select
-              value={selectedStaffFilter}
-              onChange={(e) => setSelectedStaffFilter(e.target.value)}
-              className="w-full sm:w-auto p-2 border border-slate-200 rounded-xl text-xs bg-white font-semibold text-slate-800"
-            >
-              <option value="all">👥 Todo el Personal Técnico</option>
-              {allStaff.map(st => (
-                <option key={st.id} value={st.id}>
-                  {st.name} ({st.role.split(' ')[0]})
-                </option>
-              ))}
-            </select>
-          </div>
+          {/* Staff Filter Dropdown (Only visible to Admin) */}
+          {!currentStaffId && (
+            <div className="flex items-center space-x-2 shrink-0">
+              <select
+                value={selectedStaffFilter}
+                onChange={(e) => setSelectedStaffFilter(e.target.value)}
+                className="w-full sm:w-auto p-2 border border-slate-200 rounded-xl text-xs bg-white font-semibold text-slate-800"
+              >
+                <option value="all">👥 Todo el Personal Técnico</option>
+                {allStaff.map(st => (
+                  <option key={st.id} value={st.id}>
+                    {st.name} ({st.role.split(' ')[0]})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
         </div>
 

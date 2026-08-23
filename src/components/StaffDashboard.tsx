@@ -14,7 +14,9 @@ import {
   Eye,
   TrendingUp,
   User,
-  Paperclip
+  Paperclip,
+  FileText,
+  Download
 } from 'lucide-react';
 import { CalendarView } from './CalendarView';
 import { getProjectProgressInfo } from '../utils/projectProgress';
@@ -23,6 +25,7 @@ interface StaffDashboardProps {
   projects: ProductionProject[];
   currentStaff: StaffMember;
   onOpenProject: (project: ProductionProject) => void;
+  onOpenContractExport?: (project: ProductionProject) => void;
   onOpenAnalytics?: () => void;
   onUpdateProject?: (project: ProductionProject) => void;
   onOpenNewProject?: () => void;
@@ -32,6 +35,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
   projects,
   currentStaff,
   onOpenProject,
+  onOpenContractExport,
   onUpdateProject,
   onOpenNewProject
 }) => {
@@ -318,6 +322,21 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
                         </span>
 
                         <div className="flex items-center gap-2">
+                          {onOpenContractExport && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onOpenContractExport(project);
+                              }}
+                              className="px-3 py-2 rounded-xl bg-amber-100/80 hover:bg-amber-200 text-amber-950 text-xs font-black transition-all flex items-center justify-center gap-1.5 border border-amber-300 shadow-2xs cursor-pointer"
+                              title="Descargar o ver Contrato Oficial"
+                            >
+                              <FileText className="w-3.5 h-3.5 text-amber-800" />
+                              <span>Contrato</span>
+                            </button>
+                          )}
+
                           <button
                             onClick={() => onOpenProject(project)}
                             className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-amber-400 text-xs font-black transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"

@@ -39,24 +39,40 @@ export const getProjectProgressInfo = (project: ProductionProject): ProjectProgr
 
   // If there are no steps defined, default to 12
   const total = totalSteps > 0 ? totalSteps : 12;
-  const ratio = (completedSteps / total) * 100;
-  const rawPercentage = Number(ratio.toFixed(2));
+  
+  // Custom milestone mapping:
+  // Step 3 completed (Contract Generation & Formalization Phase 1) = exactly 25.00%
+  let rawPercentage = 0;
+  if (completedSteps === 0) {
+    rawPercentage = 0.0;
+  } else if (completedSteps === 1) {
+    rawPercentage = 8.33;
+  } else if (completedSteps === 2) {
+    rawPercentage = 16.67;
+  } else if (completedSteps === 3 || (project.contractExported && completedSteps <= 3)) {
+    rawPercentage = 25.00;
+  } else {
+    // 4 to 12 steps
+    const remainingSteps = completedSteps - 3;
+    const remainingRatio = 25.00 + (remainingSteps / 9) * 75.00;
+    rawPercentage = Number(Math.min(100, remainingRatio).toFixed(2));
+  }
+
   const formattedPercentage = `${rawPercentage.toFixed(2)}%`;
 
-  // Validation requirement: if there are completed steps or contract emitted,
-  // there must be proforma / contract or step attachments uploaded
+  // Validation requirement: check if attachments are present or contract exported
   const hasUploadedFiles = 
     hasAttachmentsInSteps > 0 || 
     Boolean(project.proformaAttachmentUrl) || 
     Boolean(project.depositReceiptUrl) || 
     Boolean(project.contractExported);
 
-  // A project is considered validated if all completed steps have their corresponding
-  // mandatory attachments uploaded and verified, or contract is formally exported
+  // A project is considered validated if steps have their corresponding attachments or contract is exported
   const isValidated = 
     completedSteps === 0 || 
-    (Boolean(project.contractExported) && completedSteps <= 3) ||
-    (completedStepsWithoutAttachments === 0 && (hasAttachmentsInSteps >= completedSteps || Boolean(project.contractExported)));
+    Boolean(project.contractExported) ||
+    hasUploadedFiles ||
+    completedStepsWithoutAttachments === 0;
   
   const pendingAttachmentsCount = isValidated ? 0 : completedStepsWithoutAttachments;
 

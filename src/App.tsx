@@ -445,6 +445,7 @@ export default function App() {
             projects={projects}
             currentStaff={currentStaff}
             onOpenProject={(proj) => setSelectedProjectForDetail(proj)}
+            onOpenContractExport={(proj) => setSelectedProjectForContract(proj)}
             onOpenAnalytics={() => setIsAnalyticsModalOpen(true)}
             onUpdateProject={handleUpdateProject}
             onOpenNewProject={() => setIsNewProjectModalOpen(true)}

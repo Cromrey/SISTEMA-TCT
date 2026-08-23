@@ -219,6 +219,7 @@ export const PhaseSequenceBar: React.FC<PhaseSequenceBarProps> = ({
                     const isWorking = step.status === 'in_progress';
                     const isActive = step.stepNumber === activeStepNumber && !isDone;
                     const isSpecialRule = step.stepNumber === 7; // Regla 7:00 PM
+                    const isStep3 = step.stepNumber === 3; // Step 3: Firma de Contrato (highlighted & blinking)
                     const hasAttachments = step.attachments && step.attachments.length > 0;
 
                     return (
@@ -226,9 +227,11 @@ export const PhaseSequenceBar: React.FC<PhaseSequenceBarProps> = ({
                         key={step.stepNumber}
                         type="button"
                         onClick={() => onStepClick && onStepClick(phaseIdx, stepIdx)}
-                        className={`w-full text-left p-2 rounded-xl border text-xs transition-all flex flex-col gap-1 group ${
+                        className={`w-full text-left p-2 rounded-xl border text-xs transition-all flex flex-col gap-1 group relative ${
                           isDone
                             ? 'bg-emerald-50/80 text-emerald-950 border-emerald-200 hover:bg-emerald-100'
+                            : isStep3 && !isDone
+                            ? 'bg-amber-300/40 text-amber-950 border-2 border-amber-500 font-black shadow-lg ring-2 ring-amber-400 animate-pulse scale-[1.02]'
                             : isActive
                             ? 'bg-amber-100 text-amber-950 border-2 border-amber-500 font-black shadow-md ring-2 ring-amber-400 animate-pulse scale-[1.02]'
                             : isWorking
@@ -240,11 +243,20 @@ export const PhaseSequenceBar: React.FC<PhaseSequenceBarProps> = ({
                             : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
                         }`}
                       >
+                        {/* Step 3 Special Blinking Badge */}
+                        {isStep3 && !isDone && (
+                          <span className="absolute -top-2 right-2 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 text-[8px] font-black px-1.5 py-0.5 rounded-full shadow-md animate-bounce border border-amber-300">
+                            ★ FIRMA DE CONTRATO
+                          </span>
+                        )}
+
                         {/* Top row: step number + title */}
                         <div className="flex items-center space-x-1.5 min-w-0 w-full">
                           <div className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-black shrink-0 ${
                             isDone 
                               ? 'bg-emerald-600 text-white' 
+                              : isStep3 && !isDone
+                              ? 'bg-amber-500 text-slate-950 ring-2 ring-amber-300 font-black'
                               : isActive
                               ? 'bg-amber-500 text-slate-950 ring-2 ring-amber-300'
                               : isWorking

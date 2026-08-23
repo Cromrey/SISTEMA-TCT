@@ -156,6 +156,8 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
     ? 'dni' 
     : !/^9\d{8}$/.test(clientPhone.trim()) 
     ? 'phone' 
+    : parseFloat(initialDepositStr || '0') <= 0
+    ? 'deposit'
     : '';
 
   // Parse numeric values safely with up to 2 decimal places
@@ -541,17 +543,6 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
                 <Calendar className="w-4 h-4 text-amber-600" />
                 2. Fechas de Trabajo, Horario de Cobertura y Locación
               </label>
-              
-              {/* Button (+) to add multiple event working dates */}
-              <button
-                type="button"
-                onClick={handleAddScheduleDay}
-                className="px-2.5 py-1 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-900 text-xs font-black flex items-center gap-1 transition-colors cursor-pointer border border-amber-300"
-                title="Añadir otro día de trabajo / cobertura"
-              >
-                <Plus className="w-3.5 h-3.5 text-amber-700" />
-                <span>Añadir Día (+)</span>
-              </button>
             </div>
             
             {/* Event Type Buttons */}
@@ -608,16 +599,24 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
               </div>
             </div>
 
-            {/* Dynamic Event Dates & Time Inputs with Clock Selector */}
-            <div className="space-y-2.5 bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
-              <div className="flex items-center justify-between text-xs font-black text-slate-700">
+            {/* Dynamic Event Dates & Time Inputs with Clock Selector and Add Day Button right inside */}
+            <div className="space-y-2.5 bg-slate-50 p-3.5 sm:p-4 rounded-2xl border border-slate-200">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs font-black text-slate-700 pb-1 border-b border-slate-200/80">
                 <span className="flex items-center gap-1.5">
-                  <Clock className="w-3.5 h-3.5 text-amber-600" />
-                  Fechas y Horarios de Cobertura por Día ({eventSchedules.length} {eventSchedules.length === 1 ? 'jornada' : 'jornadas'})
+                  <Clock className="w-4 h-4 text-amber-600" />
+                  Fechas y Horario de Cobertura ({eventSchedules.length} {eventSchedules.length === 1 ? 'jornada' : 'jornadas de trabajo'})
                 </span>
-                <span className="text-[11px] text-slate-500 font-normal">
-                  Usa el reloj para hora de inicio y final
-                </span>
+                
+                {/* Button (+) to add multiple event working dates relocated inside this box */}
+                <button
+                  type="button"
+                  onClick={handleAddScheduleDay}
+                  className="px-3 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-500 text-slate-950 text-xs font-black flex items-center gap-1.5 transition-all shadow-xs cursor-pointer border border-amber-500"
+                  title="Añadir otro día de trabajo / cobertura"
+                >
+                  <Plus className="w-4 h-4 text-slate-950" />
+                  <span>Añadir Día (+)</span>
+                </button>
               </div>
 
               {eventSchedules.map((schedule, idx) => (
@@ -823,24 +822,26 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
 
             {/* List Price, Discount, Extra Hours Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
-                <label className="block text-slate-700 font-bold mb-1">
-                  Precio de Lista Base (S/.)
+              <div className="p-3 bg-slate-100 rounded-xl border border-slate-300">
+                <label className="block text-slate-700 font-bold mb-1 flex items-center justify-between">
+                  <span>Precio de Lista Base (S/.)</span>
+                  <span className="text-[10px] bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded font-black flex items-center gap-1">
+                    🔒 Proforma Oficial
+                  </span>
                 </label>
                 <input
                   type="text"
                   inputMode="decimal"
                   value={listPriceStr}
-                  onChange={handleNumericInput(setListPriceStr)}
+                  readOnly
+                  disabled
                   placeholder="0.00"
-                  className="w-full p-2 text-sm font-black border border-slate-300 rounded-lg bg-white text-slate-900 font-mono"
+                  className="w-full p-2 text-sm font-black border border-slate-300 rounded-lg bg-slate-200/70 text-slate-800 font-mono cursor-not-allowed select-none shadow-inner"
                   required
                 />
-                {listPriceNum !== originalPackageBasePrice && (
-                  <span className="text-[10px] text-amber-700 font-bold block mt-1">
-                    * Precio modificado (Original: S/. {originalPackageBasePrice}). Requiere justificación en Cláusulas Especiales.
-                  </span>
-                )}
+                <span className="text-[10px] text-slate-500 font-bold block mt-1">
+                  * Precio bloqueado según el paquete/proforma registrada.
+                </span>
               </div>
 
               <div className="p-3 bg-emerald-50/50 rounded-xl border border-emerald-200">
@@ -892,22 +893,13 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
             <div className="text-xs">
               <label className="block text-slate-700 font-bold mb-1">
                 Equipos Adicionales / Cláusulas Especiales
-                {listPriceNum !== originalPackageBasePrice && (
-                  <span className="text-amber-600 font-bold ml-1">
-                    (Obligatorio por variación de precio base)
-                  </span>
-                )}
               </label>
               <input
                 type="text"
                 value={additionalEquipmentNotes}
                 onChange={(e) => setAdditionalEquipmentNotes(e.target.value)}
                 placeholder="Ej. 1 Dron adicional, trípodes heavy duty, 2 pantallas de retorno..."
-                className={`w-full p-2 border rounded-xl ${
-                  listPriceNum !== originalPackageBasePrice && !additionalEquipmentNotes.trim()
-                    ? 'border-amber-400 bg-amber-50/30 ring-1 ring-amber-300'
-                    : 'border-slate-300'
-                }`}
+                className="w-full p-2 border border-slate-300 rounded-xl bg-white"
               />
             </div>
 
@@ -921,14 +913,25 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-slate-400 text-[11px] block font-bold">ADELANTO INICIAL (S/.)</label>
+                <label className="text-slate-400 text-[11px] font-bold flex items-center justify-between">
+                  <span>ADELANTO INICIAL (S/.) *</span>
+                  {nextRequiredField === 'deposit' && (
+                    <span className="text-[10px] text-amber-300 bg-amber-500/30 border border-amber-400 px-1.5 py-0.2 rounded font-black animate-pulse">
+                      Paso 5: Ingrese monto
+                    </span>
+                  )}
+                </label>
                 <input
                   type="text"
                   inputMode="decimal"
                   value={initialDepositStr}
                   onChange={handleNumericInput(setInitialDepositStr)}
                   placeholder="0.00"
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-sm font-bold text-white font-mono"
+                  className={`w-full border rounded-lg px-2 py-1.5 text-sm font-bold font-mono transition-all ${
+                    nextRequiredField === 'deposit'
+                      ? 'bg-amber-950/80 border-2 border-amber-400 ring-2 ring-amber-400/50 text-amber-300 animate-pulse'
+                      : 'bg-slate-800 border-slate-700 text-white'
+                  }`}
                 />
                 <select
                   value={paymentMethodDeposit}

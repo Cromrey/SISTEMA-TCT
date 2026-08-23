@@ -448,120 +448,53 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
           </div>
         </div>
 
-        {/* Modal Tabs Navigation Bar (Consolidated 3 Tabs: 1. Detalle y Formulario, 2. Expediente Comercial, 3. Personal & Equipos) */}
-        <div className="bg-slate-900 px-2 sm:px-6 pt-1 border-b border-slate-800 flex items-center gap-1 sm:gap-2 overflow-x-auto no-scrollbar shrink-0">
-          
-          {/* Tab 1: Detalle y Formulario (Integrated with 12 Steps Sequence and Attachments) */}
-          <button
-            type="button"
-            onClick={() => setActiveTab('phase_details')}
-            className={`px-3 sm:px-5 py-2.5 rounded-t-xl text-xs font-black transition-all flex items-center gap-1.5 shrink-0 border-b-2 cursor-pointer ${
-              activeTab === 'phase_details'
-                ? 'bg-slate-50 text-slate-900 border-amber-500 shadow-sm'
-                : 'text-slate-300 hover:text-white border-transparent hover:bg-slate-800/50'
-            }`}
-            title="Ver Detalle Operativo, Flujo de 12 Pasos y Formularios por Fases"
-          >
-            <CheckSquare className="w-4 h-4 text-emerald-500 shrink-0" />
-            <span className="hidden sm:inline">1. Detalle y Formulario</span>
-            <span className="sm:hidden">1. Detalle</span>
-            {progressInfo.isValidated ? (
-              <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-emerald-500/20 text-emerald-700 font-mono font-bold">
-                {progressInfo.formattedPercentage}
-              </span>
-            ) : (
-              <span className="px-1.5 py-0.2 rounded-full text-[9px] bg-red-500/20 text-red-600 font-mono flex items-center gap-0.5" title="Avance bloqueado: faltan adjuntos">
-                <span className="line-through">{progressInfo.formattedPercentage}</span>
-              </span>
-            )}
-          </button>
-
-          {/* Tab 2: Commercial Dossier */}
-          <button
-            type="button"
-            onClick={() => setActiveTab('commercial')}
-            className={`px-3 sm:px-5 py-2.5 rounded-t-xl text-xs font-black transition-all flex items-center gap-1.5 shrink-0 border-b-2 cursor-pointer ${
-              activeTab === 'commercial'
-                ? 'bg-slate-50 text-slate-900 border-amber-500 shadow-sm'
-                : 'text-slate-300 hover:text-white border-transparent hover:bg-slate-800/50'
-            }`}
-            title="Expediente Comercial, Cotización, Descuentos y Contrato"
-          >
-            <FileText className="w-4 h-4 text-blue-400 shrink-0" />
-            <span className="hidden sm:inline">2. Expediente Comercial</span>
-            <span className="sm:hidden">2. Comercial</span>
-          </button>
-
-          {/* Tab 3: Staff & Equipment (Admin Only Edit) */}
-          <button
-            type="button"
-            onClick={() => setActiveTab('staff_equipment')}
-            className={`px-3 sm:px-5 py-2.5 rounded-t-xl text-xs font-black transition-all flex items-center gap-1.5 shrink-0 border-b-2 cursor-pointer ${
-              activeTab === 'staff_equipment'
-                ? 'bg-slate-50 text-slate-900 border-amber-500 shadow-sm'
-                : 'text-slate-300 hover:text-white border-transparent hover:bg-slate-800/50'
-            }`}
-            title="Asignación de Personal Técnico y Equipamiento Audiovisual"
-          >
-            <Camera className="w-4 h-4 text-purple-400 shrink-0" />
-            <span className="hidden sm:inline">3. Personal & Equipos</span>
-            <span className="sm:hidden">3. Equipos</span>
-            {currentRole === 'admin' ? (
-              <span className="px-1.5 py-0.2 rounded-full text-[9px] bg-amber-400/20 text-amber-300 font-bold">
-                Admin
-              </span>
-            ) : (
-              <Lock className="w-3 h-3 text-slate-400" />
-            )}
-          </button>
-
-        </div>
-
-        {/* Modal Scrollable Content */}
+        {/* Modal Scrollable Content: Unified 12 Steps Command Center */}
         <div className="p-3 sm:p-5 lg:p-6 overflow-y-auto space-y-5 flex-1 bg-slate-50">
           
-          {/* TAB 1: DETALLE Y FORMULARIO (Includes Active Step Hero, Summary Strip, Blinking Validation Banner, Sequence Bar & Phase Cards) */}
-          {activeTab === 'phase_details' && (
-            <div className="space-y-5">
-              
-              {/* Active Step Hero Alert Banner */}
-              {activeStepObj && (
-                <div className="bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 p-0.5 rounded-2xl shadow-md animate-subtle-pulse">
-                  <div className="bg-slate-950 text-white p-3.5 sm:p-4 rounded-[14px] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                    <div className="flex items-center space-x-3 min-w-0">
-                      <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-amber-400 to-amber-500 text-slate-950 font-black text-lg sm:text-xl flex items-center justify-center shadow-md shrink-0">
-                        {activeStepObj.step.stepNumber}
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="px-2 py-0.5 rounded-md bg-amber-400 text-slate-950 font-black text-[10px] sm:text-[11px] uppercase tracking-wider">
-                            ⚡ Hito en Seguimiento • Paso {activeStepObj.step.stepNumber} de 12
-                          </span>
-                          <span className="text-xs font-bold text-amber-300 font-mono">
-                            {progressInfo.isValidated ? progressInfo.formattedPercentage : `${progressInfo.formattedPercentage} (Pendiente de Adjuntos)`}
-                          </span>
-                        </div>
-                        <h3 className="text-sm sm:text-base font-black text-white mt-1">
-                          {activeStepObj.step.title}
-                        </h3>
-                        <p className="text-xs text-slate-300 mt-0.5 font-medium flex items-center gap-1">
-                          <span className="text-amber-400 font-bold">📄 Requerido:</span> {getStepRequirementHint(activeStepObj.step.stepNumber)}
-                        </p>
-                      </div>
+          <div className="space-y-5">
+            {/* Active Step Hero Alert Banner */}
+            {activeStepObj && (
+              <div className="bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 p-0.5 rounded-2xl shadow-md animate-subtle-pulse">
+                <div className="bg-slate-950 text-white p-3.5 sm:p-4 rounded-[14px] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                  <div className="flex items-center space-x-3 min-w-0">
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-amber-400 to-amber-500 text-slate-950 font-black text-lg sm:text-xl flex items-center justify-center shadow-md shrink-0">
+                      {activeStepObj.step.stepNumber}
                     </div>
-
-                    <button
-                      type="button"
-                      onClick={() => setSelectedStepCoord({ phaseIndex: activeStepObj.phaseIdx, stepIndex: activeStepObj.stepIdx })}
-                      className="w-full sm:w-auto px-4 py-2.5 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 rounded-xl font-black text-xs transition-all shadow-md flex items-center justify-center gap-2 shrink-0 cursor-pointer"
-                    >
-                      <Zap className="w-4 h-4" />
-                      <span>Abrir Formulario & Adjuntos</span>
-                      <ChevronRight className="w-4 h-4" />
-                    </button>
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="px-2 py-0.5 rounded-md bg-amber-400 text-slate-950 font-black text-[10px] sm:text-[11px] uppercase tracking-wider">
+                          ⚡ Hito en Seguimiento • Paso {activeStepObj.step.stepNumber} de 12
+                        </span>
+                        <span className="text-xs font-bold text-amber-300 font-mono">
+                          {progressInfo.formattedPercentage}
+                        </span>
+                        {activeStepObj.step.stepNumber === 3 && (
+                          <span className="bg-amber-400 text-slate-950 font-black text-[10px] px-2 py-0.5 rounded-full border border-amber-200 animate-bounce">
+                            ★ FIRMA DE CONTRATO
+                          </span>
+                        )}
+                      </div>
+                      <h3 className="text-sm sm:text-base font-black text-white mt-1">
+                        {activeStepObj.step.title}
+                      </h3>
+                      <p className="text-xs text-slate-300 mt-0.5 font-medium flex items-center gap-1">
+                        <span className="text-amber-400 font-bold">📄 Requerido:</span> {getStepRequirementHint(activeStepObj.step.stepNumber)}
+                      </p>
+                    </div>
                   </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setSelectedStepCoord({ phaseIndex: activeStepObj.phaseIdx, stepIndex: activeStepObj.stepIdx })}
+                    className="w-full sm:w-auto px-4 py-2.5 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 rounded-xl font-black text-xs transition-all shadow-md flex items-center justify-center gap-2 shrink-0 cursor-pointer"
+                  >
+                    <Zap className="w-4 h-4" />
+                    <span>Abrir Formulario & Adjuntos</span>
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
                 </div>
-              )}
+              </div>
+            )}
 
               {/* Key Facts / Summary Strip */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
@@ -701,15 +634,18 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
 
                           const isComplete = step.status === 'completed';
                           const isActive = step.stepNumber === activeStepNumber && !isComplete;
+                          const isStep3 = step.stepNumber === 3;
                           const hasAttachments = step.attachments && step.attachments.length > 0;
 
                           return (
                             <div
                               key={step.id}
                               onClick={() => setSelectedStepCoord({ phaseIndex: pIdx, stepIndex: sIdx })}
-                              className={`p-3 rounded-2xl border transition-all cursor-pointer ${
+                              className={`p-3 rounded-2xl border transition-all cursor-pointer relative ${
                                 isComplete
                                   ? 'bg-emerald-50/70 border-emerald-200 hover:border-emerald-400'
+                                  : isStep3 && !isComplete
+                                  ? 'bg-amber-100/90 border-2 border-amber-500 shadow-md ring-2 ring-amber-400 animate-pulse'
                                   : isActive
                                   ? 'bg-amber-50/80 border-amber-400 ring-2 ring-amber-400/20 shadow-xs'
                                   : isLocked
@@ -717,11 +653,19 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                                   : 'bg-white border-slate-200 hover:border-slate-300'
                               }`}
                             >
+                              {isStep3 && !isComplete && (
+                                <span className="absolute -top-2.5 right-3 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 text-[9px] font-black px-2 py-0.5 rounded-full shadow-md animate-bounce border border-amber-300">
+                                  ★ FIRMA DE CONTRATO
+                                </span>
+                              )}
+
                               <div className="flex items-start justify-between gap-2">
                                 <div className="flex items-start space-x-2.5">
                                   <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-black shrink-0 mt-0.5 ${
                                     isComplete
                                       ? 'bg-emerald-600 text-white'
+                                      : isStep3 && !isComplete
+                                      ? 'bg-amber-500 text-slate-950 ring-2 ring-amber-300 font-black'
                                       : isActive
                                       ? 'bg-amber-500 text-slate-950'
                                       : 'bg-slate-200 text-slate-700'
@@ -739,7 +683,12 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                                           ✓ Completado
                                         </span>
                                       )}
-                                      {isActive && (
+                                      {isStep3 && !isComplete && (
+                                        <span className="text-[10px] font-black text-amber-950 bg-amber-300 px-1.5 py-0.2 rounded border border-amber-500">
+                                          ★ Hito Clave (25%)
+                                        </span>
+                                      )}
+                                      {isActive && !isStep3 && (
                                         <span className="text-[10px] font-black text-amber-900 bg-amber-200 px-1.5 py-0.2 rounded animate-pulse">
                                           ⚡ En curso
                                         </span>
@@ -784,12 +733,8 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                 </div>
               </div>
 
-            </div>
-          )}
-
-          {/* TAB 2: COMMERCIAL DOSSIER & PRICING */}
-          {activeTab === 'commercial' && (
-            <div className="space-y-4">
+              {/* EXPEDIENTE COMERCIAL: DATOS DEL CONTRATO Y PROFORMA */}
+              <div className="pt-2">
               
               <div className="bg-white rounded-3xl p-4 sm:p-6 border border-slate-200 shadow-xs space-y-5">
                 
@@ -1163,13 +1108,10 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                 )}
 
               </div>
+              </div>
 
-            </div>
-          )}
-
-          {/* TAB 3: TECHNICAL STAFF & EQUIPMENT (Admin Can Edit, Employee Read-Only) */}
-          {activeTab === 'staff_equipment' && (
-            <div className="space-y-4">
+              {/* TECHNICAL STAFF & EQUIPMENT (Directly accessible at the bottom) */}
+              <div className="pt-2 space-y-4">
               
               {/* Permission Banner for Non-Admins */}
               {currentRole !== 'admin' && (
@@ -1420,10 +1362,10 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                     )}
                   </div>
                 </div>
-
               </div>
+              </div>
+
             </div>
-          )}
 
         </div>
 

@@ -312,26 +312,54 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
           <div className="space-y-1 page-break-inside-avoid">
             <h3 className="font-black text-slate-900 uppercase tracking-wide flex items-center gap-1 text-[11px]">
               <span className="w-3.5 h-3.5 rounded-full bg-slate-900 text-amber-400 text-[9px] flex items-center justify-center font-bold">2</span>
-              CLÁUSULA SEGUNDA: DEL OBJETO DEL SERVICIO, FECHA Y LOCACIÓN
+              CLÁUSULA SEGUNDA: DEL OBJETO DEL SERVICIO, FECHAS DE TRABAJO Y LOCACIÓN
             </h3>
 
-            <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 grid grid-cols-1 sm:grid-cols-3 gap-2 text-[10px]">
-              <div>
-                <span className="text-[9px] uppercase font-bold text-slate-500 block">Tipo de Evento & Paquete</span>
-                <p className="font-black text-slate-900 text-[11px]">{currentData.eventType}</p>
-                <p className="text-blue-700 font-bold">{currentData.selectedPackageName || 'Paquete Integral TCT'}</p>
+            <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 space-y-2 text-[10px]">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div>
+                  <span className="text-[9px] uppercase font-bold text-slate-500 block">Tipo de Evento & Paquete</span>
+                  <p className="font-black text-slate-900 text-[11px]">{currentData.eventType}</p>
+                  <p className="text-blue-700 font-bold">{currentData.selectedPackageName || 'Paquete Integral TCT'}</p>
+                </div>
+
+                <div>
+                  <span className="text-[9px] uppercase font-bold text-slate-500 block">Locación y Dirección Exacta</span>
+                  <p className="font-bold text-slate-900">{currentData.eventLocation}</p>
+                  <p className="text-slate-600">{currentData.eventAddress || 'Lima Metropolitana'}</p>
+                </div>
               </div>
 
-              <div>
-                <span className="text-[9px] uppercase font-bold text-slate-500 block">Fecha y Horario de Cobertura</span>
-                <p className="font-black text-slate-900 text-[11px]">{currentData.eventDate}</p>
-                <p className="text-slate-700 font-bold">{currentData.eventTime} ({currentData.standardHours || 8} horas base)</p>
-              </div>
-
-              <div>
-                <span className="text-[9px] uppercase font-bold text-slate-500 block">Locación y Dirección Exacta</span>
-                <p className="font-bold text-slate-900">{currentData.eventLocation}</p>
-                <p className="text-slate-600">{currentData.eventAddress || 'Lima Metropolitana'}</p>
+              {/* Work days display: 1 line per day */}
+              <div className="pt-2 border-t border-slate-200">
+                <span className="text-[9px] uppercase font-black text-slate-700 block mb-1">
+                  📅 Cronograma de Jornadas de Trabajo / Cobertura ({currentData.eventSchedules && currentData.eventSchedules.length > 0 ? currentData.eventSchedules.length : 1} {currentData.eventSchedules && currentData.eventSchedules.length > 1 ? 'días' : 'día'}):
+                </span>
+                
+                <div className="space-y-1 bg-white p-2 rounded-lg border border-slate-200 divide-y divide-slate-100">
+                  {currentData.eventSchedules && currentData.eventSchedules.length > 0 ? (
+                    currentData.eventSchedules.map((sch, idx) => (
+                      <div key={sch.id || idx} className="pt-1 first:pt-0 flex items-center justify-between flex-wrap text-[10px]">
+                        <span className="font-bold text-slate-900 font-mono">
+                          Día {idx + 1}: {sch.date}
+                        </span>
+                        <span className="text-slate-700 font-medium">
+                          Horario: <strong>{sch.startTime}</strong> a <strong>{sch.endTime}</strong>
+                          {sch.notes ? ` (${sch.notes})` : ''}
+                        </span>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="flex items-center justify-between text-[10px]">
+                      <span className="font-bold text-slate-900 font-mono">
+                        Día 1: {currentData.eventDate}
+                      </span>
+                      <span className="text-slate-700 font-medium">
+                        Horario: <strong>{currentData.eventTime || 'Horario pactado'}</strong> ({currentData.standardHours || 8} horas base)
+                      </span>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -423,14 +451,14 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
                 </div>
 
                 <div className="p-1.5 bg-white rounded-lg border border-slate-200">
-                  <span className="font-bold text-slate-900 block">💾 Estuche Madera & USB 3.0</span>
+                  <span className="font-bold text-slate-900 block">💾 Memoria USB 3.0</span>
                   <span className="text-[10px] text-emerald-700 font-bold">Entrega con Saldo S/. 0</span>
-                  <p className="text-[9px] text-slate-500">Material final en alta definición 4K</p>
+                  <p className="text-[9px] text-slate-500">Material final entregado en memoria USB</p>
                 </div>
               </div>
 
               <p className="text-[9.5px] text-slate-700 font-medium italic border-t border-slate-200 pt-1.5">
-                * Conforme al Paso 12 del flujo oficial, CORPORACIÓN TCT conservará los archivos MASTER FINAL entregados por 05 días posteriores a la entrega final, posterior a elllo eliminará definitivamente el material de sus computadora.
+                * CORPORACIÓN TCT conservará los archivos MASTER FINAL entregados por 05 días posteriores a la entrega final al cliente, posterior a ello se eliminará definitivamente el material de MASTER y crudo.
               </p>
             </div>
           </div>

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { 
   ProductionProject, 
   StepData, 
@@ -91,6 +91,22 @@ export const StepExecutionModal: React.FC<StepExecutionModalProps> = ({
   const [attachments, setAttachments] = useState<StepAttachment[]>(stepData.attachments || []);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // User role detection for one-time attachment and sequence restrictions
+  const currentUser = useMemo(() => {
+    try {
+      const raw = localStorage.getItem('tct_current_user') || localStorage.getItem('currentUser');
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) {
+      return null;
+    }
+  }, []);
+
+  const isAdmin = currentUser?.role === 'admin' || adminOverrideLock;
+  const isEarlyStep = [1, 2, 3].includes(stepData.stepNumber);
+  const hasExistingAttachment = attachments.length > 0;
+  // Non-admin employees can upload only once in steps 1, 2, 3
+  const isEmployeeUploadLocked = !isAdmin && isEarlyStep && hasExistingAttachment;
 
   // Payment state for Step 7 (Cobro 7:00 PM)
   const [paymentStatus, setPaymentStatus] = useState<'paid' | 'agreed_extension' | 'unpaid_alert' | 'pending'>(
@@ -1102,41 +1118,54 @@ FECHA: ${acceptanceDate}
                 Archivos Adjuntos & Evidencias del Paso ({attachments.length})
               </h4>
 
-              <div>
+              <div className="flex items-center gap-2">
                 <input
                   type="file"
                   ref={fileInputRef}
                   onChange={handleFileUpload}
-                  multiple
+                  multiple={!isEarlyStep}
                   accept="image/*,.pdf,.doc,.docx"
                   className="hidden"
                   id={`file-upload-${stepData.stepNumber}`}
-                  disabled={isLocked}
+                  disabled={isLocked || isEmployeeUploadLocked}
                 />
-                <button
-                  type="button"
-                  disabled={isLocked}
-                  onClick={() => fileInputRef.current?.click()}
-                  className={`px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-xl text-xs font-extrabold flex items-center gap-1.5 shadow-xs transition-all ${
-                    isLocked ? 'opacity-50 cursor-not-allowed' : ''
-                  }`}
-                >
-                  <Upload className="w-3.5 h-3.5" />
-                  <span>Subir Archivo / Foto / Acta Firmada</span>
-                </button>
+                {isEmployeeUploadLocked ? (
+                  <span className="px-3 py-1.5 bg-emerald-100 text-emerald-900 border border-emerald-300 rounded-xl text-xs font-bold flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Archivo Adjuntado (Subida Única Completada)</span>
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={isLocked || isEmployeeUploadLocked}
+                    onClick={() => fileInputRef.current?.click()}
+                    className={`px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-xl text-xs font-extrabold flex items-center gap-1.5 shadow-xs transition-all cursor-pointer ${
+                      isLocked || isEmployeeUploadLocked ? 'opacity-50 cursor-not-allowed' : ''
+                    }`}
+                  >
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>
+                      {isEarlyStep ? 'Subir Archivo / Sustento (Subida Única)' : 'Subir Archivo / Foto / Acta Firmada'}
+                    </span>
+                  </button>
+                )}
               </div>
             </div>
 
             {attachments.length === 0 ? (
               <div 
-                onClick={() => !isLocked && fileInputRef.current?.click()}
+                onClick={() => !isLocked && !isEmployeeUploadLocked && fileInputRef.current?.click()}
                 className={`p-4 border-2 border-dashed border-slate-200 rounded-xl text-center text-xs text-slate-400 flex flex-col items-center justify-center gap-1 ${
-                  isLocked ? 'cursor-not-allowed' : 'cursor-pointer hover:border-amber-400 hover:bg-amber-50/30'
+                  isLocked || isEmployeeUploadLocked ? 'cursor-not-allowed' : 'cursor-pointer hover:border-amber-400 hover:bg-amber-50/30'
                 }`}
               >
                 <Upload className="w-5 h-5 text-slate-300" />
                 <span>Arrastra o haz clic para adjuntar comprobantes, contratos o fotos de este paso</span>
-                <span className="text-[10px] text-slate-400">(Formatos soportados: JPG, PNG, PDF, DOCX)</span>
+                <span className="text-[10px] text-slate-400">
+                  {isEarlyStep 
+                    ? '(Habilitado para empleados: 1 sola subida permitida. Formatos: JPG, PNG, PDF)' 
+                    : '(Formatos soportados: JPG, PNG, PDF, DOCX)'}
+                </span>
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -1169,14 +1198,16 @@ FECHA: ${acceptanceDate}
                       >
                         <Eye className="w-3.5 h-3.5" />
                       </a>
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteAttachment(att.id)}
-                        className="p-1 rounded bg-white hover:bg-red-100 text-red-600 border border-slate-200"
-                        title="Eliminar"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                      {isAdmin && (
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteAttachment(att.id)}
+                          className="p-1 rounded bg-white hover:bg-red-100 text-red-600 border border-slate-200"
+                          title="Eliminar (Solo Administrador)"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))}

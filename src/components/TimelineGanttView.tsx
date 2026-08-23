@@ -161,7 +161,7 @@ export const TimelineGanttView: React.FC<TimelineGanttViewProps> = ({
 
       const p6PurgeStart = new Date(p6DeliveryEnd);
       const p6PurgeEnd = new Date(p6PurgeStart);
-      p6PurgeEnd.setDate(p6PurgeEnd.getDate() + 7);
+      p6PurgeEnd.setDate(p6PurgeEnd.getDate() + 3); // 3 Days Final Storage Policy
 
       // Map step definitions to actual dates
       const stepDateMap: Record<number, { start: Date; end: Date; milestone?: boolean; sla?: number }> = {
@@ -532,6 +532,19 @@ export const TimelineGanttView: React.FC<TimelineGanttViewProps> = ({
           </button>
         </div>
 
+      </div>
+
+      {/* Official Storage Policy Banner (3 Days) */}
+      <div className="bg-gradient-to-r from-slate-900 via-slate-850 to-slate-900 text-white p-3 rounded-2xl border border-slate-800 shadow-xs flex items-center justify-between flex-wrap gap-2 text-xs">
+        <div className="flex items-center gap-2">
+          <span className="p-1.5 bg-amber-500/20 text-amber-400 rounded-lg font-bold">🛡️ POLÍTICA DE ALMACENAMIENTO TCT</span>
+          <span className="text-slate-300 font-medium">
+            Corporación TCT conservará los archivos <strong className="text-amber-300">MASTER FINAL</strong> entregados por <strong className="text-white bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700 font-mono">03 días posteriores</strong> a la entrega final al cliente. Posterior a ello se eliminará definitivamente el material de MASTER y crudo.
+          </span>
+        </div>
+        <span className="text-[10px] text-slate-400 font-mono bg-slate-800/80 px-2 py-1 rounded-lg border border-slate-700">
+          SLA Purga: 3 Días Hábiles
+        </span>
       </div>
 
       {/* 3. Gantt Chart Container */}
