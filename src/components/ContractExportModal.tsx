@@ -3,25 +3,15 @@ import { ProductionProject, UserRole } from '../types';
 import { TCTLogo } from './TCTLogo';
 import { printElement, downloadPrintableHtml, downloadEditableDoc } from '../utils/printHelper';
 import { finalizeContractExportStep3 } from '../utils/stepSequenceHelper';
+import { getStoredUsers } from '../utils/authStorage';
 import { 
   Printer, 
   X, 
-  FileCheck, 
-  ShieldCheck, 
-  Coins, 
-  Calendar, 
-  User, 
-  MapPin, 
-  Clock, 
-  Sparkles, 
-  Lock, 
   Edit3, 
   Save, 
-  CheckCircle2, 
+  Zap,
   Download,
-  FileText,
-  FileCode,
-  Zap
+  FileText
 } from 'lucide-react';
 
 interface ContractExportModalProps {
@@ -65,7 +55,7 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
     downloadPrintableHtml(
       'tct-contract-document',
       `Contrato-${currentData.contractNumber || currentData.uniqueCode}.html`,
-      `Contrato Oficial TCT - ${currentData.contractNumber}`
+      `Contrato Oficial - ${currentData.contractNumber || currentData.uniqueCode}`
     );
   };
 
@@ -74,7 +64,7 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
     downloadEditableDoc(
       'tct-contract-document',
       `Contrato-${currentData.contractNumber || currentData.uniqueCode}-Editable.doc`,
-      `Contrato Oficial TCT - ${currentData.contractNumber}`
+      `Contrato Oficial - ${currentData.contractNumber || currentData.uniqueCode}`
     );
   };
 
@@ -87,11 +77,26 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
 
   const currentData = isEditing ? editedProject : project;
 
+  const systemUsers = getStoredUsers();
+  const matchedUser = systemUsers.find(u => 
+    (currentData.createdByName && u.fullName.toLowerCase().includes(currentData.createdByName.toLowerCase())) ||
+    (currentData.contractHolder && u.fullName.toLowerCase().includes(currentData.contractHolder.toLowerCase())) ||
+    (currentData.createdByDni && u.dni === currentData.createdByDni) ||
+    (currentData.contractHolderDni && u.dni === currentData.contractHolderDni)
+  );
+
+  const advisorName = currentData.createdByName || matchedUser?.fullName || (currentData.contractHolder ? currentData.contractHolder.split(' - ')[0] : 'Michael Romero');
+  const advisorDni = currentData.createdByDni || currentData.contractHolderDni || matchedUser?.dni || '45892314';
+  const advisorPhone = matchedUser?.phone || '+51 990 030 200';
+  const advisorEmail = matchedUser?.email || 'ventas@corporaciontct.pe';
+
   const totalExtraHours = (currentData.extraHoursCount || 0) * (currentData.extraHourRate || 150);
   const computedTotal = (currentData.listPrice || currentData.totalBudget) - (currentData.discountAmount || 0) + totalExtraHours;
   const balanceRemaining = Math.max(0, computedTotal - currentData.initialDeposit - (currentData.fieldPayment || 0));
 
   const isLockedAfterRegistration = currentData.initialCommercialLocked || currentData.contractExported;
+
+  const hasSpecialClause = Boolean(currentData.specialContractClause && currentData.specialContractClause.trim().length > 0);
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4">
@@ -113,33 +118,28 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center space-x-1.5 sm:space-x-2 flex-wrap gap-1">
-            {/* Admin Edit Controls */}
-            {isAdmin ? (
+          <div className="flex items-center space-x-2 sm:space-x-3 flex-wrap gap-1.5">
+            {/* Admin Edit Controls (Only if Admin) */}
+            {isAdmin && (
               isEditing ? (
                 <button
                   onClick={handleSaveEdits}
-                  className="px-2.5 sm:px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-md flex items-center gap-1.5 transition-all cursor-pointer"
+                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-md flex items-center gap-1.5 transition-all cursor-pointer"
                   title="Guardar Cambios del Contrato"
                 >
                   <Save className="w-4 h-4" />
-                  <span className="hidden sm:inline">Guardar Cambios</span>
+                  <span>Guardar Cambios</span>
                 </button>
               ) : (
                 <button
                   onClick={() => setIsEditing(true)}
-                  className="px-2.5 sm:px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all cursor-pointer"
+                  className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all cursor-pointer"
                   title="Editar datos del Contrato (Exclusivo Administrador)"
                 >
                   <Edit3 className="w-4 h-4 text-amber-400" />
-                  <span className="hidden sm:inline">Editar (Admin)</span>
+                  <span>Editar Contrato</span>
                 </button>
               )
-            ) : (
-              <span className="text-[11px] font-bold text-slate-400 bg-slate-800/80 px-2.5 py-1 rounded-lg border border-slate-700 flex items-center gap-1" title="Solo el Administrador puede modificar contratos generados">
-                <Lock className="w-3.5 h-3.5 text-slate-400" />
-                <span className="hidden sm:inline">Solo Lectura (Admin)</span>
-              </span>
             )}
 
             {/* Culminate Step 3 / 25.00% Action Button */}
@@ -156,34 +156,34 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
               <span>{exportCulminated ? '✓ 25.00% Registrado (Paso 4 Habilitado)' : 'Culminar Exportación (25.00%)'}</span>
             </button>
 
-            {/* Print / PDF Export Button */}
+            {/* Guardar en PDF / Imprimir Button */}
             <button
               onClick={handlePrint}
-              className="px-2.5 sm:px-4 py-1.5 sm:py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-black text-xs rounded-xl shadow-md flex items-center gap-1.5 transition-all cursor-pointer"
-              title="Abrir cuadro de diálogo de impresión y Guardar como PDF"
+              className="px-3.5 sm:px-5 py-1.5 sm:py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-black text-xs rounded-xl shadow-lg hover:shadow-amber-500/20 flex items-center gap-2 transition-all cursor-pointer"
+              title="Guardar en PDF o Imprimir Contrato Oficial"
             >
               <Printer className="w-4 h-4" />
-              <span className="hidden sm:inline">PDF / Imprimir</span>
+              <span>Guardar en PDF / Imprimir</span>
             </button>
 
-            {/* Download Word Editable Document (.doc) */}
+            {/* Word Editable (.doc) Button */}
             <button
               onClick={handleDownloadWordDoc}
-              className="px-2.5 sm:px-3.5 py-1.5 sm:py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-sm flex items-center gap-1.5 transition-all cursor-pointer"
-              title="Descargar Contrato Editable para Microsoft Word (.doc) / Google Docs"
+              className="px-3 py-1.5 sm:py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-sm flex items-center gap-1.5 transition-all cursor-pointer"
+              title="Descargar Contrato en Word Editable (.doc)"
             >
               <FileText className="w-4 h-4 text-white" />
-              <span className="hidden sm:inline">Word Doc</span>
+              <span className="hidden sm:inline">Word (.doc)</span>
             </button>
 
-            {/* Direct Download HTML */}
+            {/* Download HTML Button */}
             <button
               onClick={handleDownloadHtml}
-              className="px-2 sm:px-3 py-1.5 sm:py-2 bg-slate-800 hover:bg-slate-700 text-amber-300 font-bold text-xs rounded-xl border border-slate-700 shadow-sm flex items-center gap-1 transition-all cursor-pointer"
-              title="Descargar archivo web imprimible .HTML"
+              className="px-2.5 py-1.5 sm:py-2 bg-slate-800 hover:bg-slate-700 text-amber-300 font-bold text-xs rounded-xl border border-slate-700 shadow-sm flex items-center gap-1 transition-all cursor-pointer"
+              title="Descargar archivo HTML del Contrato"
             >
               <Download className="w-3.5 h-3.5 text-amber-400" />
-              <span className="hidden md:inline">HTML</span>
+              <span className="hidden lg:inline">.HTML</span>
             </button>
 
             <button
@@ -261,7 +261,10 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
                 <p className="font-black text-slate-900">CORPORACIÓN TCT S.A.C.</p>
                 <p className="text-slate-600">RUC: 20608941253</p>
                 <p className="text-slate-600">
-                  <strong>Asesor Comercial:</strong> {currentData.contractHolder || 'Ing. Roberto Acuña - Asesor Principal'}
+                  <strong>Asesor Comercial:</strong> {advisorName} (DNI: {advisorDni})
+                </p>
+                <p className="text-slate-600">
+                  <strong>Celular Asesor:</strong> {advisorPhone} • <strong>Correo:</strong> {advisorEmail}
                 </p>
               </div>
 
@@ -292,6 +295,13 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
                         placeholder="Teléfono"
                       />
                     </div>
+                    <input
+                      type="text"
+                      value={editedProject.clientAddress || ''}
+                      onChange={(e) => setEditedProject({ ...editedProject, clientAddress: e.target.value })}
+                      className="w-full p-1 text-[10px] border border-slate-300 rounded-md"
+                      placeholder="Domicilio Exacto del Cliente"
+                    />
                   </div>
                 ) : (
                   <>
@@ -299,6 +309,11 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
                     <p className="text-slate-600">
                       <strong>DNI / RUC:</strong> {currentData.clientDniRuc || '73849201'} • <strong>Teléfono:</strong> {currentData.clientPhone}
                     </p>
+                    {currentData.clientAddress && (
+                      <p className="text-slate-600">
+                        <strong>Domicilio:</strong> {currentData.clientAddress}
+                      </p>
+                    )}
                     <p className="text-slate-600">
                       <strong>Correo:</strong> {currentData.clientEmail || 'contacto@cliente.com'}
                     </p>
@@ -339,7 +354,7 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
                 <div className="space-y-1 bg-white p-2 rounded-lg border border-slate-200 divide-y divide-slate-100">
                   {currentData.eventSchedules && currentData.eventSchedules.length > 0 ? (
                     currentData.eventSchedules.map((sch, idx) => (
-                      <div key={sch.id || idx} className="pt-1 first:pt-0 flex items-center justify-between flex-wrap text-[10px]">
+                      <div key={sch.id || `sch-${sch.date || idx}-${idx}`} className="pt-1 first:pt-0 flex items-center justify-between flex-wrap text-[10px]">
                         <span className="font-bold text-slate-900 font-mono">
                           Día {idx + 1}: {sch.date}
                         </span>
@@ -436,60 +451,138 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
               CLÁUSULA CUARTA: ENTREGABLES Y PLAZOS ESTRICTOS DE ENTREGA
             </h3>
 
-            <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 space-y-1.5 text-[10px]">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                <div className="p-1.5 bg-white rounded-lg border border-slate-200">
-                  <span className="font-bold text-slate-900 block">🎬 Video Master & Trailer</span>
+            <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 space-y-2 text-[10px]">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+                
+                {/* 1. Video Master (Always present) */}
+                <div className="p-2 bg-white rounded-lg border border-slate-200 shadow-2xs">
+                  <span className="font-black text-slate-900 block flex items-center gap-1">
+                    🎬 Video Master
+                  </span>
                   <span className="text-[10px] text-purple-700 font-bold">Plazo: 15 días hábiles</span>
-                  <p className="text-[9px] text-slate-500">Enlace digital y resguardo en Servidor</p>
+                  {currentData.authorizeInternetPublishing && (
+                    <p className="text-[9px] text-slate-600 font-medium mt-0.5">Enlace digital y resguardo en Servidor</p>
+                  )}
                 </div>
 
-                <div className="p-1.5 bg-white rounded-lg border border-slate-200">
-                  <span className="font-bold text-slate-900 block">📖 Fotolibro Impreso</span>
-                  <span className="text-[10px] text-pink-700 font-bold">{currentData.includesPhotobook ? 'Plazo: 30 días hábiles' : 'No incluido en paquete'}</span>
-                  <p className="text-[9px] text-slate-500">Maquetación, aprobación y encuadernado</p>
-                </div>
+                {/* 2. Sesión Fotográfica (Conditional based on photoshoot checkbox) */}
+                {currentData.includesPhotoshoot && (
+                  <div className="p-2 bg-white rounded-lg border border-slate-200 shadow-2xs">
+                    <span className="font-black text-slate-900 block flex items-center gap-1">
+                      📸 Sesión Fotográfica
+                    </span>
+                    <span className="text-[10px] text-indigo-700 font-bold">15 días</span>
+                    <p className="text-[9px] text-slate-600 font-medium mt-0.5">fotografias editadas</p>
+                  </div>
+                )}
 
-                <div className="p-1.5 bg-white rounded-lg border border-slate-200">
-                  <span className="font-bold text-slate-900 block">💾 Memoria USB 3.0</span>
+                {/* 3. Fotobook (Conditional based on photobook checkbox) */}
+                {currentData.includesPhotobook && (
+                  <div className="p-2 bg-white rounded-lg border border-slate-200 shadow-2xs">
+                    <span className="font-black text-slate-900 block flex items-center gap-1">
+                      📖 Fotobook
+                    </span>
+                    <span className="text-[10px] text-pink-700 font-bold">
+                      Plazo: 30 días hábiles
+                    </span>
+                    <p className="text-[9px] text-slate-600 font-medium mt-0.5">Maquetación, aprobación y encuadernado</p>
+                  </div>
+                )}
+
+                {/* 4. Memoria USB (Always present) */}
+                <div className="p-2 bg-white rounded-lg border border-slate-200 shadow-2xs">
+                  <span className="font-black text-slate-900 block flex items-center gap-1">
+                    💾 {currentData.usbSpecification || 'Memoria USB 3.2 de 128 GB'}
+                  </span>
                   <span className="text-[10px] text-emerald-700 font-bold">Entrega con Saldo S/. 0</span>
-                  <p className="text-[9px] text-slate-500">Material final entregado en memoria USB</p>
+                  <p className="text-[9px] text-slate-600 font-medium mt-0.5">Material final masterizado en alta velocidad</p>
                 </div>
+
+                {/* 5. Regalo Sorpresa (Conditional based on giftIncluded, styled cleanly similar to others) */}
+                {currentData.giftIncluded && (
+                  <div className="p-2 bg-white rounded-lg border border-slate-200 shadow-2xs">
+                    <span className="font-black text-slate-900 block flex items-center gap-1">
+                      🎁 Regalo Sorpresa TCT
+                    </span>
+                    <span className="text-[10px] text-amber-800 font-bold">Mismo día de entrega final</span>
+                    <p className="text-[9px] text-slate-600 font-medium mt-0.5">Detalle conmemorativo exclusivo TCT</p>
+                  </div>
+                )}
+
               </div>
 
-              <p className="text-[9.5px] text-slate-700 font-medium italic border-t border-slate-200 pt-1.5">
-                * CORPORACIÓN TCT conservará los archivos MASTER FINAL entregados por 05 días posteriores a la entrega final al cliente, posterior a ello se eliminará definitivamente el material de MASTER y crudo.
-              </p>
+              {/* Preservation rule for master and raw files */}
+              <div className="bg-amber-50/50 p-2 rounded-lg border border-amber-200 text-slate-800 font-medium text-[9.5px] leading-relaxed">
+                <p>
+                  * <strong>CORPORACIÓN TCT</strong> conservará los archivos <strong>MASTER y brutos</strong>, hasta un plazo de <strong>03 días posteriores</strong> a la fecha programada de entrega del material. De no recoger en la fecha de entrega sólo se conservará el archivo <strong>MASTER</strong>.
+                </p>
+              </div>
             </div>
           </div>
 
-          {/* Official Signatures with increased space for electronic / physical signature */}
-          <div className="pt-6 border-t-2 border-slate-950 grid grid-cols-2 gap-8 text-center text-[10px] page-break-inside-avoid">
-            <div className="space-y-4">
-              <div className="h-24 sm:h-28 border-b-2 border-dashed border-slate-400 w-52 mx-auto flex items-end justify-center pb-2 bg-slate-50/50 rounded-t-lg">
-                <span className="font-mono text-[9px] text-slate-400">Espacio para Firma & Sello Corporativo</span>
+          {/* Clause 5: Special Clause / Mutual Agreements (Cláusula Especial - Se muestra SOLO si se registra algo) */}
+          {(hasSpecialClause || isEditing) && (
+            <div className="space-y-1 page-break-inside-avoid">
+              <h3 className="font-black text-slate-900 uppercase tracking-wide flex items-center gap-1 text-[11px]">
+                <span className="w-3.5 h-3.5 rounded-full bg-slate-900 text-amber-400 text-[9px] flex items-center justify-center font-bold">5</span>
+                CLÁUSULA QUINTA: CLÁUSULA ESPECIAL Y ACUERDOS MUTUOS
+              </h3>
+
+              <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 text-[10px] leading-relaxed">
+                {isEditing ? (
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-bold text-slate-500 uppercase block">
+                      Cláusula adicional / Acuerdos mutuos especiales (si queda vacío, no figurará en el contrato final):
+                    </label>
+                    <textarea
+                      value={editedProject.specialContractClause || ''}
+                      onChange={(e) => setEditedProject({ ...editedProject, specialContractClause: e.target.value })}
+                      rows={2}
+                      placeholder="Ejemplo: Se acuerda incluir 1 reel vertical para redes sociales o especificaciones adicionales..."
+                      className="w-full p-2 text-xs border border-slate-300 rounded-lg bg-white font-sans focus:ring-1 focus:ring-amber-500"
+                    />
+                  </div>
+                ) : (
+                  <div className="bg-white p-2 rounded-lg border border-slate-200 text-slate-800">
+                    <p className="font-medium">{currentData.specialContractClause}</p>
+                  </div>
+                )}
               </div>
+            </div>
+          )}
+
+          {/* Official Signatures with generous space and clean rubric area */}
+          <div className="pt-6 border-t-2 border-slate-950 grid grid-cols-2 gap-8 text-center text-[10px] page-break-inside-avoid">
+            <div className="space-y-3">
+              <div className="h-24 sm:h-28 border-b-2 border-dashed border-slate-400 w-52 mx-auto bg-slate-50/40 rounded-t-lg"></div>
               <div>
                 <p className="font-black text-slate-900 uppercase">CORPORACIÓN TCT S.A.C.</p>
-                <p className="text-[9px] text-slate-500 font-medium">Director de Producción / Asesor Comercial</p>
+                <p className="text-[9.5px] text-slate-800 font-bold mt-0.5">
+                  Asesor Comercial: {advisorName}
+                </p>
+                <p className="text-[9px] text-slate-700 font-mono font-bold">
+                  DNI: {advisorDni} • Cel: {advisorPhone}
+                </p>
+                <p className="text-[8.5px] text-slate-500 font-mono">
+                  {advisorEmail}
+                </p>
                 <p className="text-[8px] text-slate-400 font-mono">RUC: 20608941253</p>
               </div>
             </div>
 
-            <div className="space-y-4">
-              <div className="h-24 sm:h-28 border-b-2 border-dashed border-slate-400 w-52 mx-auto flex items-end justify-center pb-2 bg-slate-50/50 rounded-t-lg">
-                <span className="font-mono text-[9px] text-slate-400">Espacio para Firma Física / Electrónica</span>
-              </div>
+            <div className="space-y-3">
+              <div className="h-24 sm:h-28 border-b-2 border-dashed border-slate-400 w-52 mx-auto bg-slate-50/40 rounded-t-lg"></div>
               <div>
                 <p className="font-black text-slate-900 uppercase">{currentData.clientName}</p>
-                <p className="text-[9px] text-slate-500 font-medium">DNI / RUC: {currentData.clientDniRuc || '__________________'}</p>
+                <p className="text-[9px] text-slate-700 font-medium">DNI / RUC: {currentData.clientDniRuc || '__________________'}</p>
                 <p className="text-[8px] text-slate-400">El Contratante</p>
               </div>
             </div>
           </div>
 
-          <div className="text-center text-[9px] text-slate-400 pt-1.5 border-t border-slate-100 font-mono page-break-inside-avoid">
-            Documento de Contrato emitido formalmente por el Sistema Corporación TCT • Lima, Perú
+          {/* Footer Document Text */}
+          <div className="text-center text-[9px] text-slate-500 pt-1.5 border-t border-slate-100 font-mono page-break-inside-avoid">
+            Documento de Contrato emitido formalmente por el Sistema Integrado de Gestión de Corporación TCT: SIGET • Huancayo, Perú
           </div>
 
         </div>

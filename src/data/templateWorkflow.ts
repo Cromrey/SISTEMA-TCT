@@ -49,14 +49,14 @@ export const createDefaultPhases = (eventDate: string, includesPhotobook = true)
         },
         {
           stepNumber: 3,
-          title: 'Firma del Contrato',
+          title: 'Firma de Contrato',
           badgeText: 'CONTRATO FORMAL',
           badgeColor: 'bg-teal-100 text-teal-800 border-teal-300',
-          status: 'completed',
+          status: 'in_progress',
           checklist: [
             { id: 'c3_1', text: 'Firma formal del acuerdo legal especificando N° Cotización y Contrato', completed: true },
             { id: 'c3_2', text: 'Aprobación de cláusula de pago y tiempos de entrega', completed: true },
-            { id: 'c3_3', text: 'Entrega de copia física o digital al cliente', completed: true }
+            { id: 'c3_3', text: 'Entrega de copia física o digital al cliente', completed: false }
           ]
         }
       ]

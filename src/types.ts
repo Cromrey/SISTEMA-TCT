@@ -165,6 +165,7 @@ export interface ProductionProject {
   title: string;
   clientName: string;
   clientDniRuc?: string;
+  clientAddress?: string; // Domicilio exacto del cliente
   clientPhone: string;
   clientEmail: string;
   eventType: EventType;
@@ -203,6 +204,9 @@ export interface ProductionProject {
   includesPhotobook: boolean;
   includesPhotoshoot?: boolean; // Sesión fotográfica (1 cámara de foto, plazo 15 días)
   includesDrone: boolean;
+  giftIncluded?: boolean; // Regalo sorpresa entregado el mismo día de los entregables finales
+  usbSpecification?: string; // e.g. "Memoria USB 3.2 de 128 GB" o especificación personalizada
+  specialContractClause?: string; // Cláusula especial / acuerdos mutuos entre cliente y TCT
   estimatedDeliveryDate: string;
   
   // Multiple event schedules / shifts if applicable
@@ -223,6 +227,12 @@ export interface ProductionProject {
   contractExported?: boolean;
   contractExportDate?: string;
   initialCommercialLocked?: boolean;
+  contractPendingAttachment?: boolean; // Tacha el avance (25.00%) hasta subir adjuntos de pasos 1, 2, 3
+  
+  // Creator / Commercial Advisor info
+  createdByName?: string;
+  createdByDni?: string;
+  contractHolderDni?: string;
   
   // Audit Trail & Logs
   auditLogs?: ProjectAuditLog[];
@@ -392,6 +402,7 @@ export interface AuthUser {
   password: string; // e.g. "TCT" or "123"
   role: UserRole; // 'admin' | 'employee'
   fullName: string;
+  dni?: string; // 8-digit DNI
   jobTitle: string; // e.g. "Administrador General", "Director de Cámara", "Fotógrafo", "Piloto Dron", "Editor & Ingest"
   phone?: string;
   email?: string;

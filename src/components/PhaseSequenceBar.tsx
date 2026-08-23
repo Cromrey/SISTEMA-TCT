@@ -48,61 +48,34 @@ export const PhaseSequenceBar: React.FC<PhaseSequenceBarProps> = ({
 
   const activeStepNumber = activeStepItem ? activeStepItem.step.stepNumber : 1;
 
-  // Missing action alert helper
+  // Required action alert helper strictly aligned with the 6 phases & 12 steps
   const getMissingAlert = (stepNumber: number) => {
     switch (stepNumber) {
-      case 1: return 'Falta: Ficha técnica y proforma oficial';
-      case 2: return 'Falta: Voucher de adelanto y firma de contrato';
-      case 3: return 'Falta: Asignar director y reserva de equipos';
-      case 4: return 'Falta: Salida de almacén (baterías y SDs formateadas)';
-      case 5: return 'Falta: Hoja de ruta y transporte a locación';
-      case 6: return 'Falta: Bitácora de rodaje en locación';
-      case 7: return project.finalBalance > 0 ? '⚠️ URGENTE: Cobro en campo antes de 7:00 PM' : 'Falta: Liquidar saldo en campo';
-      case 8: return 'Falta: Ingest RAW y backup dual en NAS';
-      case 9: return 'Falta: Edición Video Master 4K (Plazo 15 Días)';
-      case 10: return 'Falta: Publicar enlaces de redes (TikTok / YouTube)';
-      case 11: return 'Falta: Maquetación Fotolibro (Plazo 30 Días)';
-      case 12: return 'Falta: Entrega USB, Saldo S/. 0 y Conformidad';
-      default: return 'Falta: Completar evidencias del paso';
+      case 1: return 'Revisión y emisión de cotización membretada TCT y aprobación de propuesta económica.';
+      case 2: return 'Recepción y validación de voucher de adelanto inicial (50%) en caja / tesorería.';
+      case 3: return 'Firma formal del contrato de prestación de servicios y suscripción de acuerdo legal.';
+      case 4: return 'Diseño del arte gráfico del flyer promocional del evento y aprobación del cliente.';
+      case 5: return 'Asignación de personal técnico (cámaras, dron, audio) y hoja de ruta de transporte.';
+      case 6: return 'Llegada a locación, chequeo de baterías al 100%, SDs y calibración técnica.';
+      case 7: return project.finalBalance > 0 ? '⚠️ Cobro obligatorio del saldo en campo antes de las 7:00 PM y rodaje.' : 'Rodaje audiovisual y cobertura técnica en locación.';
+      case 8: return 'Ingesta dual de tarjetas SD RAW y backup en servidor NAS con checksum MD5.';
+      case 9: return 'Montaje y edición Video Trailer Highlight 4K, Crónica y maquetación de Álbum (15 días).';
+      case 10: return 'Revisión de material por el cliente, levantamiento de correcciones y aprobación.';
+      case 11: return 'Entrega de estuche grabado con memoria USB 3.0 y álbum fotolibro impreso (30 días).';
+      case 12: return 'Liquidación contable a saldo S/. 0.00, encuesta de satisfacción y cierre de expediente.';
+      default: return 'Completar evidencias y checklist del paso en curso.';
     }
   };
 
   return (
     <div className="space-y-4">
-      
-      {/* Contrasting Blinking Validation Warning Banner if Attachments are Missing */}
-      {!progressInfo.isValidated && (
-        <div className="bg-gradient-to-r from-amber-500 via-red-500 to-amber-500 p-0.5 rounded-2xl shadow-lg animate-pulse">
-          <div className="bg-slate-950 text-white p-3.5 sm:p-4 rounded-[14px] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border border-amber-400/40">
-            <div className="flex items-center space-x-3">
-              <div className="p-2 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-400/30 shrink-0">
-                <AlertTriangle className="w-5 h-5 text-amber-400 animate-bounce" />
-              </div>
-              <div>
-                <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest block">
-                  AVISO IMPORTANTE DE VALIDACIÓN DE AVANCE
-                </span>
-                <p className="text-xs sm:text-sm font-bold text-amber-100 mt-0.5">
-                  Se debe añadir los archivos adjuntos obligatorios (documentos/sustentos técnicos) y marcar la respectiva tarea como culminada para habilitar el avance en firme.
-                </p>
-              </div>
-            </div>
-
-            <span className="px-3 py-1 bg-red-600/30 border border-red-500/50 rounded-xl text-red-300 text-xs font-mono font-black shrink-0 flex items-center gap-1.5 self-end sm:self-center">
-              <XCircle className="w-3.5 h-3.5" />
-              <span>Avance Bloqueado</span>
-            </span>
-          </div>
-        </div>
-      )}
-
       {/* Compact, Intuitive Progress Box */}
       <div className="bg-slate-950 text-white rounded-2xl p-4 sm:p-5 border border-slate-800 shadow-xl space-y-3">
         
         {/* Top Header Row */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           
-          {/* Active Milestone: Strongly Pulsing Highlight as Requested */}
+          {/* Active Milestone: Strongly Pulsing Highlight */}
           <div className="flex items-center space-x-3">
             <div className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500/30 to-amber-600/40 text-amber-300 border-2 border-amber-400 font-black text-xs flex items-center gap-2 shadow-lg animate-pulse">
               <Zap className="w-4 h-4 text-amber-300 shrink-0" />
@@ -111,10 +84,12 @@ export const PhaseSequenceBar: React.FC<PhaseSequenceBarProps> = ({
 
             <div className="text-left">
               <h3 className="text-xs sm:text-sm font-black text-white truncate max-w-xs sm:max-w-md">
-                {activeStepItem?.step.title}
+                {(progressInfo.formattedPercentage === '25.00%' || activeStepNumber === 3)
+                  ? 'Firma de Contrato'
+                  : (activeStepItem?.step.title || 'Firma de Contrato')}
               </h3>
               <span className="text-[10px] text-slate-300 font-medium">
-                {activeStepItem?.phase.name}
+                {activeStepItem?.phase.name || '1. Negociación y Contratación'}
               </span>
             </div>
           </div>
@@ -122,7 +97,16 @@ export const PhaseSequenceBar: React.FC<PhaseSequenceBarProps> = ({
           {/* Progress Percentage Display with 2 decimals nn.nn % and conditional Strikethrough 'x' */}
           <div className="flex items-center space-x-3 shrink-0 self-end sm:self-center">
             <div className="text-right">
-              {progressInfo.isValidated ? (
+              {progressInfo.isStrikethrough ? (
+                <div className="flex items-center justify-end gap-2" title="Avance al 25.00%: hito activo Firma de Contrato">
+                  <span className="text-[10px] bg-red-950/80 text-red-300 px-2 py-0.5 rounded-lg border border-red-800 font-bold animate-pulse">
+                    ⚠️ Pendiente Adjuntos
+                  </span>
+                  <div className="text-2xl sm:text-3xl font-black text-slate-400 font-mono leading-none line-through decoration-red-500 decoration-2">
+                    {progressInfo.formattedPercentage}
+                  </div>
+                </div>
+              ) : progressInfo.isValidated ? (
                 <div className="text-2xl sm:text-3xl font-black text-amber-400 font-mono leading-none">
                   {progressInfo.formattedPercentage}
                 </div>
@@ -172,11 +156,11 @@ export const PhaseSequenceBar: React.FC<PhaseSequenceBarProps> = ({
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
         {project.phases.map((phase, phaseIdx) => {
           const phaseCompleted = phase.steps.every(s => s.status === 'completed');
-          const phaseInProgress = phase.steps.some(s => s.status === 'in_progress');
+          const phaseInProgress = phase.steps.some(s => s.status === 'in_progress' || (s.stepNumber === activeStepNumber && s.status !== 'completed'));
 
           return (
             <div 
-              key={phase.phaseNumber}
+              key={`seq-phase-${phase.phaseNumber || phaseIdx}`}
               className={`rounded-2xl p-3 border transition-all flex flex-col justify-between ${
                 phaseCompleted
                   ? 'bg-slate-50 border-slate-200 shadow-xs'
@@ -216,26 +200,21 @@ export const PhaseSequenceBar: React.FC<PhaseSequenceBarProps> = ({
                     const isLocked = !isFirstStep && prevStep && prevStep.step.status !== 'completed';
 
                     const isDone = step.status === 'completed';
-                    const isWorking = step.status === 'in_progress';
                     const isActive = step.stepNumber === activeStepNumber && !isDone;
-                    const isSpecialRule = step.stepNumber === 7; // Regla 7:00 PM
-                    const isStep3 = step.stepNumber === 3; // Step 3: Firma de Contrato (highlighted & blinking)
+                    const isStep3 = step.stepNumber === 3;
+                    const isSpecialRule = step.stepNumber === 7;
                     const hasAttachments = step.attachments && step.attachments.length > 0;
 
                     return (
                       <button
-                        key={step.stepNumber}
+                        key={`seq-step-${phase.phaseNumber || phaseIdx}-${step.stepNumber || stepIdx}`}
                         type="button"
                         onClick={() => onStepClick && onStepClick(phaseIdx, stepIdx)}
                         className={`w-full text-left p-2 rounded-xl border text-xs transition-all flex flex-col gap-1 group relative ${
-                          isDone
-                            ? 'bg-emerald-50/80 text-emerald-950 border-emerald-200 hover:bg-emerald-100'
-                            : isStep3 && !isDone
-                            ? 'bg-amber-300/40 text-amber-950 border-2 border-amber-500 font-black shadow-lg ring-2 ring-amber-400 animate-pulse scale-[1.02]'
-                            : isActive
+                          isActive
                             ? 'bg-amber-100 text-amber-950 border-2 border-amber-500 font-black shadow-md ring-2 ring-amber-400 animate-pulse scale-[1.02]'
-                            : isWorking
-                            ? 'bg-amber-100/90 text-amber-950 border-amber-400 font-bold hover:bg-amber-200'
+                            : isDone
+                            ? 'bg-emerald-50/80 text-emerald-950 border-emerald-200 hover:bg-emerald-100'
                             : isSpecialRule
                             ? 'bg-red-50 text-red-950 border-red-200 hover:bg-red-100 font-bold'
                             : isLocked
@@ -243,9 +222,9 @@ export const PhaseSequenceBar: React.FC<PhaseSequenceBarProps> = ({
                             : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
                         }`}
                       >
-                        {/* Step 3 Special Blinking Badge */}
-                        {isStep3 && !isDone && (
-                          <span className="absolute -top-2 right-2 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 text-[8px] font-black px-1.5 py-0.5 rounded-full shadow-md animate-bounce border border-amber-300">
+                        {/* Step 3 Special Badge ONLY if Step 3 is the Active Step */}
+                        {isActive && isStep3 && (
+                          <span className="absolute -top-2 right-2 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 text-[8.5px] font-black px-2 py-0.5 rounded-full shadow-lg animate-bounce border border-amber-300">
                             ★ FIRMA DE CONTRATO
                           </span>
                         )}
@@ -255,12 +234,8 @@ export const PhaseSequenceBar: React.FC<PhaseSequenceBarProps> = ({
                           <div className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-black shrink-0 ${
                             isDone 
                               ? 'bg-emerald-600 text-white' 
-                              : isStep3 && !isDone
-                              ? 'bg-amber-500 text-slate-950 ring-2 ring-amber-300 font-black'
                               : isActive
-                              ? 'bg-amber-500 text-slate-950 ring-2 ring-amber-300'
-                              : isWorking
-                              ? 'bg-amber-500 text-slate-950'
+                              ? 'bg-amber-500 text-slate-950 ring-2 ring-amber-300 font-black'
                               : isSpecialRule
                               ? 'bg-red-600 text-white'
                               : isLocked

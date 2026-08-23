@@ -171,31 +171,31 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     
     switch (stepNumber) {
       case 1:
-        return 'Falta: Ficha técnica y proforma oficial de cliente';
+        return 'Revisión y emisión de cotización membretada TCT y aprobación de propuesta';
       case 2:
-        return project && project.initialDeposit > 0 ? 'Falta: Voucher de adelanto y firma de contrato' : 'Falta: Confirmar adelanto';
+        return project && project.initialDeposit > 0 ? 'Voucher de adelanto recibido y validado en tesorería' : 'Recepción y validación de voucher de adelanto inicial (50%)';
       case 3:
-        return 'Falta: Asignar director técnico y reserva de equipos';
+        return 'Firma formal del contrato de prestación de servicios y acuerdo legal';
       case 4:
-        return 'Falta: Salida de almacén (baterías y SDs formateadas)';
+        return 'Diseño del arte gráfico del flyer publicitario y aprobación del cliente';
       case 5:
-        return 'Falta: Hoja de ruta y transporte a locación';
+        return 'Asignación de personal técnico (cámaras, dron, audio) y transporte';
       case 6:
-        return 'Falta: Bitácora de rodaje en locación';
+        return 'Llegada a locación, calibración técnica, audio y cobertura audiovisual';
       case 7:
-        return project && project.finalBalance > 0 ? '⚠️ URGENTE: Cobro en campo antes de 7:00 PM' : 'Falta: Registrar medio de pago';
+        return project && project.finalBalance > 0 ? '⚠️ Cobro obligatorio de saldo en campo antes de las 7:00 PM' : 'Validación de saldo cancelado S/. 0.00 en campo';
       case 8:
-        return 'Falta: Ingest RAW y backup dual en NAS RAID';
+        return 'Ingesta RAW y backup dual en NAS con checksum MD5';
       case 9:
-        return 'Falta: Video Master 4K ProRes (SLA 15 Días)';
+        return 'Edición Video Master 4K y USB personalizado (Plazo 15 Días)';
       case 10:
-        return 'Falta: Publicar enlaces de redes (TikTok / YouTube)';
+        return 'Publicación de enlaces oficiales en YouTube, TikTok y redes';
       case 11:
-        return 'Falta: Maquetación de Fotolibro (SLA 30 Días)';
+        return 'Diagramación e impresión de Fotolibro Premium (Plazo 30 Días)';
       case 12:
-        return 'Falta: Entrega USB, Saldo S/. 0 y Acta de Conformidad';
+        return 'Entrega final, liquidación a S/. 0 y Acta de Conformidad';
       default:
-        return 'Falta: Completar evidencias del paso';
+        return 'Completar evidencias del paso en curso';
     }
   };
 
@@ -817,7 +817,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 No hay producciones que coincidan con los filtros seleccionados.
               </div>
             ) : (
-              filteredProjects.map((project) => {
+              filteredProjects.map((project, pIdx) => {
                 const { total, done } = getProjectProgress(project);
                 const progressInfo = getProjectProgressInfo(project);
                 const isToday = project.eventDate === todayStr;
@@ -829,7 +829,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
                 return (
                   <div 
-                    key={project.id}
+                    key={project.id || `proj-${project.uniqueCode || pIdx}`}
                     className={`p-4 sm:p-5 rounded-3xl border transition-all duration-300 flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-4 shadow-sm hover:shadow-md ${
                       isOverdue
                         ? 'bg-gradient-to-r from-red-100/90 via-slate-100 to-red-100/80 border-red-300'
@@ -939,18 +939,27 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         
                         {/* Hito Actual: STRONGLY PULSING & HIGHLIGHTED */}
                         <div className="min-w-0 flex-1">
-                          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gradient-to-r from-amber-600 to-amber-500 text-slate-950 text-xs font-black shadow-md">
+                          <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-black shadow-md ${
+                            progressInfo.isStep3Blinking 
+                              ? 'bg-gradient-to-r from-red-600 via-amber-500 to-red-600 text-white animate-pulse border border-amber-300' 
+                              : 'bg-gradient-to-r from-amber-600 to-amber-500 text-slate-950'
+                          }`}>
                             <Zap className="w-3.5 h-3.5 text-slate-950" />
-                            <span>⚡ Paso {milestone.stepNumber} /12</span>
+                            <span>⚡ Paso {progressInfo.isStep3Blinking ? 3 : milestone.stepNumber} /12</span>
                           </div>
-                          <div className="text-xs font-black text-white truncate block mt-1" title={milestone.title}>
-                            {milestone.title}
+                          <div className="text-xs font-black text-white truncate block mt-1" title={progressInfo.isStep3Blinking ? 'Firma de Contrato (Adjuntos requeridos)' : milestone.title}>
+                            {progressInfo.isStep3Blinking ? 'Firma de Contrato (Adjuntos requeridos)' : milestone.title}
                           </div>
                         </div>
 
-                        {/* Big font percentage with 2 decimals nn.nn% and strikethrough if !isValidated */}
+                        {/* Big font percentage with 2 decimals nn.nn% and strikethrough if isStrikethrough / !isValidated */}
                         <div className="text-right shrink-0">
-                          {progressInfo.isValidated ? (
+                          {progressInfo.isStrikethrough ? (
+                            <div className="text-xl sm:text-2xl font-black text-slate-400 font-mono leading-none flex items-center justify-end gap-1.5" title="Avance al 25.00% en revisión: se deben adjuntar los sustentos en los pasos 1, 2 y 3">
+                              <span className="text-[9px] bg-red-950 text-red-300 px-1 py-0.5 rounded border border-red-800 font-sans">⚠️ En revisión</span>
+                              <span className="line-through decoration-red-500 decoration-2">{progressInfo.formattedPercentage}</span>
+                            </div>
+                          ) : progressInfo.isValidated ? (
                             <div className="text-2xl sm:text-3xl font-black text-amber-400 font-mono leading-none">
                               {progressInfo.formattedPercentage}
                             </div>

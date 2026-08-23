@@ -90,6 +90,7 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
   const [clientDni, setClientDni] = useState('');
   const [clientPhone, setClientPhone] = useState('');
   const [clientEmail, setClientEmail] = useState('');
+  const [clientAddress, setClientAddress] = useState('');
   const [eventLocation, setEventLocation] = useState('');
   const [eventAddress, setEventAddress] = useState('');
   
@@ -139,6 +140,8 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
   const [includesPhotobook, setIncludesPhotobook] = useState(false);
   const [includesPhotoshoot, setIncludesPhotoshoot] = useState(false);
   const [includesDrone, setIncludesDrone] = useState(false);
+  const [giftIncluded, setGiftIncluded] = useState(false);
+  const [specialContractClause, setSpecialContractClause] = useState('');
 
   // Client Authorization for Online Publication (SI / NO)
   const [authorizeInternetPublishing, setAuthorizeInternetPublishing] = useState<boolean>(true);
@@ -291,15 +294,28 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
     const estimatedDelivery = new Date(new Date(primaryEventDate).getTime() + 15 * 86400000).toISOString().split('T')[0];
     const initialPhases = createDefaultPhases(primaryEventDate, includesPhotobook);
 
+    const matchedAdvisor = systemUsers.find(u =>
+      contractHolder.includes(u.fullName) || (currentUser && u.id === currentUser.id)
+    ) || currentUser;
+
+    const advisorName = matchedAdvisor?.fullName || currentUser?.fullName || contractHolder.split(' - ')[0] || 'Michael Romero';
+    const advisorDni = matchedAdvisor?.dni || currentUser?.dni || '45892314';
+    const creatorName = currentUser?.fullName || advisorName;
+    const creatorDni = currentUser?.dni || advisorDni;
+
     const newProject: ProductionProject = {
       id: `tct-proj-${Date.now()}`,
       uniqueCode,
       quotationCode: quotationCode.trim(),
       contractNumber,
       contractHolder: contractHolder.trim(),
+      contractHolderDni: advisorDni,
+      createdByName: creatorName,
+      createdByDni: creatorDni,
       title: title.trim() || `${eventType}: ${clientName || 'Producción Audiovisual'}`,
       clientName: clientName.trim(),
       clientDniRuc: clientDni.trim(),
+      clientAddress: clientAddress.trim(),
       clientPhone: clientPhone.trim() ? `+51 ${clientPhone.trim()}` : '',
       clientEmail: clientEmail.trim(),
       eventType,
@@ -329,6 +345,8 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
       includesPhotobook,
       includesPhotoshoot,
       includesDrone,
+      giftIncluded,
+      specialContractClause: specialContractClause.trim(),
       authorizeInternetPublishing,
       estimatedDeliveryDate: estimatedDelivery,
       assignedStaff: [
@@ -811,6 +829,23 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
                 </span>
               </div>
             </div>
+
+            {/* Domicilio exacto del cliente */}
+            <div>
+              <label className="block text-slate-700 font-bold mb-1 text-xs flex items-center justify-between">
+                <span>Domicilio Exacto del Cliente <span className="text-slate-400 font-normal">(Para Cláusula Primera del Contrato)</span></span>
+              </label>
+              <input
+                type="text"
+                value={clientAddress}
+                onChange={(e) => setClientAddress(e.target.value)}
+                placeholder="Ej: Av. San Carlos 1450, Urb. San Antonio, Huancayo"
+                className="w-full p-2 text-xs border border-slate-300 rounded-xl font-medium focus:ring-2 focus:ring-amber-500 focus:outline-none placeholder:text-slate-400 bg-white"
+              />
+              <span className="text-[10px] text-slate-400 block mt-0.5">
+                Dirección legal o residencial del contratante para el expediente y contrato privado
+              </span>
+            </div>
           </div>
 
           {/* Section 4: Discounts, Hours & Financials in Soles (S/.) */}
@@ -985,7 +1020,7 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
             </div>
 
             {/* Deliverable Checkboxes with updated requested names */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1 text-xs">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 pt-1 text-xs">
               <label className="flex items-center space-x-2.5 cursor-pointer p-3 rounded-xl bg-pink-50 border border-pink-200 hover:bg-pink-100/70 transition-colors">
                 <input
                   type="checkbox"
@@ -1021,6 +1056,35 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
                   Incluye Cobertura Dron 4K
                 </span>
               </label>
+
+              <label className="flex items-center space-x-2.5 cursor-pointer p-3 rounded-xl bg-amber-50/80 border border-amber-200 hover:bg-amber-100/70 transition-colors">
+                <input
+                  type="checkbox"
+                  checked={giftIncluded}
+                  onChange={(e) => setGiftIncluded(e.target.checked)}
+                  className="w-4 h-4 text-amber-600 rounded"
+                />
+                <span className="font-bold text-amber-950 text-xs">
+                  Incluye Regalo Sorpresa TCT (día de entrega)
+                </span>
+              </label>
+            </div>
+
+            {/* Special Additional Clause (Cláusula Quinta en Contrato) */}
+            <div className="text-xs space-y-1">
+              <label className="block text-slate-700 font-bold flex items-center justify-between">
+                <span>Cláusula Quinta Especial / Acuerdos Adicionales (Opcional)</span>
+                <span className="text-[10px] text-slate-400 font-normal">
+                  * Si se registra, figurará en el contrato. Si queda vacío, no se mostrará Cláusula Quinta.
+                </span>
+              </label>
+              <textarea
+                rows={2}
+                value={specialContractClause}
+                onChange={(e) => setSpecialContractClause(e.target.value)}
+                placeholder="Ej. Se acuerda entregar 1 reel vertical para Instagram a los 5 días hábiles..."
+                className="w-full p-2 border border-slate-300 rounded-xl bg-white text-xs text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-amber-500 focus:outline-none"
+              />
             </div>
 
             {/* Online Publication Authorization (Resaltado en Color Especial y Negrita) */}

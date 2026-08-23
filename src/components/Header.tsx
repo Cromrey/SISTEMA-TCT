@@ -1,20 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { UserRole, StaffMember, AuthUser } from '../types';
 import { TCTLogo } from './TCTLogo';
 import { 
-  ShieldCheck, 
-  UserCheck, 
-  PlusCircle, 
-  Sliders,
-  Users,
-  LogOut,
-  User,
-  Maximize2,
-  Minimize2,
-  Clapperboard,
-  Video,
-  ArrowLeft,
-  ArrowRight
+  Clapperboard
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -27,15 +15,15 @@ interface HeaderProps {
   onStaffChange: (staff: StaffMember) => void;
   onUserSelect?: (user: AuthUser) => void;
   onOpenNewProject: () => void;
-  onOpenAnalytics: () => void;
-  onOpenRulesModal: () => void;
-  onOpenUsersManagement: () => void;
+  onOpenAnalytics?: () => void;
+  onOpenRulesModal?: () => void;
+  onOpenUsersManagement?: () => void;
   onOpenCalendar?: () => void;
-  onLogout: () => void;
-  onResetData: () => void;
+  onLogout?: () => void;
+  onResetData?: () => void;
   searchQuery?: string;
   onSearchChange?: (query: string) => void;
-  activeProjectsCount: number;
+  activeProjectsCount?: number;
   onGoBack?: () => void;
   onGoForward?: () => void;
   canGoBack?: boolean;
@@ -51,42 +39,8 @@ export const Header: React.FC<HeaderProps> = ({
   allUsers = [],
   onStaffChange,
   onUserSelect,
-  onOpenNewProject,
-  onOpenRulesModal,
-  onOpenCalendar,
-  onLogout,
-  activeProjectsCount,
-  onGoBack,
-  onGoForward,
-  canGoBack = true,
-  canGoForward = true
+  onOpenNewProject
 }) => {
-  const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
-
-  useEffect(() => {
-    const handleFullscreenChange = () => {
-      setIsFullscreen(Boolean(document.fullscreenElement));
-    };
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-    return () => {
-      document.removeEventListener('fullscreenchange', handleFullscreenChange);
-    };
-  }, []);
-
-  const toggleFullscreen = async () => {
-    try {
-      if (!document.fullscreenElement) {
-        await document.documentElement.requestFullscreen();
-      } else {
-        if (document.exitFullscreen) {
-          await document.exitFullscreen();
-        }
-      }
-    } catch (err) {
-      console.warn('Fullscreen API not allowed or supported in this context:', err);
-    }
-  };
-
   // Find current active user job title or cargo
   const activeUser = allUsers.find(u => 
     (currentRole === 'employee' && u.fullName === currentStaff.name) || 
@@ -148,8 +102,8 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
           </div>
 
-          {/* Right Controls Panel: User Selector, Navigation (Atrás/Adelante on Right), Ver Calendario, Nueva Producción */}
-          <div className="flex items-center space-x-1.5 sm:space-x-2.5 ml-auto flex-wrap justify-end gap-y-1.5">
+          {/* Right Controls Panel: User Selector & Nueva Producción CTA */}
+          <div className="flex items-center space-x-2 sm:space-x-3 ml-auto flex-wrap justify-end gap-y-1.5">
             
             {/* User Switcher Dropdown with Cargo Badge */}
             <div className="flex items-center bg-slate-950/90 hover:bg-slate-950 p-1 sm:p-1.5 rounded-xl border border-slate-800 shadow-inner">
@@ -211,87 +165,6 @@ export const Header: React.FC<HeaderProps> = ({
                 </div>
               </div>
             </div>
-
-            {/* Displacement Navigation Icons (Atrás y Adelante) - MOVED TO RIGHT SIDE */}
-            <div className="flex items-center space-x-1 bg-slate-950/80 p-1 rounded-xl border border-slate-800 shadow-inner">
-              <button
-                id="btn-nav-history-back"
-                onClick={onGoBack}
-                disabled={!canGoBack}
-                className="p-1.5 sm:px-2.5 sm:py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-amber-400 disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center gap-1 text-xs font-bold shadow-xs cursor-pointer"
-                title="Desplazamiento Atrás"
-                aria-label="Ir Atrás"
-              >
-                <ArrowLeft className="w-4 h-4 text-amber-400" />
-                <span className="hidden md:inline text-[11px]">Atrás</span>
-              </button>
-
-              <button
-                id="btn-nav-history-forward"
-                onClick={onGoForward}
-                disabled={!canGoForward}
-                className="p-1.5 sm:px-2.5 sm:py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-amber-400 disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center gap-1 text-xs font-bold shadow-xs cursor-pointer"
-                title="Desplazamiento Adelante"
-                aria-label="Avanzar Adelante"
-              >
-                <ArrowRight className="w-4 h-4 text-amber-400" />
-                <span className="hidden md:inline text-[11px]">Adelante</span>
-              </button>
-            </div>
-
-            {/* Master Rules Button (Visible for Admin users) */}
-            {currentRole === 'admin' && (
-              <button
-                id="btn-open-rules-config"
-                onClick={onOpenRulesModal}
-                className="p-2 sm:px-3 sm:py-2.5 rounded-xl bg-slate-800 hover:bg-slate-750 text-amber-300 hover:text-amber-200 border border-slate-700 hover:border-amber-500/60 transition-all flex items-center justify-center gap-1.5 text-xs font-black shadow-xs shrink-0 cursor-pointer"
-                title="Reglas del Sistema (Configuración de Empresa, Asignación de Personal, Paquetes, Checklists)"
-                aria-label="Reglas del Sistema"
-              >
-                <Sliders className="w-4 h-4 text-amber-400" />
-                <span className="hidden lg:inline text-[11px]">Reglas TCT</span>
-              </button>
-            )}
-
-            {/* Pantalla Completa (Fullscreen API) Toggle Button */}
-            <button
-              id="btn-fullscreen-toggle"
-              onClick={toggleFullscreen}
-              className="p-2 sm:px-2.5 sm:py-2.5 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-amber-400 border border-slate-700 hover:border-amber-500/50 transition-all flex items-center justify-center gap-1 text-xs font-bold shadow-xs shrink-0 cursor-pointer"
-              title={isFullscreen ? "Salir de Pantalla Completa" : "Modo Pantalla Completa (Inmersivo)"}
-              aria-label="Pantalla Completa"
-            >
-              {isFullscreen ? (
-                <>
-                  <Minimize2 className="w-4 h-4 text-amber-400" />
-                  <span className="hidden xl:inline text-[11px]">Salir Fullscreen</span>
-                </>
-              ) : (
-                <>
-                  <Maximize2 className="w-4 h-4 text-slate-300" />
-                  <span className="hidden xl:inline text-[11px]">Pantalla Completa</span>
-                </>
-              )}
-            </button>
-
-            {/* Ver Calendario Button (Positioned right beside Nueva Producción) */}
-            <button
-              id="btn-open-calendar-header"
-              onClick={() => {
-                if (onOpenCalendar) {
-                  onOpenCalendar();
-                } else {
-                  // Dispatch custom event to switch to calendar tab
-                  window.dispatchEvent(new CustomEvent('tct_switch_tab', { detail: { view: 'calendar' } }));
-                }
-              }}
-              className="p-2 sm:px-3 sm:py-2.5 bg-slate-800 hover:bg-slate-750 text-amber-300 hover:text-amber-200 border border-amber-500/40 rounded-xl shadow-md transition-all shrink-0 cursor-pointer flex items-center justify-center gap-1.5 font-bold text-xs"
-              title="Ver Calendario de Producciones y Fechas de Evento"
-              aria-label="Ver Calendario"
-            >
-              <Video className="w-4 h-4 text-amber-400" />
-              <span className="hidden sm:inline">Ver Calendario</span>
-            </button>
 
             {/* Nueva Producción Button */}
             <button

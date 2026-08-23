@@ -276,7 +276,89 @@ export const ReportPrintModal: React.FC<ReportPrintModalProps> = ({
             </div>
           </div>
 
-          {/* Plazos & Delivery Guarantees */}
+          {/* Technical Staff & Assigned Equipment Section */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-[10px] page-break-inside-avoid">
+            
+            {/* Personal Técnico Asignado */}
+            <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 space-y-1.5">
+              <div className="flex items-center justify-between border-b border-slate-200 pb-1">
+                <span className="font-black text-slate-900 uppercase text-[9px] flex items-center gap-1">
+                  <User className="w-3 h-3 text-blue-600" />
+                  Personal Técnico Asignado ({project.assignedStaff?.length || 0})
+                </span>
+                <span className="text-[8.5px] text-slate-500 font-bold">Fase 2 • Paso 5</span>
+              </div>
+
+              {project.assignedStaff && project.assignedStaff.length > 0 ? (
+                <div className="space-y-1">
+                  {project.assignedStaff.map((staff, idx) => (
+                    <div key={staff.id || idx} className="flex items-center justify-between bg-white p-1.5 rounded-lg border border-slate-200 text-[9.5px]">
+                      <div>
+                        <span className="font-bold text-slate-900">{staff.name}</span>
+                        <span className="text-slate-500 block text-[8.5px]">
+                          {staff.role} {staff.phone ? `• Tel: ${staff.phone}` : ''}
+                        </span>
+                      </div>
+                      <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold ${
+                        staff.confirmed 
+                          ? 'bg-emerald-100 text-emerald-800' 
+                          : 'bg-amber-100 text-amber-800'
+                      }`}>
+                        {staff.confirmed ? '✓ Confirmado' : 'Asignado'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-slate-500 italic text-[9px] py-1">
+                  Sin personal asignado aún (Se define en Paso 5: Plan de Rodaje).
+                </p>
+              )}
+            </div>
+
+            {/* Equipos & Recursos Técnicos Asignados */}
+            <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 space-y-1.5">
+              <div className="flex items-center justify-between border-b border-slate-200 pb-1">
+                <span className="font-black text-slate-900 uppercase text-[9px] flex items-center gap-1">
+                  <Sparkles className="w-3 h-3 text-amber-600" />
+                  Equipos Técnicos & Logística ({project.equipmentList?.length || 0})
+                </span>
+                <span className="text-[8.5px] text-slate-500 font-bold">Fase 3 • Paso 6</span>
+              </div>
+
+              {project.equipmentList && project.equipmentList.length > 0 ? (
+                <div className="grid grid-cols-2 gap-1 max-h-28 overflow-hidden">
+                  {project.equipmentList.map((eq, idx) => (
+                    <div key={eq.id || idx} className="bg-white p-1 rounded-md border border-slate-200 text-[8.5px] flex items-center justify-between">
+                      <span className="font-bold text-slate-800 truncate" title={eq.name}>
+                        {eq.name}
+                      </span>
+                      <span className="text-[7.5px] bg-slate-100 px-1 py-0.2 rounded text-slate-600 shrink-0">
+                        {eq.category || 'Equipo'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-slate-500 italic text-[9px] py-1">
+                  Equipamiento estándar en reserva (Cámaras 4K, Audio Inalámbrico, Baterías, SDs V90).
+                </p>
+              )}
+
+              {project.additionalEquipmentNotes && (
+                <div className="bg-amber-50/80 p-1.5 rounded-lg border border-amber-200 text-[8.5px] text-amber-900 leading-tight">
+                  <strong>Requerimiento Adicional:</strong> {project.additionalEquipmentNotes}
+                </div>
+              )}
+
+              {project.transportDetails && (
+                <div className="text-[8.5px] text-slate-600">
+                  <strong>Transporte:</strong> {project.transportDetails}
+                </div>
+              )}
+            </div>
+
+          </div>
           <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 text-[10px] space-y-1 page-break-inside-avoid">
             <h4 className="font-black text-slate-900 uppercase text-[10px]">Garantías de Entrega & Plazos Oficiales (TCT)</h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-slate-700">

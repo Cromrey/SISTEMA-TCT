@@ -151,7 +151,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {myProjects.map((project) => {
+              {myProjects.map((project, pIdx) => {
                 const isToday = project.eventDate === todayStr;
                 const progressInfo = getProjectProgressInfo(project);
 
@@ -179,7 +179,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
 
                 return (
                   <div 
-                    key={project.id}
+                    key={project.id || `my-proj-${project.uniqueCode || pIdx}`}
                     className={`rounded-3xl p-5 border transition-all duration-300 flex flex-col justify-between space-y-4 shadow-xs ${
                       isActivelyWorking 
                         ? 'animate-subtle-pulse bg-gradient-to-br from-amber-50/30 via-white to-amber-50/20 border-amber-400/90' 
@@ -246,7 +246,14 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
                           </div>
 
                           <div className="text-right">
-                            {progressInfo.isValidated ? (
+                            {progressInfo.isStrikethrough ? (
+                              <div className="flex items-center gap-1 text-right justify-end">
+                                <span className="text-[9px] bg-red-950 text-red-300 px-1.5 py-0.5 rounded border border-red-800 font-bold">⚠️ En revisión</span>
+                                <span className="text-xl sm:text-2xl font-black text-slate-400 font-mono line-through decoration-red-500 decoration-2">
+                                  {progressInfo.formattedPercentage}
+                                </span>
+                              </div>
+                            ) : progressInfo.isValidated ? (
                               <span className="text-2xl sm:text-3xl font-black text-amber-400 font-mono">
                                 {progressInfo.formattedPercentage}
                               </span>

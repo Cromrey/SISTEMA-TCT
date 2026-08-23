@@ -539,7 +539,7 @@ export const TimelineGanttView: React.FC<TimelineGanttViewProps> = ({
         <div className="flex items-center gap-2">
           <span className="p-1.5 bg-amber-500/20 text-amber-400 rounded-lg font-bold">🛡️ POLÍTICA DE ALMACENAMIENTO TCT</span>
           <span className="text-slate-300 font-medium">
-            Corporación TCT conservará los archivos <strong className="text-amber-300">MASTER FINAL</strong> entregados por <strong className="text-white bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700 font-mono">03 días posteriores</strong> a la entrega final al cliente. Posterior a ello se eliminará definitivamente el material de MASTER y crudo.
+            Corporación TCT conservará los archivos <strong className="text-amber-300">MASTER y brutos</strong>, hasta un plazo de <strong className="text-white bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700 font-mono">03 días posteriores</strong> a la fecha programada de entrega del material. De no recoger en la fecha de entrega sólo se conservará el archivo <strong className="text-amber-300">MASTER</strong>.
           </span>
         </div>
         <span className="text-[10px] text-slate-400 font-mono bg-slate-800/80 px-2 py-1 rounded-lg border border-slate-700">

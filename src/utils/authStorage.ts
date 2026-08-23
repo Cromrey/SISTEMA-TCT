@@ -10,6 +10,7 @@ export const DEFAULT_AUTH_USERS: AuthUser[] = [
     password: 'TCT',
     role: 'admin',
     fullName: 'Michael Romero (Administrador TCT)',
+    dni: '45892314',
     jobTitle: 'Administrador General',
     phone: '+51 990030200',
     email: 'admin@corporaciontct.pe',
@@ -22,6 +23,7 @@ export const DEFAULT_AUTH_USERS: AuthUser[] = [
     password: 'TCT2',
     role: 'employee',
     fullName: 'Elim Cristóbal Bernabé',
+    dni: '71234567',
     jobTitle: 'Editor y productor',
     phone: '990050010',
     email: 'elim@corporaciontct.pe',
@@ -34,6 +36,7 @@ export const DEFAULT_AUTH_USERS: AuthUser[] = [
     password: 'TCT1',
     role: 'employee',
     fullName: 'Clay Romero Reyes',
+    dni: '46781234',
     jobTitle: 'Coordinador de Producción',
     phone: '990010010',
     email: 'clay@corporaciontct.pe',
@@ -46,6 +49,7 @@ export const DEFAULT_AUTH_USERS: AuthUser[] = [
     password: 'TCT3',
     role: 'employee',
     fullName: 'Henry Romero Reyes',
+    dni: '47890123',
     jobTitle: 'Fotógrafo Principal',
     phone: '990010020',
     email: 'henry@corporaciontct.pe',
@@ -58,6 +62,7 @@ export const DEFAULT_AUTH_USERS: AuthUser[] = [
     password: 'TCT4',
     role: 'employee',
     fullName: 'Luz Reyes Riveros',
+    dni: '20054321',
     jobTitle: 'Director de Cámara',
     phone: '980050010',
     email: 'luz@corporaciontct.pe',
@@ -70,6 +75,7 @@ export const DEFAULT_AUTH_USERS: AuthUser[] = [
     password: 'TCT5',
     role: 'employee',
     fullName: 'Elizabeth Matamoros Fuentes',
+    dni: '48901234',
     jobTitle: 'Técnico de Audio & Luces',
     phone: '990010054',
     email: 'ely@corporaciontct.pe',
@@ -82,6 +88,7 @@ export const DEFAULT_AUTH_USERS: AuthUser[] = [
     password: '123',
     role: 'employee',
     fullName: 'Carlos Mendoza',
+    dni: '70123456',
     jobTitle: 'Director de Cámara',
     phone: '+51 912 345 678',
     email: 'carlos.mendoza@corporaciontct.pe',
@@ -209,6 +216,7 @@ export function createOrUpdateUser(
     password: string;
     role: 'admin' | 'employee';
     fullName: string;
+    dni?: string;
     jobTitle: string;
     phone?: string;
     email?: string;
@@ -252,6 +260,7 @@ export function createOrUpdateUser(
       password: userData.password.trim(),
       role: userData.role,
       fullName: userData.fullName.trim(),
+      dni: userData.dni?.trim() || users[idx].dni || '',
       jobTitle: userData.jobTitle.trim() || (userData.role === 'admin' ? 'Administrador' : 'Técnico'),
       phone: userData.phone?.trim() || '',
       email: userData.email?.trim() || '',
@@ -276,6 +285,7 @@ export function createOrUpdateUser(
       password: userData.password.trim(),
       role: userData.role,
       fullName: userData.fullName.trim(),
+      dni: userData.dni?.trim() || '',
       jobTitle: userData.jobTitle.trim() || (userData.role === 'admin' ? 'Administrador' : 'Técnico'),
       phone: userData.phone?.trim() || '',
       email: userData.email?.trim() || '',

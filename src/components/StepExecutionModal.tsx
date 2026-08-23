@@ -415,9 +415,25 @@ FECHA: ${acceptanceDate}
       updatedAt: new Date().toISOString()
     };
 
+    // Check if steps 1, 2, 3 all have attachments uploaded to clear contractPendingAttachment
+    const step1Obj = updatedPhases[0]?.steps?.find(s => s.stepNumber === 1);
+    const step2Obj = updatedPhases[0]?.steps?.find(s => s.stepNumber === 2);
+    const step3Obj = updatedPhases[0]?.steps?.find(s => s.stepNumber === 3);
+
+    const s1Has = Boolean((step1Obj?.attachments && step1Obj.attachments.length > 0) || project.proformaAttachmentUrl || (stepData.stepNumber === 1 && attachments.length > 0));
+    const s2Has = Boolean((step2Obj?.attachments && step2Obj.attachments.length > 0) || project.depositReceiptUrl || (stepData.stepNumber === 2 && attachments.length > 0));
+    const s3Has = Boolean((step3Obj?.attachments && step3Obj.attachments.length > 0) || (stepData.stepNumber === 3 && attachments.length > 0));
+
+    if (s1Has && s2Has && s3Has) {
+      updatedProject.contractPendingAttachment = false;
+    }
+
     // Step 3 completion special flow: finalize contract export, lock initial commercial, unlock step 4, set exactly 25.00%
     if (stepData.stepNumber === 3 && finalStatus === 'completed') {
       updatedProject = finalizeContractExportStep3(updatedProject, project.contractHolder || 'Administrador TCT');
+      if (s1Has && s2Has && s3Has) {
+        updatedProject.contractPendingAttachment = false;
+      }
     }
 
     // Generate Audit Log Entry
@@ -1078,9 +1094,9 @@ FECHA: ${acceptanceDate}
                 Checklist Oficial del Paso {stepData.stepNumber}
               </h4>
               <div className="space-y-2">
-                {stepData.checklist.map((item) => (
+                {stepData.checklist.map((item, idx) => (
                   <label
-                    key={item.id}
+                    key={item.id || `chk-${stepData.stepNumber}-${idx}`}
                     className={`flex items-start space-x-3 p-3 rounded-xl border transition-all ${
                       item.completed 
                         ? 'bg-emerald-50/80 border-emerald-200 text-emerald-950' 
@@ -1169,8 +1185,8 @@ FECHA: ${acceptanceDate}
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {attachments.map(att => (
-                  <div key={att.id} className="flex items-center justify-between p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs">
+                {attachments.map((att, attIdx) => (
+                  <div key={att.id || `att-${att.name}-${attIdx}`} className="flex items-center justify-between p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs">
                     <div className="flex items-center space-x-2 truncate pr-2">
                       {att.type === 'image' ? (
                         <div className="w-8 h-8 rounded-lg overflow-hidden shrink-0 border border-slate-300">

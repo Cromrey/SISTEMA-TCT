@@ -90,29 +90,11 @@ export const checkStepSequenceStatus = (
 
   if (!isPrevCompleted) {
     missingRequirements.push(
-      `El Paso ${prevStep.stepNumber} (${prevStep.title}) no está culminado.`
+      `El Paso ${prevStep.stepNumber} (${prevStep.title}) debe estar completado previamente.`
     );
   }
 
-  // Step 4 unlocking rule: Step 3 must be completed AND contract exported/registered with mandatory attachments (25.00%)
-  if (targetStepNumber === 4) {
-    const step3 = allSteps.find(item => item.step.stepNumber === 3)?.step;
-    const hasAttachments = Boolean(
-      (step3?.attachments && step3.attachments.length > 0) ||
-      project.proformaAttachmentUrl ||
-      project.depositReceiptUrl ||
-      project.contractExported
-    );
-
-    if (!isPrevCompleted) {
-      missingRequirements.push('Debe culminar y registrar la exportación del contrato en el Paso 3.');
-    }
-    if (!hasAttachments && !project.contractExported) {
-      missingRequirements.push('Debe registrar los sustentos o adjuntos del contrato en el Paso 3.');
-    }
-  }
-
-  // Check if subsequent steps are completed (preventing backward modification of past completed steps)
+  // Check if subsequent steps are completed (preventing backward modification of past completed steps for employees)
   const subsequentStepsCompleted = allSteps
     .slice(targetGlobalIndex + 1)
     .some(item => item.step.status === 'completed');
@@ -125,7 +107,7 @@ export const checkStepSequenceStatus = (
     canComplete: isUnlocked && !subsequentStepsCompleted,
     isReadOnly: isCompleted && subsequentStepsCompleted,
     reason: !isUnlocked
-      ? `🔒 Paso Bloqueado: Requiere culminar obligatoriamente el Paso ${prevStep.stepNumber} (${prevStep.title}) y registrar sus archivos adjuntos.`
+      ? `🔒 Paso Bloqueado: Requiere culminar obligatoriamente el Paso ${prevStep.stepNumber} (${prevStep.title}).`
       : undefined,
     requiredStepNumber: prevStep.stepNumber,
     requiredStepTitle: prevStep.title,
@@ -147,46 +129,38 @@ export const validateStepCompletion = (
     const pendingChecks = step.checklist.filter(c => !c.completed);
     if (pendingChecks.length > 0) {
       errorMessages.push(
-        `Faltan ${pendingChecks.length} ítems obligatorios en el checklist: "${pendingChecks[0].text}".`
+        `Faltan ${pendingChecks.length} ítems en el checklist: "${pendingChecks[0].text}".`
       );
     }
   }
 
-  // 2. Specific step validations
+  // 2. Specific step validations (flexible and reliable)
   switch (step.stepNumber) {
     case 1:
-      // Quotation code or proforma required
-      if (!project.quotationCode && (!step.attachments || step.attachments.length === 0)) {
-        errorMessages.push('Debe asignar el código de cotización o adjuntar la proforma oficial.');
+      // Quotation code or proforma
+      if (!project.quotationCode && (!step.attachments || step.attachments.length === 0) && !project.proformaAttachmentUrl) {
+        errorMessages.push('Debe asignar el código de cotización o adjuntar la proforma.');
       }
       break;
 
     case 2:
-      // Deposit required
-      if (project.initialDeposit <= 0 && (!step.attachments || step.attachments.length === 0)) {
-        errorMessages.push('Debe registrar el monto de adelanto inicial o adjuntar voucher de caja.');
+      // Deposit
+      if (project.initialDeposit <= 0 && (!step.attachments || step.attachments.length === 0) && !project.depositReceiptUrl) {
+        errorMessages.push('Debe registrar el monto de adelanto o adjuntar voucher.');
       }
       break;
 
     case 3:
-      // Contract export / signed document required
+      // Contract number / export / signed document
       if (!project.contractNumber) {
-        errorMessages.push('Debe contar con N° de contrato oficial generado.');
-      }
-      break;
-
-    case 4:
-      // Flyer design
-      const hasFlyer = (step.attachments && step.attachments.length > 0) || (step.links && step.links.length > 0);
-      if (!hasFlyer) {
-        errorMessages.push('Debe adjuntar el arte del flyer o registrar el enlace en alta resolución.');
+        errorMessages.push('Debe contar con N° de contrato generado.');
       }
       break;
 
     case 7:
       // Field payment verification
       if (!step.fieldPaymentData || step.fieldPaymentData.paymentStatus === 'pending') {
-        if (project.finalBalance > 0) {
+        if (project.finalBalance > 0 && project.fieldPayment <= 0) {
           errorMessages.push('Debe registrar el estado del cobro en campo (Pagado o Acuerdo de prórroga) antes de las 7:00 PM.');
         }
       }
@@ -194,28 +168,16 @@ export const validateStepCompletion = (
 
     case 8:
       // Ingest verification
-      if (!step.ingestData || !step.ingestData.backupVerified) {
-        errorMessages.push('Debe marcar la casilla de "Respaldo y verificación de checksum en servidor NAS".');
-      }
-      break;
-
-    case 10:
-      // Social links
-      const hasSocial = Boolean(
-        step.socialLinks?.tiktok ||
-        step.socialLinks?.youtube ||
-        step.socialLinks?.facebook ||
-        step.socialLinks?.googleDrive ||
-        (step.links && step.links.length > 0)
-      );
-      if (!hasSocial && project.authorizeInternetPublishing !== false) {
-        errorMessages.push('Debe ingresar al menos un enlace oficial de publicación o Drive.');
+      if (step.checklist && step.checklist.every(c => c.completed)) {
+        // All good
+      } else if (!step.ingestData || !step.ingestData.backupVerified) {
+        errorMessages.push('Debe marcar la casilla de "Respaldo y verificación en servidor NAS".');
       }
       break;
 
     case 12:
       // Client conformity
-      if (!step.conformityAcceptance?.accepted) {
+      if (!step.conformityAcceptance?.accepted && (!step.checklist || step.checklist.some(c => !c.completed))) {
         errorMessages.push('Debe registrar la Aceptación del Acta de Conformidad Final firmada por el cliente.');
       }
       break;
@@ -229,7 +191,7 @@ export const validateStepCompletion = (
 
 /**
  * Finalizes contract export (Step 3 culmination)
- * Locks initial commercial data, marks Steps 1, 2, 3 as completed,
+ * Locks initial commercial data, marks Steps 1, 2, and 3 as completed,
  * ensures progress is set to exactly 25.00%, and unlocks Step 4.
  */
 export const finalizeContractExportStep3 = (
@@ -238,9 +200,9 @@ export const finalizeContractExportStep3 = (
 ): ProductionProject => {
   const updatedPhases = [...project.phases];
 
-  // Mark Phase 1 (Steps 1, 2, 3) as completed
+  // In Phase 1: Steps 1, 2 and 3 completed
   if (updatedPhases[0] && updatedPhases[0].steps) {
-    const phase1Steps = updatedPhases[0].steps.map((st, idx) => {
+    const phase1Steps = updatedPhases[0].steps.map((st) => {
       const allChecklistCompleted = st.checklist
         ? st.checklist.map(c => ({ ...c, completed: true, completedAt: c.completedAt || new Date().toLocaleTimeString() }))
         : [];
@@ -255,7 +217,7 @@ export const finalizeContractExportStep3 = (
     updatedPhases[0] = { ...updatedPhases[0], steps: phase1Steps };
   }
 
-  // Set Step 4 (Flyer) to in_progress if currently pending
+  // Phase 2 Step 4 (Flyer) becomes in_progress and unlocked
   if (updatedPhases[1] && updatedPhases[1].steps && updatedPhases[1].steps[0]) {
     if (updatedPhases[1].steps[0].status === 'pending') {
       const step4 = { ...updatedPhases[1].steps[0], status: 'in_progress' as const };
@@ -270,8 +232,8 @@ export const finalizeContractExportStep3 = (
     userName,
     userRole: 'admin',
     action: 'contract_exported',
-    title: 'Exportación de Contrato Culminada (Avance: 25.00%)',
-    description: `Se culminó la exportación y formalización del contrato ${project.contractNumber}. Se validó el 25.00% de avance (Paso 3 completado), se bloquearon los datos contractuales iniciales y se habilitó el Paso 4 (Diseño del Flyer).`,
+    title: 'Exportación de Contrato Generada (Hito: 25.00%)',
+    description: `Se formalizó la exportación del contrato ${project.contractNumber}. Fases 1-3 culminadas (25.00%) y Paso 4 (Diseño de Flyer) habilitado.`,
     metadata: {
       contractNumber: project.contractNumber,
       clientName: project.clientName,
@@ -285,6 +247,7 @@ export const finalizeContractExportStep3 = (
     phases: updatedPhases,
     contractExported: true,
     contractExportDate: new Date().toISOString(),
+    contractPendingAttachment: false,
     initialCommercialLocked: true,
     updatedAt: new Date().toISOString()
   };
