@@ -232,7 +232,7 @@ export const EmployeePortal: React.FC<EmployeePortalProps> = ({
                 ? 'bg-emerald-100 text-emerald-800' 
                 : 'bg-red-100 text-red-800'
             }`}>
-              {currentProject.finalBalance === 0 ? '✓ Liquidado ($0.00)' : `Saldo Pendiente: $${currentProject.finalBalance}`}
+              {currentProject.finalBalance === 0 ? '✓ Liquidado (S/. 0.00)' : `Saldo Pendiente: S/. ${currentProject.finalBalance.toLocaleString()}`}
             </span>
           </div>
         </div>
@@ -309,7 +309,7 @@ export const EmployeePortal: React.FC<EmployeePortalProps> = ({
                   Cobro Liquidado en Campo con Éxito
                 </span>
                 <span className="text-xs text-slate-500 font-mono">
-                  Monto: ${step7.fieldPaymentData.amountCollected} USD • {step7.fieldPaymentData.paymentTime} • {step7.fieldPaymentData.receiptNumber}
+                  Monto: S/. {step7.fieldPaymentData.amountCollected.toLocaleString()} • {step7.fieldPaymentData.paymentTime} • {step7.fieldPaymentData.receiptNumber}
                 </span>
               </div>
             </div>
@@ -322,7 +322,7 @@ export const EmployeePortal: React.FC<EmployeePortalProps> = ({
           <div className="space-y-3 pt-2">
             <div className="p-3 bg-white/90 rounded-2xl border border-red-300 text-xs flex items-center justify-between flex-wrap gap-2">
               <span className="font-bold text-red-950">
-                Saldo a cobrar al cliente en locación: <strong className="text-base text-red-600">${currentProject.finalBalance} USD</strong>
+                Saldo a cobrar al cliente en locación: <strong className="text-base text-red-600">S/. {currentProject.finalBalance.toLocaleString()}</strong>
               </span>
               <span className="text-slate-500 font-medium">
                 Medios autorizados: Efectivo / Transferencia / Yape

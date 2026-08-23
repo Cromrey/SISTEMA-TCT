@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ProductionProject, SmartAlert, DecisionInsight, EventType, StepData, StaffMember } from '../types';
 import { TCTLogo } from './TCTLogo';
 import { KpiMetricsDashboard } from './KpiMetricsDashboard';
@@ -41,9 +41,9 @@ import {
 import { CalendarView } from './CalendarView';
 import { ExecutiveSummaryModule } from './ExecutiveSummaryModule';
 import { TimelineGanttView } from './TimelineGanttView';
-import { ProjectQrCheckinModal } from './ProjectQrCheckinModal';
 import { GlobalPdfExportModal, PdfReportType } from './GlobalPdfExportModal';
 import { formatDateDDMMAA } from '../utils/dateFormatter';
+import { getProjectProgressInfo } from '../utils/projectProgress';
 import {
   ResponsiveContainer,
   BarChart,
@@ -99,10 +99,24 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [groupFilter, setGroupFilterState] = useState<MainGrouping>(savedQuickFilter as MainGrouping);
   const [specificPhaseFilter, setSpecificPhaseFilter] = useState<SpecificPhaseFilter>('all');
   const [selectedTypeFilter, setSelectedTypeFilter] = useState<EventType | 'all'>('all');
-  const [qrModalProject, setQrModalProject] = useState<ProductionProject | null>(null);
   const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
   const [pdfReportType, setPdfReportType] = useState<PdfReportType>('projects_list');
   const [showTimelineChart, setShowTimelineChart] = useState(false);
+
+  // Listen to external calendar view triggers from header
+  useEffect(() => {
+    const handleSwitchTab = (e: CustomEvent<{ view: string }>) => {
+      if (e.detail?.view === 'calendar') {
+        setCurrentView('calendar');
+      } else if (e.detail?.view === 'list') {
+        setCurrentView('list');
+      }
+    };
+    window.addEventListener('tct_switch_tab' as any, handleSwitchTab);
+    return () => {
+      window.removeEventListener('tct_switch_tab' as any, handleSwitchTab);
+    };
+  }, []);
 
   const setGroupFilter = (filter: MainGrouping) => {
     setGroupFilterState(filter);
@@ -423,6 +437,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             >
               <TrendingUp className="w-4 h-4 text-amber-600" />
               <span>Toma de Decisiones</span>
+            </button>
+
+            {/* Ver Calendario Button beside Nueva Producción */}
+            <button
+              onClick={() => setCurrentView('calendar')}
+              className={`px-3.5 py-2 rounded-xl text-xs font-black flex items-center gap-1.5 shadow-sm transition-all border cursor-pointer ${
+                currentView === 'calendar'
+                  ? 'bg-slate-950 text-amber-400 border-amber-400 ring-2 ring-amber-400/30'
+                  : 'bg-slate-900 hover:bg-slate-800 text-amber-300 border-amber-500/40 hover:border-amber-400'
+              }`}
+              title="Ver Calendario de Fechas de Evento"
+            >
+              <Calendar className="w-4 h-4 text-amber-400" />
+              <span>Ver Calendario</span>
             </button>
 
             <button
@@ -790,13 +818,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               </div>
             ) : (
               filteredProjects.map((project) => {
-                const { total, done, percent } = getProjectProgress(project);
+                const { total, done } = getProjectProgress(project);
+                const progressInfo = getProjectProgressInfo(project);
                 const isToday = project.eventDate === todayStr;
                 const isZeroBalance = project.finalBalance === 0;
                 const milestone = getCurrentMilestone(project);
                 const isOverdue = isProjectOverdue(project);
                 const missingActionAlert = getStepMissingActionAlert(milestone.stepNumber, milestone.step, project);
-                const isActivelyWorking = !project.isArchived && percent < 100;
+                const isActivelyWorking = !project.isArchived && progressInfo.percentage < 100;
 
                 return (
                   <div 
@@ -919,11 +948,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           </div>
                         </div>
 
-                        {/* Big font percentage */}
+                        {/* Big font percentage with 2 decimals nn.nn% and strikethrough if !isValidated */}
                         <div className="text-right shrink-0">
-                          <div className="text-3xl font-black text-amber-400 font-mono leading-none">
-                            {percent}<span className="text-base font-bold text-amber-300">%</span>
-                          </div>
+                          {progressInfo.isValidated ? (
+                            <div className="text-2xl sm:text-3xl font-black text-amber-400 font-mono leading-none">
+                              {progressInfo.formattedPercentage}
+                            </div>
+                          ) : (
+                            <div className="text-lg sm:text-xl font-black text-red-400 font-mono leading-none flex items-center justify-end gap-1" title="Avance bloqueado: faltan adjuntos técnicos">
+                              <span className="text-[9px] bg-red-950 text-red-300 px-1 py-0.5 rounded border border-red-800 font-sans">❌ Bloqueado</span>
+                              <span className="line-through opacity-75">{progressInfo.formattedPercentage}</span>
+                            </div>
+                          )}
                           <span className="text-[10px] text-slate-300 font-bold bg-slate-800 px-2 py-0.5 rounded font-mono border border-slate-700 block mt-1">
                             {done} /12 pasos
                           </span>
@@ -934,8 +970,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       {/* Mini Progress Bar */}
                       <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden p-0.2 border border-slate-700">
                         <div 
-                          className="h-full bg-gradient-to-r from-amber-400 via-teal-400 to-emerald-400 rounded-full transition-all duration-700"
-                          style={{ width: `${percent}%` }}
+                          className={`h-full rounded-full transition-all duration-700 ${
+                            progressInfo.isValidated
+                              ? 'bg-gradient-to-r from-amber-400 via-teal-400 to-emerald-400'
+                              : 'bg-gradient-to-r from-red-500 to-amber-500 opacity-60'
+                          }`}
+                          style={{ width: `${progressInfo.percentage}%` }}
                         />
                       </div>
 
@@ -963,8 +1003,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
                     </div>
 
-                    {/* Right Column: Actions (Contrato, Informe, Ver 12 Pasos, QR, Borrar) */}
-                    <div className="grid grid-cols-2 sm:grid-cols-4 xl:flex xl:flex-col items-stretch justify-end gap-1.5 shrink-0 pt-2 xl:pt-0 border-t xl:border-t-0 border-slate-300">
+                    {/* Right Column: Actions (Contrato, Informe, Ver 12 Pasos, Borrar) */}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 xl:flex xl:flex-col items-stretch justify-end gap-1.5 shrink-0 pt-2 xl:pt-0 border-t xl:border-t-0 border-slate-300">
                       
                       {/* Export Contract Button */}
                       <button
@@ -995,16 +1035,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         <span>12 Pasos</span>
                       </button>
 
-                      {/* QR Check-in on site button */}
-                      <button
-                        onClick={() => setQrModalProject(project)}
-                        className="min-h-[44px] xl:min-h-0 xl:flex-initial px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 active:scale-95 text-amber-300 transition-all text-[11px] font-bold flex items-center justify-center gap-1.5 shadow-xs border border-slate-700 cursor-pointer"
-                        title="Generar Código QR de Asistencia y Check-in en Locación"
-                      >
-                        <QrCode className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                        <span>QR Check</span>
-                      </button>
-
                       {/* Delete individual project button */}
                       {onDeleteProject && (
                         <button
@@ -1012,7 +1042,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             e.stopPropagation();
                             onDeleteProject(project.id);
                           }}
-                          className="col-span-2 sm:col-span-4 xl:col-span-1 min-h-[40px] xl:min-h-0 xl:flex-initial px-2.5 py-1.5 rounded-xl bg-red-600/10 hover:bg-red-600/25 active:scale-95 text-red-700 hover:text-red-800 transition-all text-[11px] font-bold flex items-center justify-center gap-1 border border-red-200 cursor-pointer"
+                          className="col-span-2 sm:col-span-3 xl:col-span-1 min-h-[40px] xl:min-h-0 xl:flex-initial px-2.5 py-1.5 rounded-xl bg-red-600/10 hover:bg-red-600/25 active:scale-95 text-red-700 hover:text-red-800 transition-all text-[11px] font-bold flex items-center justify-center gap-1 border border-red-200 cursor-pointer"
                           title="Eliminar este contrato/expediente de la base de datos"
                         >
                           <Trash2 className="w-3.5 h-3.5 text-red-500 shrink-0" />
@@ -1079,21 +1109,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </div>
 
       </div>
-
-      {/* QR Code Check-In Modal for Staff */}
-      {qrModalProject && (
-        <ProjectQrCheckinModal
-          project={qrModalProject}
-          isOpen={Boolean(qrModalProject)}
-          onClose={() => setQrModalProject(null)}
-          onUpdateProject={(updated) => {
-            if (onUpdateProject) {
-              onUpdateProject(updated);
-            }
-            setQrModalProject(updated);
-          }}
-        />
-      )}
 
       {/* Global Official PDF Report Modal for Corporacion TCT */}
       {isPdfModalOpen && (

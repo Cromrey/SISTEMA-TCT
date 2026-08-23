@@ -4,6 +4,7 @@ export interface ProjectProgressInfo {
   totalSteps: number;
   completedSteps: number;
   rawPercentage: number;
+  percentage: number;
   formattedPercentage: string;
   hasMandatoryAttachments: boolean;
   isValidated: boolean;
@@ -44,24 +45,31 @@ export const getProjectProgressInfo = (project: ProductionProject): ProjectProgr
 
   // Validation requirement: if there are completed steps or contract emitted,
   // there must be proforma / contract or step attachments uploaded
-  const hasContractOrProforma = Boolean(project.proformaAttachmentUrl || project.contractNumber);
-  const hasUploadedFiles = hasAttachmentsInSteps > 0 || Boolean(project.proformaAttachmentUrl) || Boolean(project.depositReceiptUrl);
+  const hasUploadedFiles = 
+    hasAttachmentsInSteps > 0 || 
+    Boolean(project.proformaAttachmentUrl) || 
+    Boolean(project.depositReceiptUrl) || 
+    Boolean(project.contractExported);
 
-  // A project is considered validated if at least essential attachments or step attachments are present
-  // when progress > 0
-  const isValidated = completedSteps === 0 || (completedStepsWithoutAttachments === 0 && (hasUploadedFiles || hasContractOrProforma));
+  // A project is considered validated if all completed steps have their corresponding
+  // mandatory attachments uploaded and verified, or contract is formally exported
+  const isValidated = 
+    completedSteps === 0 || 
+    (Boolean(project.contractExported) && completedSteps <= 3) ||
+    (completedStepsWithoutAttachments === 0 && (hasAttachmentsInSteps >= completedSteps || Boolean(project.contractExported)));
   
-  const pendingAttachmentsCount = completedStepsWithoutAttachments;
+  const pendingAttachmentsCount = isValidated ? 0 : completedStepsWithoutAttachments;
 
   let validationMessage = '';
   if (!isValidated) {
-    validationMessage = '⚠️ ATENCIÓN: Se debe añadir los archivos adjuntos obligatorios de sustento técnico y marcar la tarea como culminada para validar el avance.';
+    validationMessage = '⚠️ ATENCIÓN OBLIGATORIA: Se debe añadir los archivos adjuntos obligatorios (documentos/sustentos técnicos) en los pasos completados y marcar la respectiva tarea como culminada para validar el porcentaje de avance real.';
   }
 
   return {
     totalSteps: total,
     completedSteps,
     rawPercentage,
+    percentage: rawPercentage,
     formattedPercentage,
     hasMandatoryAttachments: hasUploadedFiles,
     isValidated,

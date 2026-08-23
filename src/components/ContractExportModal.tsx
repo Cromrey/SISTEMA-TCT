@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ProductionProject, UserRole } from '../types';
 import { TCTLogo } from './TCTLogo';
 import { printElement, downloadPrintableHtml, downloadEditableDoc } from '../utils/printHelper';
+import { finalizeContractExportStep3 } from '../utils/stepSequenceHelper';
 import { 
   Printer, 
   X, 
@@ -19,7 +20,8 @@ import {
   CheckCircle2, 
   Download,
   FileText,
-  FileCode
+  FileCode,
+  Zap
 } from 'lucide-react';
 
 interface ContractExportModalProps {
@@ -38,13 +40,28 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
   const isAdmin = currentRole === 'admin';
   const [isEditing, setIsEditing] = useState(false);
   const [editedProject, setEditedProject] = useState<ProductionProject>({ ...project });
-  const [copySuccess, setCopySuccess] = useState(false);
+  const [exportCulminated, setExportCulminated] = useState(Boolean(project.contractExported));
+
+  const handleFinalizeAndRegisterExport = () => {
+    if (onUpdateProject) {
+      const finalized = finalizeContractExportStep3(
+        isEditing ? editedProject : project,
+        'Administrador TCT'
+      );
+      onUpdateProject(finalized);
+      setEditedProject(finalized);
+    }
+    setExportCulminated(true);
+    setIsEditing(false);
+  };
 
   const handlePrint = () => {
+    handleFinalizeAndRegisterExport();
     printElement('tct-contract-document', `Contrato-${currentData.contractNumber || currentData.uniqueCode}`);
   };
 
   const handleDownloadHtml = () => {
+    handleFinalizeAndRegisterExport();
     downloadPrintableHtml(
       'tct-contract-document',
       `Contrato-${currentData.contractNumber || currentData.uniqueCode}.html`,
@@ -53,6 +70,7 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
   };
 
   const handleDownloadWordDoc = () => {
+    handleFinalizeAndRegisterExport();
     downloadEditableDoc(
       'tct-contract-document',
       `Contrato-${currentData.contractNumber || currentData.uniqueCode}-Editable.doc`,
@@ -72,6 +90,8 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
   const totalExtraHours = (currentData.extraHoursCount || 0) * (currentData.extraHourRate || 150);
   const computedTotal = (currentData.listPrice || currentData.totalBudget) - (currentData.discountAmount || 0) + totalExtraHours;
   const balanceRemaining = Math.max(0, computedTotal - currentData.initialDeposit - (currentData.fieldPayment || 0));
+
+  const isLockedAfterRegistration = currentData.initialCommercialLocked || currentData.contractExported;
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4">
@@ -121,6 +141,20 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
                 <span className="hidden sm:inline">Solo Lectura (Admin)</span>
               </span>
             )}
+
+            {/* Culminate Step 3 / 25.00% Action Button */}
+            <button
+              onClick={handleFinalizeAndRegisterExport}
+              className={`px-3 sm:px-3.5 py-1.5 sm:py-2 text-xs font-black rounded-xl shadow-md flex items-center gap-1.5 transition-all cursor-pointer ${
+                exportCulminated
+                  ? 'bg-emerald-600/30 text-emerald-300 border border-emerald-500/50'
+                  : 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-slate-950 animate-pulse'
+              }`}
+              title="Culminar formalmente el Paso 3 (Firma/Exportación), fijar avance al 25.00% y habilitar el Paso 4"
+            >
+              <Zap className="w-3.5 h-3.5" />
+              <span>{exportCulminated ? '✓ 25.00% Registrado (Paso 4 Habilitado)' : 'Culminar Exportación (25.00%)'}</span>
+            </button>
 
             {/* Print / PDF Export Button */}
             <button

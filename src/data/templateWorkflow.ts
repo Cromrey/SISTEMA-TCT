@@ -73,11 +73,11 @@ export const createDefaultPhases = (eventDate: string, includesPhotobook = true)
           badgeText: '1 MES ANTES',
           badgeColor: 'bg-blue-100 text-blue-800 border-blue-300',
           deadline: flyerDate.toISOString().split('T')[0],
-          status: 'completed',
+          status: 'pending',
           checklist: [
-            { id: 'c4_1', text: 'Solicitud de fotos e información del evento al cliente', completed: true },
-            { id: 'c4_2', text: 'Elaboración del arte gráfico con 30 días de anticipación', completed: true },
-            { id: 'c4_3', text: 'Aprobación del flyer por el cliente y publicación promocional', completed: true }
+            { id: 'c4_1', text: 'Solicitud de fotos e información del evento al cliente', completed: false },
+            { id: 'c4_2', text: 'Elaboración del arte gráfico con 30 días de anticipación', completed: false },
+            { id: 'c4_3', text: 'Aprobación del flyer por el cliente y publicación promocional', completed: false }
           ],
           links: [
             { label: 'Flyer en Alta Resolución (Drive)', url: 'https://drive.google.com/drive/folders/sample-flyer-tct', platform: 'drive' }
@@ -88,12 +88,12 @@ export const createDefaultPhases = (eventDate: string, includesPhotobook = true)
           title: 'Logística de Viaje',
           badgeText: 'COORDINADO',
           badgeColor: 'bg-indigo-100 text-indigo-800 border-indigo-300',
-          status: 'in_progress',
+          status: 'pending',
           checklist: [
-            { id: 'c5_1', text: 'Coordinación de movilidad y transporte técnico', completed: true },
-            { id: 'c5_2', text: 'Asignación y confirmación de personal técnico de TCT', completed: true },
+            { id: 'c5_1', text: 'Coordinación de movilidad y transporte técnico', completed: false },
+            { id: 'c5_2', text: 'Asignación y confirmación de personal técnico de TCT', completed: false },
             { id: 'c5_3', text: 'Revisión y checklist de cámaras, lentes, dron, baterías y audio', completed: false },
-            { id: 'c5_4', text: 'Definición de itinerario y tiempos de viaje', completed: true }
+            { id: 'c5_4', text: 'Definición de itinerario y tiempos de viaje', completed: false }
           ]
         }
       ]

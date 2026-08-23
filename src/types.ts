@@ -219,6 +219,11 @@ export interface ProductionProject {
   // Phases 1 through 6
   phases: PhaseData[];
   
+  // Step 3 Contract Export & Sequential Lock Status
+  contractExported?: boolean;
+  contractExportDate?: string;
+  initialCommercialLocked?: boolean;
+  
   // Audit Trail & Logs
   auditLogs?: ProjectAuditLog[];
   
@@ -245,6 +250,7 @@ export interface ProjectAuditLog {
     | 'attachment_uploaded'
     | 'social_link_published'
     | 'conformity_signed'
+    | 'contract_exported'
     | 'commercial_edited'
     | 'staff_assigned'
     | 'equipment_assigned'

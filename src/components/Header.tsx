@@ -30,6 +30,7 @@ interface HeaderProps {
   onOpenAnalytics: () => void;
   onOpenRulesModal: () => void;
   onOpenUsersManagement: () => void;
+  onOpenCalendar?: () => void;
   onLogout: () => void;
   onResetData: () => void;
   searchQuery?: string;
@@ -52,6 +53,7 @@ export const Header: React.FC<HeaderProps> = ({
   onUserSelect,
   onOpenNewProject,
   onOpenRulesModal,
+  onOpenCalendar,
   onLogout,
   activeProjectsCount,
   onGoBack,
@@ -129,36 +131,8 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="w-full max-w-7xl mx-auto px-2 sm:px-4 lg:px-6">
         <div className="flex items-center justify-between min-h-16 py-2 gap-2 sm:gap-4 flex-wrap sm:flex-nowrap">
           
-          {/* Left Block: Logo, Slogan and Forward/Back History Navigation Controls */}
+          {/* Left Block: Official TCT Logo & Calligraphy Slogan Branding */}
           <div className="flex items-center space-x-2 sm:space-x-3 shrink-0">
-            {/* Top Navigation Icons (Atrás y Adelante) */}
-            <div className="flex items-center space-x-1 bg-slate-950/80 p-1 rounded-xl border border-slate-800 shadow-inner">
-              <button
-                id="btn-nav-history-back"
-                onClick={onGoBack}
-                disabled={!canGoBack}
-                className="p-1.5 sm:px-2.5 sm:py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-amber-400 disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center gap-1 text-xs font-bold shadow-xs cursor-pointer"
-                title="Ir Atrás (Deslizar de Derecha a Izquierda)"
-                aria-label="Ir Atrás"
-              >
-                <ArrowLeft className="w-4 h-4 text-amber-400" />
-                <span className="hidden md:inline text-[11px]">Atrás</span>
-              </button>
-
-              <button
-                id="btn-nav-history-forward"
-                onClick={onGoForward}
-                disabled={!canGoForward}
-                className="p-1.5 sm:px-2.5 sm:py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-amber-400 disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center gap-1 text-xs font-bold shadow-xs cursor-pointer"
-                title="Avanzar Adelante (Deslizar de Izquierda a Derecha)"
-                aria-label="Avanzar Adelante"
-              >
-                <ArrowRight className="w-4 h-4 text-amber-400" />
-                <span className="hidden md:inline text-[11px]">Adelante</span>
-              </button>
-            </div>
-
-            {/* Official TCT Logo & Calligraphy Slogan Branding */}
             <div className="flex items-center space-x-2">
               <TCTLogo size="md" variant="icon-only" />
               <div className="flex flex-col justify-center">
@@ -174,7 +148,7 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
           </div>
 
-          {/* Synthesized User Selector & Actions Panel (Top-Right Controls) */}
+          {/* Right Controls Panel: User Selector, Navigation (Atrás/Adelante on Right), Ver Calendario, Nueva Producción */}
           <div className="flex items-center space-x-1.5 sm:space-x-2.5 ml-auto flex-wrap justify-end gap-y-1.5">
             
             {/* User Switcher Dropdown with Cargo Badge */}
@@ -238,6 +212,33 @@ export const Header: React.FC<HeaderProps> = ({
               </div>
             </div>
 
+            {/* Displacement Navigation Icons (Atrás y Adelante) - MOVED TO RIGHT SIDE */}
+            <div className="flex items-center space-x-1 bg-slate-950/80 p-1 rounded-xl border border-slate-800 shadow-inner">
+              <button
+                id="btn-nav-history-back"
+                onClick={onGoBack}
+                disabled={!canGoBack}
+                className="p-1.5 sm:px-2.5 sm:py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-amber-400 disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center gap-1 text-xs font-bold shadow-xs cursor-pointer"
+                title="Desplazamiento Atrás"
+                aria-label="Ir Atrás"
+              >
+                <ArrowLeft className="w-4 h-4 text-amber-400" />
+                <span className="hidden md:inline text-[11px]">Atrás</span>
+              </button>
+
+              <button
+                id="btn-nav-history-forward"
+                onClick={onGoForward}
+                disabled={!canGoForward}
+                className="p-1.5 sm:px-2.5 sm:py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-amber-400 disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center gap-1 text-xs font-bold shadow-xs cursor-pointer"
+                title="Desplazamiento Adelante"
+                aria-label="Avanzar Adelante"
+              >
+                <ArrowRight className="w-4 h-4 text-amber-400" />
+                <span className="hidden md:inline text-[11px]">Adelante</span>
+              </button>
+            </div>
+
             {/* Master Rules Button (Visible for Admin users) */}
             {currentRole === 'admin' && (
               <button
@@ -273,6 +274,25 @@ export const Header: React.FC<HeaderProps> = ({
               )}
             </button>
 
+            {/* Ver Calendario Button (Positioned right beside Nueva Producción) */}
+            <button
+              id="btn-open-calendar-header"
+              onClick={() => {
+                if (onOpenCalendar) {
+                  onOpenCalendar();
+                } else {
+                  // Dispatch custom event to switch to calendar tab
+                  window.dispatchEvent(new CustomEvent('tct_switch_tab', { detail: { view: 'calendar' } }));
+                }
+              }}
+              className="p-2 sm:px-3 sm:py-2.5 bg-slate-800 hover:bg-slate-750 text-amber-300 hover:text-amber-200 border border-amber-500/40 rounded-xl shadow-md transition-all shrink-0 cursor-pointer flex items-center justify-center gap-1.5 font-bold text-xs"
+              title="Ver Calendario de Producciones y Fechas de Evento"
+              aria-label="Ver Calendario"
+            >
+              <Video className="w-4 h-4 text-amber-400" />
+              <span className="hidden sm:inline">Ver Calendario</span>
+            </button>
+
             {/* Nueva Producción Button */}
             <button
               id="btn-new-project-header"
@@ -287,18 +307,6 @@ export const Header: React.FC<HeaderProps> = ({
               <span className="sm:hidden absolute -top-1 -right-1 w-3.5 h-3.5 bg-slate-950 text-amber-400 font-black text-[9px] rounded-full flex items-center justify-center border border-amber-400 shadow-xs">
                 +
               </span>
-            </button>
-
-            {/* Logout Button */}
-            <button
-              id="btn-logout-header"
-              onClick={onLogout}
-              className="p-2 sm:px-3 sm:py-2.5 rounded-xl bg-red-950/50 hover:bg-red-600 text-red-300 hover:text-white border border-red-800/50 transition-all flex items-center justify-center gap-1.5 text-xs font-bold shadow-xs shrink-0 group cursor-pointer"
-              title="Cerrar sesión"
-              aria-label="Cerrar sesión"
-            >
-              <LogOut className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
-              <span className="hidden md:inline text-[11px]">Salir</span>
             </button>
 
           </div>

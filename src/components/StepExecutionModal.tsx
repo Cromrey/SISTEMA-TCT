@@ -8,6 +8,7 @@ import {
 } from '../types';
 import { createAuditEntry, appendAuditLog } from '../utils/auditLogger';
 import { compressImageFile } from '../utils/imageCompressor';
+import { checkStepSequenceStatus, validateStepCompletion, finalizeContractExportStep3 } from '../utils/stepSequenceHelper';
 import confetti from 'canvas-confetti';
 import { 
   X, 
@@ -38,7 +39,8 @@ import {
   Share2,
   Video,
   Globe,
-  ShieldCheck
+  ShieldCheck,
+  Zap
 } from 'lucide-react';
 
 interface StepExecutionModalProps {
@@ -61,6 +63,9 @@ export const StepExecutionModal: React.FC<StepExecutionModalProps> = ({
 
   if (!currentPhase || !originalStep) return null;
 
+  // Check strict sequential status
+  const sequenceStatus = checkStepSequenceStatus(project, originalStep.stepNumber);
+
   // Flatten all 12 steps to check sequential prerequisite
   const allSteps: { phaseIdx: number; stepIdx: number; step: StepData }[] = [];
   project.phases.forEach((p, pI) => {
@@ -74,12 +79,13 @@ export const StepExecutionModal: React.FC<StepExecutionModalProps> = ({
   );
 
   const prevStepItem = currentStepGlobalIndex > 0 ? allSteps[currentStepGlobalIndex - 1] : null;
-  const isPrerequisiteMet = !prevStepItem || prevStepItem.step.status === 'completed';
+  const isPrerequisiteMet = sequenceStatus.isUnlocked;
 
   // State for interactive editing
   const [stepData, setStepData] = useState<StepData>({ ...originalStep });
   const [notes, setNotes] = useState(stepData.notes || '');
   const [adminOverrideLock, setAdminOverrideLock] = useState(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   // Attachments state
   const [attachments, setAttachments] = useState<StepAttachment[]>(stepData.attachments || []);
@@ -140,6 +146,7 @@ export const StepExecutionModal: React.FC<StepExecutionModalProps> = ({
   const [newLinkUrl, setNewLinkUrl] = useState('');
 
   const isLocked = !isPrerequisiteMet && !adminOverrideLock;
+  const isReadOnly = sequenceStatus.isReadOnly && !adminOverrideLock;
 
   const handleToggleChecklist = (checkId: string) => {
     if (isLocked) return;
@@ -257,14 +264,31 @@ FECHA: ${acceptanceDate}
   };
 
   const handleSave = () => {
-    const updatedPhases = [...project.phases];
-    const targetPhase = { ...updatedPhases[phaseIndex] };
-    const targetSteps = [...targetPhase.steps];
+    // 1. Check sequence lock
+    if (isLocked && !adminOverrideLock) {
+      setValidationError('Este paso está bloqueado. Debe culminar el paso anterior según la secuencia obligatoria.');
+      return;
+    }
 
     let finalStatus = stepData.status;
     if (stepData.checklist && stepData.checklist.every(c => c.completed)) {
       finalStatus = 'completed';
     }
+
+    // 2. Validate step requirements if trying to mark completed
+    if (finalStatus === 'completed' && !adminOverrideLock) {
+      const validation = validateStepCompletion({ ...stepData, attachments }, project);
+      if (!validation.canComplete && validation.errorMessages.length > 0) {
+        setValidationError(`Requisitos pendientes: ${validation.errorMessages.join(' | ')}`);
+        return;
+      }
+    }
+
+    setValidationError(null);
+
+    const updatedPhases = [...project.phases];
+    const targetPhase = { ...updatedPhases[phaseIndex] };
+    const targetSteps = [...targetPhase.steps];
 
     // Prepare Step 10 Social Links Object
     const socialLinksData: SocialLinksPublishing = {
@@ -346,6 +370,25 @@ FECHA: ${acceptanceDate}
       updatedPurgedAt = new Date().toISOString().split('T')[0];
     }
 
+    // Automatically enable next step in sequence if current step is completed
+    if (finalStatus === 'completed' && currentStepGlobalIndex + 1 < allSteps.length) {
+      const nextStepInfo = allSteps[currentStepGlobalIndex + 1];
+      const nextPhase = updatedPhases[nextStepInfo.phaseIdx];
+      if (nextPhase && nextPhase.steps[nextStepInfo.stepIdx]) {
+        if (nextPhase.steps[nextStepInfo.stepIdx].status === 'pending') {
+          const nextStepsList = [...nextPhase.steps];
+          nextStepsList[nextStepInfo.stepIdx] = {
+            ...nextStepsList[nextStepInfo.stepIdx],
+            status: 'in_progress'
+          };
+          updatedPhases[nextStepInfo.phaseIdx] = {
+            ...nextPhase,
+            steps: nextStepsList
+          };
+        }
+      }
+    }
+
     let updatedProject: ProductionProject = {
       ...project,
       phases: updatedPhases,
@@ -356,6 +399,11 @@ FECHA: ${acceptanceDate}
       updatedAt: new Date().toISOString()
     };
 
+    // Step 3 completion special flow: finalize contract export, lock initial commercial, unlock step 4, set exactly 25.00%
+    if (stepData.stepNumber === 3 && finalStatus === 'completed') {
+      updatedProject = finalizeContractExportStep3(updatedProject, project.contractHolder || 'Administrador TCT');
+    }
+
     // Generate Audit Log Entry
     const actionType = finalStatus === 'completed' ? 'step_completed' : 'step_updated';
     const auditTitle = finalStatus === 'completed'
@@ -363,7 +411,9 @@ FECHA: ${acceptanceDate}
       : `Paso ${stepData.stepNumber} Actualizado: ${stepData.title}`;
     
     let auditDesc = `Se guardaron cambios en el flujo de trabajo (Estado: ${finalStatus.toUpperCase()}).`;
-    if (stepData.stepNumber === 7 && paymentStatus === 'paid') {
+    if (stepData.stepNumber === 3 && finalStatus === 'completed') {
+      auditDesc = `Paso 3 culminado. Contrato formalizado y avance establecido en 25.00%. Paso 4 habilitado.`;
+    } else if (stepData.stepNumber === 7 && paymentStatus === 'paid') {
       auditDesc = `Cobro obligatorio de campo registrado: S/. ${amountCollected.toLocaleString()} (${paymentMethod}) - Recibo: ${receiptNumber}`;
     } else if (stepData.stepNumber === 8 && backupVerified) {
       auditDesc = `Ingest verificado en NAS: ${sdCardsCount} tarjetas SD (${totalGigabytes} GB) respaldadas con éxito.`;
@@ -447,7 +497,7 @@ FECHA: ${acceptanceDate}
 
           <button
             onClick={onClose}
-            className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -455,6 +505,34 @@ FECHA: ${acceptanceDate}
 
         {/* Modal Scrollable Content */}
         <div className="p-6 overflow-y-auto space-y-5 flex-1 bg-slate-50">
+          
+          {/* Validation Error Alert */}
+          {validationError && (
+            <div className="bg-red-50 border-2 border-red-300 rounded-2xl p-4 flex items-start gap-3 text-xs text-red-900 shadow-sm animate-shake">
+              <AlertOctagon className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+              <div>
+                <strong className="font-black block text-red-950">Validación de Secuencia Didáctica Requerida:</strong>
+                <span>{validationError}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Read Only Notice for Completed Prior Steps */}
+          {isReadOnly && (
+            <div className="bg-slate-100 border border-slate-300 rounded-2xl p-3.5 flex items-center justify-between text-xs text-slate-700">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                <span>Paso completado previamente y formalizado en la secuencia de producción.</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAdminOverrideLock(true)}
+                className="text-[11px] font-bold text-amber-700 hover:text-amber-800 underline"
+              >
+                Habilitar edición excepcional
+              </button>
+            </div>
+          )}
           
           {/* Prerequisite Sequential Warning */}
           {isLocked && prevStepItem && (
