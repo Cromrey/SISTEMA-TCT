@@ -88,46 +88,6 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
   return (
     <div className="space-y-6">
       
-      {/* Top Banner with Staff Greeting & Direct Actions */}
-      <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 rounded-3xl p-5 sm:p-6 text-white border border-slate-800 shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center space-x-2">
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-amber-400 text-slate-950 uppercase tracking-wide">
-              Panel Técnico TCT
-            </span>
-            <span className="text-xs text-slate-300 font-medium">
-              Rol: <strong>{currentStaff.role}</strong>
-            </span>
-          </div>
-          <h2 className="text-xl sm:text-2xl font-black text-white mt-1">
-            Hola, {currentStaff.name}
-          </h2>
-          <p className="text-xs sm:text-sm text-slate-300 mt-0.5">
-            Tienes <strong>{myProjects.length} eventos asignados</strong> bajo tu responsabilidad operativa.
-          </p>
-        </div>
-
-        <div className="flex items-center space-x-2 w-full md:w-auto">
-          {onOpenNewProject && (
-            <button
-              onClick={onOpenNewProject}
-              className="flex-1 md:flex-initial px-4 py-2.5 rounded-2xl bg-amber-500 hover:bg-amber-600 active:scale-95 text-slate-950 font-black text-xs transition-all shadow-md flex items-center justify-center gap-1.5 cursor-pointer"
-            >
-              <Sparkles className="w-4 h-4" />
-              <span>+ Nueva Producción</span>
-            </button>
-          )}
-
-          <button
-            onClick={() => setActiveSubTab(activeSubTab === 'events' ? 'calendar' : 'events')}
-            className="flex-1 md:flex-initial px-4 py-2.5 rounded-2xl bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 font-bold text-xs transition-all border border-slate-700 flex items-center justify-center gap-1.5 cursor-pointer"
-          >
-            <Calendar className="w-4 h-4 text-amber-400" />
-            <span>{activeSubTab === 'events' ? 'Ver Calendario' : 'Ver Mis Eventos'}</span>
-          </button>
-        </div>
-      </div>
-
       {/* KPI Cards Strip */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         
