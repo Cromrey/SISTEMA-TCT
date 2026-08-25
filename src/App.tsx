@@ -26,8 +26,9 @@ import { ComparativeAnalyticsModal } from './components/ComparativeAnalyticsModa
 import { ReportPrintModal } from './components/ReportPrintModal';
 import { ContractExportModal } from './components/ContractExportModal';
 import { AdminSettingsModal } from './components/AdminSettingsModal';
+import { DeleteProjectConfirmModal } from './components/DeleteProjectConfirmModal';
 import { useSwipeGesture } from './hooks/useSwipeGesture';
-import { RotateCcw, Sparkles, CheckCircle2, ShieldCheck, UserCheck } from 'lucide-react';
+import { RotateCcw, Sparkles, CheckCircle2, ShieldCheck, UserCheck, AlertTriangle, X, Trash2 } from 'lucide-react';
 
 const INITIAL_FALLBACK_STAFF: StaffMember[] = [
   { id: 'usr-emp-carlos', name: 'Carlos Mendoza', role: 'Director de Cámara', phone: '+51 912 345 678', confirmed: true },
@@ -75,8 +76,18 @@ export default function App() {
   const [isNewProjectModalOpen, setIsNewProjectModalOpen] = useState(false);
   const [isAnalyticsModalOpen, setIsAnalyticsModalOpen] = useState(false);
   const [isRulesModalOpen, setIsRulesModalOpen] = useState(false);
-  const [rulesInitialTab, setRulesInitialTab] = useState<'checklists' | 'equipment' | 'packages' | 'services' | 'formats' | 'users' | 'system'>('checklists');
+  const [rulesInitialTab, setRulesInitialTab] = useState<'checklists' | 'equipment' | 'packages' | 'services' | 'formats' | 'users' | 'system' | 'contract_design' | 'company' | 'staff_assignment' | 'shortcuts'>('checklists');
   const [isUsersModalOpen, setIsUsersModalOpen] = useState(false);
+
+  // Deletion modal and one-time broadcast notification state
+  const [projectToDelete, setProjectToDelete] = useState<ProductionProject | null>(null);
+  const [deletionAlertBanner, setDeletionAlertBanner] = useState<{
+    code: string;
+    title: string;
+    reason: string;
+    user: string;
+    details?: string;
+  } | null>(null);
 
   // Toast notification
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -253,6 +264,65 @@ export default function App() {
     };
     window.addEventListener('tct_projects_updated' as any, handleProjectsUpdated);
 
+    // Listen for deletion broadcasts (realtime multi-session sync)
+    const handleProjectDeletedEvent = (e: CustomEvent<{
+      id: string;
+      code: string;
+      title: string;
+      reason: string;
+      user: string;
+      details?: string;
+    }>) => {
+      if (e.detail) {
+        const { id, code, title, reason, user, details } = e.detail;
+        setProjects(prev => prev.filter(p => p.id !== id));
+        if (selectedProjectForDetail?.id === id) setSelectedProjectForDetail(null);
+        if (selectedProjectForContract?.id === id) setSelectedProjectForContract(null);
+        if (selectedProjectForReport?.id === id) setSelectedProjectForReport(null);
+
+        // Show one-time broadcast deletion banner to all active users / admins
+        setDeletionAlertBanner({
+          code,
+          title,
+          reason,
+          user,
+          details
+        });
+      }
+    };
+    window.addEventListener('tct_project_deleted' as any, handleProjectDeletedEvent);
+
+    // Cross-tab storage synchronization listener
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'tct_production_projects' && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          if (Array.isArray(parsed)) {
+            setProjects(parsed);
+          }
+        } catch (err) {
+          console.warn('Storage sync error:', err);
+        }
+      }
+      if (e.key === 'tct_last_deleted_project' && e.newValue) {
+        try {
+          const delPayload = JSON.parse(e.newValue);
+          if (delPayload && delPayload.code) {
+            setDeletionAlertBanner({
+              code: delPayload.code,
+              title: delPayload.title,
+              reason: delPayload.reason,
+              user: delPayload.user || 'Administrador',
+              details: delPayload.details
+            });
+          }
+        } catch (err) {
+          console.warn('Delete storage sync error:', err);
+        }
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+
     // Listen for custom user updates
     const handleUsersUpdated = (e: CustomEvent<AuthUser[]>) => {
       if (e.detail && Array.isArray(e.detail)) {
@@ -276,11 +346,13 @@ export default function App() {
 
     return () => {
       window.removeEventListener('tct_projects_updated' as any, handleProjectsUpdated);
+      window.removeEventListener('tct_project_deleted' as any, handleProjectDeletedEvent);
+      window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('tct_users_updated' as any, handleUsersUpdated);
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, []);
+  }, [selectedProjectForDetail, selectedProjectForContract, selectedProjectForReport]);
 
   // Handle Login Success
   const handleLoginSuccess = (user: AuthUser, remember: boolean) => {
@@ -309,11 +381,21 @@ export default function App() {
     showToast(`✓ ¡Bienvenido(a), ${user.fullName}! Acceso como ${user.role === 'admin' ? 'Administrador' : 'Empleado'}.`);
   };
 
-  // Handle Logout
-  const handleLogout = () => {
+  // Handle Logout (Single click = standard logout, Double click = deep exit)
+  const handleLogout = (deepExit: boolean = false) => {
     setActiveSession(null);
     setCurrentUser(null);
-    showToast('Sesión cerrada correctamente. Ingrese con sus credenciales TCT.');
+    if (deepExit) {
+      showToast('🔒 Saliendo del sistema TCT...');
+      try {
+        window.open('', '_self', '');
+        window.close();
+      } catch (err) {
+        console.warn('Could not execute window.close():', err);
+      }
+    } else {
+      showToast('Sesión cerrada correctamente. Ingrese con sus credenciales TCT.');
+    }
   };
 
   // Update a project
@@ -344,19 +426,55 @@ export default function App() {
     showToast(`🎉 ¡Producción creada con éxito! Contrato listo para exportar.`);
   };
 
-  // Delete a single project / contract
+  // Delete a single project / contract - Opens the Reason form modal
   const handleDeleteProject = (projectId: string) => {
     const target = projects.find(p => p.id === projectId);
-    const title = target ? target.title : 'el expediente';
-    if (window.confirm(`¿Deseas eliminar permanentemente el contrato/expediente "${title}"?`)) {
-      const updated = projects.filter(p => p.id !== projectId);
-      setProjects(updated);
-      saveProjects(updated);
-      if (selectedProjectForDetail?.id === projectId) setSelectedProjectForDetail(null);
-      if (selectedProjectForContract?.id === projectId) setSelectedProjectForContract(null);
-      if (selectedProjectForReport?.id === projectId) setSelectedProjectForReport(null);
-      showToast(`🗑️ "${title}" ha sido eliminado del sistema.`);
+    if (target) {
+      setProjectToDelete(target);
     }
+  };
+
+  // Confirm permanent deletion with mandatory reason
+  const handleConfirmDeleteProject = (projectId: string, reason: string, details: string) => {
+    const target = projects.find(p => p.id === projectId);
+    const code = target?.uniqueCode || target?.contractNumber || projectId;
+    const title = target?.title || 'Expediente Audiovisual';
+    const updated = projects.filter(p => p.id !== projectId);
+    
+    setProjects(updated);
+    saveProjects(updated);
+
+    const deletePayload = {
+      id: projectId,
+      code,
+      title,
+      reason,
+      user: currentUser?.fullName || (currentRole === 'admin' ? 'Administrador' : 'Usuario'),
+      details: details.trim() || undefined,
+      timestamp: Date.now()
+    };
+
+    // Save deletion record for multi-tab sync
+    localStorage.setItem('tct_last_deleted_project', JSON.stringify(deletePayload));
+    
+    // Broadcast custom event for in-page immediate sync
+    window.dispatchEvent(new CustomEvent('tct_project_deleted', { detail: deletePayload }));
+
+    setProjectToDelete(null);
+    if (selectedProjectForDetail?.id === projectId) setSelectedProjectForDetail(null);
+    if (selectedProjectForContract?.id === projectId) setSelectedProjectForContract(null);
+    if (selectedProjectForReport?.id === projectId) setSelectedProjectForReport(null);
+
+    // Show prominent one-time confirmation banner
+    setDeletionAlertBanner({
+      code,
+      title,
+      reason,
+      user: currentUser?.fullName || 'Administrador',
+      details: details.trim() || undefined
+    });
+
+    showToast(`🗑️ Expediente "${code}" eliminado permanentemente.`);
   };
 
   // Reset to demo data
@@ -419,7 +537,47 @@ export default function App() {
       />
 
       {/* Main Workspace with responsive full-width padding */}
-      <main className="flex-1 w-full max-w-7xl mx-auto px-2 sm:px-4 md:px-6 lg:px-8 py-3 sm:py-6">
+      <main className="flex-1 w-full max-w-7xl mx-auto px-2 sm:px-4 md:px-6 lg:px-8 py-3 sm:py-6 space-y-4">
+
+        {/* ONE-TIME SYSTEM NOTIFICATION BANNER (Cross-User & Multi-Session Sync) */}
+        {deletionAlertBanner && (
+          <div className="bg-gradient-to-r from-red-950/95 via-red-900/90 to-slate-900 border-2 border-red-500/80 rounded-2xl p-4 shadow-2xl flex items-start justify-between gap-3 animate-fade-in text-white">
+            <div className="flex items-start space-x-3 min-w-0">
+              <div className="p-2 bg-red-600/30 rounded-xl border border-red-500/50 shrink-0 text-red-400 mt-0.5">
+                <Trash2 className="w-5 h-5" />
+              </div>
+              <div className="space-y-1 min-w-0">
+                <div className="flex items-center space-x-2 flex-wrap">
+                  <span className="bg-red-600 text-white text-[10px] font-black uppercase px-2 py-0.5 rounded tracking-wider">
+                    Aviso del Sistema SIGAT (Por Única Vez)
+                  </span>
+                  <span className="font-mono text-xs font-bold text-amber-300">
+                    Expediente: {deletionAlertBanner.code}
+                  </span>
+                </div>
+                <h4 className="text-sm font-bold text-white leading-tight">
+                  El expediente <span className="text-amber-200 underline">"{deletionAlertBanner.title}"</span> ha sido eliminado permanentemente por <span className="font-semibold text-slate-200">{deletionAlertBanner.user}</span>.
+                </h4>
+                <div className="text-xs text-red-200/90 flex items-start gap-1 pt-0.5">
+                  <span className="font-bold text-red-300">Motivo de eliminación:</span>
+                  <span className="italic">{deletionAlertBanner.reason}</span>
+                </div>
+                {deletionAlertBanner.details && (
+                  <p className="text-[11px] text-slate-300 bg-black/40 rounded-lg px-2.5 py-1 mt-1 border border-red-500/30">
+                    <strong>Detalles:</strong> {deletionAlertBanner.details}
+                  </p>
+                )}
+              </div>
+            </div>
+            <button
+              onClick={() => setDeletionAlertBanner(null)}
+              className="p-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white transition-colors cursor-pointer shrink-0"
+              title="Entendido / Cerrar aviso"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
 
         {/* View Switch based on Role */}
         {currentRole === 'admin' ? (
@@ -439,6 +597,8 @@ export default function App() {
             savedQuickFilter={savedAdminFilter}
             onSaveQuickFilter={setSavedAdminFilter}
             allStaff={allStaff}
+            allUsers={allUsers}
+            onOpenUsersManagement={() => setIsUsersModalOpen(true)}
           />
         ) : (
           <StaffDashboard
@@ -556,6 +716,15 @@ export default function App() {
           onRulesUpdated={() => {
             showToast('✓ Reglas Maestras TCT guardadas y actualizadas');
           }}
+        />
+      )}
+
+      {/* MODAL 8: Delete Project Confirmation with Mandatory Reason Form */}
+      {projectToDelete && (
+        <DeleteProjectConfirmModal
+          project={projectToDelete}
+          onClose={() => setProjectToDelete(null)}
+          onConfirmDelete={handleConfirmDeleteProject}
         />
       )}
 

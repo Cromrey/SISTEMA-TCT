@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ProductionProject } from '../types';
 import { TCTLogo } from './TCTLogo';
-import { printElement, downloadPrintableHtml, downloadEditableDoc } from '../utils/printHelper';
+import { printElement, exportElementToPdf } from '../utils/printHelper';
 import { 
   Printer, 
   X, 
@@ -18,7 +18,10 @@ import {
   AlertTriangle,
   Download,
   Receipt,
-  FileText
+  FileText,
+  ChevronLeft,
+  ChevronRight,
+  Loader2
 } from 'lucide-react';
 
 interface ReportPrintModalProps {
@@ -30,24 +33,23 @@ export const ReportPrintModal: React.FC<ReportPrintModalProps> = ({
   project,
   onClose
 }) => {
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+
+  const handleExportPdf = async () => {
+    setIsGeneratingPdf(true);
+    try {
+      await exportElementToPdf(
+        'tct-printable-document',
+        `Informe-Auditoria-${project.uniqueCode}.pdf`,
+        `Informe Oficial TCT - ${project.uniqueCode}`
+      );
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
+
   const handlePrint = () => {
     printElement('tct-printable-document', `Informe-${project.uniqueCode}`);
-  };
-
-  const handleDownloadHtml = () => {
-    downloadPrintableHtml(
-      'tct-printable-document',
-      `Informe-Auditoria-${project.uniqueCode}.html`,
-      `Informe Oficial TCT - ${project.uniqueCode}`
-    );
-  };
-
-  const handleDownloadWordDoc = () => {
-    downloadEditableDoc(
-      'tct-printable-document',
-      `Informe-Auditoria-${project.uniqueCode}-Editable.doc`,
-      `Informe Oficial TCT - ${project.uniqueCode}`
-    );
   };
 
   // Compute total steps and completed
@@ -81,37 +83,58 @@ export const ReportPrintModal: React.FC<ReportPrintModalProps> = ({
 
           <div className="flex items-center space-x-1.5 sm:space-x-2 flex-wrap gap-1">
             <button
+              onClick={handleExportPdf}
+              disabled={isGeneratingPdf}
+              className="px-3 sm:px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-black text-xs rounded-xl shadow-md flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
+              title="Descargar Ficha Técnica en formato PDF"
+            >
+              {isGeneratingPdf ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Download className="w-4 h-4" />
+              )}
+              <span>{isGeneratingPdf ? 'Generando PDF...' : 'Exportar a PDF'}</span>
+            </button>
+
+            <button
               onClick={handlePrint}
-              className="px-3 sm:px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-black text-xs rounded-xl shadow-md flex items-center gap-1.5 transition-all cursor-pointer"
-              title="Abrir cuadro de diálogo de impresión y Guardar como PDF"
+              className="px-3 sm:px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all cursor-pointer"
+              title="Abrir cuadro de diálogo de impresión"
             >
-              <Printer className="w-4 h-4" />
-              <span>PDF / Imprimir</span>
+              <Printer className="w-4 h-4 text-amber-400" />
+              <span>Imprimir</span>
             </button>
 
+            {/* Navigation Icons (Atrás, Adelante, Salir) */}
             <button
-              onClick={handleDownloadWordDoc}
-              className="px-3 sm:px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-sm flex items-center gap-1.5 transition-all cursor-pointer"
-              title="Descargar Ficha Técnica en Word Editable (.doc)"
-            >
-              <FileText className="w-4 h-4 text-white" />
-              <span>Word Editable (.doc)</span>
-            </button>
-
-            <button
-              onClick={handleDownloadHtml}
-              className="px-2.5 sm:px-3 py-2 bg-slate-800 hover:bg-slate-700 text-amber-300 font-bold text-xs rounded-xl border border-slate-700 shadow-sm flex items-center gap-1 transition-all cursor-pointer"
-              title="Descargar archivo HTML imprimible"
-            >
-              <Download className="w-3.5 h-3.5 text-amber-400" />
-              <span className="hidden lg:inline">.HTML</span>
-            </button>
-
-            <button
+              type="button"
               onClick={onClose}
-              className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+              className="px-2.5 py-1.5 sm:py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 hover:border-amber-400/50 text-xs font-bold flex items-center gap-1 transition-all cursor-pointer shadow-xs"
+              title="Atrás"
             >
-              <X className="w-5 h-5" />
+              <ChevronLeft className="w-4 h-4" />
+              <span className="hidden sm:inline">Atrás</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleExportPdf}
+              disabled={isGeneratingPdf}
+              className="px-2.5 py-1.5 sm:py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 hover:border-amber-400/50 text-xs font-bold flex items-center gap-1 transition-all cursor-pointer shadow-xs"
+              title="Adelante / Exportar PDF"
+            >
+              <span className="hidden sm:inline">Adelante</span>
+              <ChevronRight className="w-4 h-4" />
+            </button>
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-1.5 sm:px-3 sm:py-2 rounded-xl bg-slate-800 hover:bg-red-950/60 hover:text-red-300 text-slate-300 border border-slate-700 hover:border-red-500/50 transition-colors cursor-pointer flex items-center gap-1 font-bold text-xs"
+              title="Salir / Cerrar ventana"
+            >
+              <span className="hidden sm:inline">Salir</span>
+              <X className="w-4 h-4" />
             </button>
           </div>
         </div>

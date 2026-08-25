@@ -33,7 +33,9 @@ import {
   AlertTriangle,
   Calendar,
   MapPin,
-  FileText
+  FileText,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 
 interface UserManagementModalProps {
@@ -257,14 +259,40 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-            title="Cerrar modal"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center space-x-1.5 sm:space-x-2 shrink-0">
+            {/* Atrás Button */}
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-2.5 py-1.5 sm:py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 hover:border-amber-400/50 text-xs font-bold flex items-center gap-1 transition-all cursor-pointer shadow-xs"
+              title="Atrás"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              <span className="hidden sm:inline">Atrás</span>
+            </button>
+
+            {/* Adelante / Nuevo Usuario Button */}
+            <button
+              type="button"
+              onClick={handleOpenCreate}
+              className="px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs flex items-center gap-1 transition-all cursor-pointer shadow-md"
+              title="Adelante / Crear Nuevo Usuario"
+            >
+              <span className="hidden sm:inline">Adelante</span>
+              <ChevronRight className="w-4 h-4" />
+            </button>
+
+            {/* Salir Button */}
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-1.5 sm:px-3 sm:py-2 rounded-xl bg-slate-800 hover:bg-red-950/60 hover:text-red-300 text-slate-300 border border-slate-700 hover:border-red-500/50 transition-colors cursor-pointer flex items-center gap-1 font-bold text-xs"
+              title="Salir / Cerrar ventana"
+            >
+              <span className="hidden sm:inline">Salir</span>
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
         {/* Toast Alert */}

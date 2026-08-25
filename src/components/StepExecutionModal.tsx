@@ -40,13 +40,16 @@ import {
   Video,
   Globe,
   ShieldCheck,
-  Zap
+  Zap,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 
 interface StepExecutionModalProps {
   project: ProductionProject;
   phaseIndex: number;
   stepIndex: number;
+  currentRole?: 'admin' | 'employee';
   onClose: () => void;
   onSaveStep: (updatedProject: ProductionProject) => void;
 }
@@ -55,18 +58,15 @@ export const StepExecutionModal: React.FC<StepExecutionModalProps> = ({
   project,
   phaseIndex,
   stepIndex,
+  currentRole = 'admin',
   onClose,
   onSaveStep
 }) => {
-  const currentPhase = project.phases[phaseIndex];
-  const originalStep = currentPhase?.steps[stepIndex];
+  // Current active step coordinates for navigation
+  const [currPhaseIdx, setCurrPhaseIdx] = useState(phaseIndex);
+  const [currStepIdx, setCurrStepIdx] = useState(stepIndex);
 
-  if (!currentPhase || !originalStep) return null;
-
-  // Check strict sequential status
-  const sequenceStatus = checkStepSequenceStatus(project, originalStep.stepNumber);
-
-  // Flatten all 12 steps to check sequential prerequisite
+  // Flatten all 12 steps to check sequential prerequisite and facilitate navigation
   const allSteps: { phaseIdx: number; stepIdx: number; step: StepData }[] = [];
   project.phases.forEach((p, pI) => {
     p.steps.forEach((s, sI) => {
@@ -74,15 +74,19 @@ export const StepExecutionModal: React.FC<StepExecutionModalProps> = ({
     });
   });
 
+  const currentPhase = project.phases[currPhaseIdx] || project.phases[0];
+  const activeStepFromProject = currentPhase?.steps[currStepIdx] || currentPhase?.steps[0];
+
   const currentStepGlobalIndex = allSteps.findIndex(
-    item => item.step.stepNumber === originalStep.stepNumber
+    item => item.phaseIdx === currPhaseIdx && item.stepIdx === currStepIdx
   );
 
-  const prevStepItem = currentStepGlobalIndex > 0 ? allSteps[currentStepGlobalIndex - 1] : null;
+  // Check strict sequential status
+  const sequenceStatus = checkStepSequenceStatus(project, activeStepFromProject?.stepNumber || 1);
   const isPrerequisiteMet = sequenceStatus.isUnlocked;
 
   // State for interactive editing
-  const [stepData, setStepData] = useState<StepData>({ ...originalStep });
+  const [stepData, setStepData] = useState<StepData>({ ...activeStepFromProject });
   const [notes, setNotes] = useState(stepData.notes || '');
   const [adminOverrideLock, setAdminOverrideLock] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -91,22 +95,6 @@ export const StepExecutionModal: React.FC<StepExecutionModalProps> = ({
   const [attachments, setAttachments] = useState<StepAttachment[]>(stepData.attachments || []);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // User role detection for one-time attachment and sequence restrictions
-  const currentUser = useMemo(() => {
-    try {
-      const raw = localStorage.getItem('tct_current_user') || localStorage.getItem('currentUser');
-      return raw ? JSON.parse(raw) : null;
-    } catch (e) {
-      return null;
-    }
-  }, []);
-
-  const isAdmin = currentUser?.role === 'admin' || adminOverrideLock;
-  const isEarlyStep = [1, 2, 3].includes(stepData.stepNumber);
-  const hasExistingAttachment = attachments.length > 0;
-  // Non-admin employees can upload only once in steps 1, 2, 3
-  const isEmployeeUploadLocked = !isAdmin && isEarlyStep && hasExistingAttachment;
 
   // Payment state for Step 7 (Cobro 7:00 PM)
   const [paymentStatus, setPaymentStatus] = useState<'paid' | 'agreed_extension' | 'unpaid_alert' | 'pending'>(
@@ -161,8 +149,73 @@ export const StepExecutionModal: React.FC<StepExecutionModalProps> = ({
   const [newLinkLabel, setNewLinkLabel] = useState('');
   const [newLinkUrl, setNewLinkUrl] = useState('');
 
+  // Synchronize local states when switching steps via Atrás/Adelante
+  const syncStepData = (newPhaseIdx: number, newStepIdx: number) => {
+    const targetPhase = project.phases[newPhaseIdx];
+    const targetStep = targetPhase?.steps[newStepIdx];
+    if (!targetPhase || !targetStep) return;
+
+    setCurrPhaseIdx(newPhaseIdx);
+    setCurrStepIdx(newStepIdx);
+    setStepData({ ...targetStep });
+    setNotes(targetStep.notes || '');
+    setAttachments(targetStep.attachments || []);
+    setValidationError(null);
+
+    // Sync Step 7 Payment
+    setPaymentStatus(targetStep.fieldPaymentData?.paymentStatus || 'pending');
+    setAmountCollected(targetStep.fieldPaymentData?.amountCollected || project.finalBalance || 0);
+    setPaymentMethod(targetStep.fieldPaymentData?.paymentMethod || 'Efectivo');
+    setReceiptNumber(targetStep.fieldPaymentData?.receiptNumber || `REC-TCT-${Math.floor(1000 + Math.random() * 9000)}`);
+
+    // Sync Step 8 Ingest
+    setSdCardsCount(targetStep.ingestData?.sdCardsCount || 6);
+    setTotalGigabytes(targetStep.ingestData?.totalGigabytes || 380);
+    setServerLocation(targetStep.ingestData?.serverLocation || `NAS-TCT-STORAGE / ${project.uniqueCode}`);
+    setBackupVerified(targetStep.ingestData?.backupVerified || false);
+
+    // Sync Step 10 Social
+    setSocialTikTok(targetStep.socialLinks?.tiktok || '');
+    setSocialYouTube(targetStep.socialLinks?.youtube || '');
+    setSocialFacebook(targetStep.socialLinks?.facebook || '');
+    setSocialDailymotion(targetStep.socialLinks?.dailymotion || '');
+    setSocialGoogleDrive(targetStep.socialLinks?.googleDrive || '');
+    setSocialNotes(targetStep.socialLinks?.notes || '');
+
+    // Sync Step 12 Conformity
+    setConformityAccepted(targetStep.conformityAcceptance?.accepted ?? false);
+    setClientFullName(targetStep.conformityAcceptance?.clientFullName || project.clientName);
+    setClientDni(targetStep.conformityAcceptance?.clientDni || '');
+    setAcceptanceDate(targetStep.conformityAcceptance?.acceptanceDate || new Date().toISOString().split('T')[0]);
+    setPurgingAuthorized(targetStep.conformityAcceptance?.purgingAuthorized ?? false);
+    setConformityNotes(targetStep.conformityAcceptance?.verificationNotes || '');
+
+    // Sync Links
+    setLinksList(targetStep.links || []);
+    setNewLinkLabel('');
+    setNewLinkUrl('');
+  };
+
+  const handleNavigatePrevStep = () => {
+    if (currentStepGlobalIndex > 0) {
+      const prev = allSteps[currentStepGlobalIndex - 1];
+      syncStepData(prev.phaseIdx, prev.stepIdx);
+    }
+  };
+
+  const handleNavigateNextStep = () => {
+    if (currentStepGlobalIndex < allSteps.length - 1) {
+      const next = allSteps[currentStepGlobalIndex + 1];
+      syncStepData(next.phaseIdx, next.stepIdx);
+    }
+  };
+
   const isLocked = !isPrerequisiteMet && !adminOverrideLock;
   const isReadOnly = sequenceStatus.isReadOnly && !adminOverrideLock;
+  const prevStepItem = currentStepGlobalIndex > 0 ? allSteps[currentStepGlobalIndex - 1] : null;
+  const isEarlyStep = stepData.stepNumber === 1 || stepData.stepNumber === 2 || stepData.stepNumber === 3;
+  const isEmployeeUploadLocked = isEarlyStep && attachments.length > 0 && currentRole !== 'admin';
+  const isAdmin = currentRole === 'admin';
 
   const handleToggleChecklist = (checkId: string) => {
     if (isLocked) return;
@@ -286,25 +339,36 @@ FECHA: ${acceptanceDate}
       return;
     }
 
-    let finalStatus = stepData.status;
-    if (stepData.checklist && stepData.checklist.every(c => c.completed)) {
+    let finalStatus: 'pending' | 'in_progress' | 'completed' = stepData.status;
+    let resolvedChecklist = stepData.checklist ? [...stepData.checklist] : [];
+
+    const allChecklistDone = resolvedChecklist.length > 0 
+      ? resolvedChecklist.every(c => c.completed) 
+      : false;
+
+    if (allChecklistDone) {
       finalStatus = 'completed';
     }
 
-    // 2. Validate step requirements if trying to mark completed
-    if (finalStatus === 'completed' && !adminOverrideLock) {
-      const validation = validateStepCompletion({ ...stepData, attachments }, project);
-      if (!validation.canComplete && validation.errorMessages.length > 0) {
-        setValidationError(`Requisitos pendientes: ${validation.errorMessages.join(' | ')}`);
-        return;
-      }
+    // Step 3: if attachment is uploaded or checklist is filled, allow completing
+    if (stepData.stepNumber === 3 && (attachments.length > 0 || allChecklistDone || project.contractExported)) {
+      resolvedChecklist = resolvedChecklist.map(c => ({
+        ...c,
+        completed: true,
+        completedAt: c.completedAt || new Date().toLocaleTimeString()
+      }));
+      finalStatus = 'completed';
     }
 
-    setValidationError(null);
-
-    const updatedPhases = [...project.phases];
-    const targetPhase = { ...updatedPhases[phaseIndex] };
-    const targetSteps = [...targetPhase.steps];
+    // Step 7: if paymentStatus is paid or agreed_extension or balance is 0, allow completing
+    if (stepData.stepNumber === 7 && (paymentStatus === 'paid' || paymentStatus === 'agreed_extension' || project.finalBalance === 0)) {
+      resolvedChecklist = resolvedChecklist.map(c => ({
+        ...c,
+        completed: true,
+        completedAt: c.completedAt || new Date().toLocaleTimeString()
+      }));
+      finalStatus = 'completed';
+    }
 
     // Prepare Step 10 Social Links Object
     const socialLinksData: SocialLinksPublishing = {
@@ -339,43 +403,63 @@ FECHA: ${acceptanceDate}
       }
     };
 
-    const updatedStep: StepData = {
+    const currentFieldPaymentData = stepData.stepNumber === 7 ? {
+      paymentStatus,
+      amountCollected: Number(amountCollected) || 0,
+      paymentMethod: paymentMethod as any,
+      receiptNumber: receiptNumber || `REC-TCT-${Math.floor(1000 + Math.random() * 9000)}`,
+      paymentTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      technicianInCharge: project.contractHolder || 'Carlos Mendoza (Director TCT)'
+    } : stepData.fieldPaymentData;
+
+    const currentIngestData = stepData.stepNumber === 8 ? {
+      sdCardsCount: Number(sdCardsCount) || 1,
+      totalGigabytes: Number(totalGigabytes) || 100,
+      serverLocation: serverLocation || `NAS-TCT-STORAGE / ${project.uniqueCode}`,
+      backupVerified: Boolean(backupVerified),
+      technicianName: 'Pedro Alva (Técnico Ingest TCT)',
+      backupDate: new Date().toISOString().split('T')[0]
+    } : stepData.ingestData;
+
+    const candidateStep: StepData = {
       ...stepData,
       status: finalStatus,
+      checklist: resolvedChecklist,
       notes,
       attachments,
       links: linksList,
       socialLinks: stepData.stepNumber === 10 ? socialLinksData : stepData.socialLinks,
       conformityAcceptance: stepData.stepNumber === 12 ? conformityData : stepData.conformityAcceptance,
-      fieldPaymentData: stepData.stepNumber === 7 ? {
-        paymentStatus,
-        amountCollected,
-        paymentMethod: paymentMethod as any,
-        receiptNumber,
-        paymentTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        technicianInCharge: 'Carlos Mendoza (Director TCT)'
-      } : stepData.fieldPaymentData,
-      ingestData: stepData.stepNumber === 8 ? {
-        sdCardsCount,
-        totalGigabytes,
-        serverLocation,
-        backupVerified,
-        technicianName: 'Pedro Alva (Técnico Ingest TCT)',
-        backupDate: new Date().toISOString().split('T')[0]
-      } : stepData.ingestData,
+      fieldPaymentData: currentFieldPaymentData,
+      ingestData: currentIngestData,
       completedAt: finalStatus === 'completed' ? (stepData.completedAt || new Date().toLocaleTimeString()) : undefined
     };
 
-    targetSteps[stepIndex] = updatedStep;
+    // 2. Validate step requirements if trying to mark completed
+    if (finalStatus === 'completed' && !adminOverrideLock) {
+      const validation = validateStepCompletion(candidateStep, project);
+      if (!validation.canComplete && validation.errorMessages.length > 0) {
+        setValidationError(`Requisitos pendientes: ${validation.errorMessages.join(' | ')}`);
+        return;
+      }
+    }
+
+    setValidationError(null);
+
+    const updatedPhases = [...project.phases];
+    const targetPhase = { ...updatedPhases[currPhaseIdx] };
+    const targetSteps = [...targetPhase.steps];
+
+    targetSteps[currStepIdx] = candidateStep;
     targetPhase.steps = targetSteps;
-    updatedPhases[phaseIndex] = targetPhase;
+    updatedPhases[currPhaseIdx] = targetPhase;
 
     // Synchronize overall project state if step 7 was paid
     let updatedFieldPayment = project.fieldPayment;
     let updatedFinalBalance = project.finalBalance;
-    if (stepData.stepNumber === 7 && paymentStatus === 'paid') {
-      updatedFieldPayment = amountCollected;
-      updatedFinalBalance = Math.max(0, project.totalBudget - project.initialDeposit - amountCollected);
+    if (stepData.stepNumber === 7 && (paymentStatus === 'paid' || paymentStatus === 'agreed_extension')) {
+      updatedFieldPayment = Number(amountCollected) || project.finalBalance || 0;
+      updatedFinalBalance = Math.max(0, project.totalBudget - project.initialDeposit - updatedFieldPayment);
     }
 
     // If step 12 conformity is accepted and purging authorized, mark server deleted
@@ -422,7 +506,7 @@ FECHA: ${acceptanceDate}
 
     const s1Has = Boolean((step1Obj?.attachments && step1Obj.attachments.length > 0) || project.proformaAttachmentUrl || (stepData.stepNumber === 1 && attachments.length > 0));
     const s2Has = Boolean((step2Obj?.attachments && step2Obj.attachments.length > 0) || project.depositReceiptUrl || (stepData.stepNumber === 2 && attachments.length > 0));
-    const s3Has = Boolean((step3Obj?.attachments && step3Obj.attachments.length > 0) || (stepData.stepNumber === 3 && attachments.length > 0));
+    const s3Has = Boolean((step3Obj?.attachments && step3Obj.attachments.length > 0) || (stepData.stepNumber === 3 && attachments.length > 0) || project.contractExported);
 
     if (s1Has && s2Has && s3Has) {
       updatedProject.contractPendingAttachment = false;
@@ -430,7 +514,9 @@ FECHA: ${acceptanceDate}
 
     // Step 3 completion special flow: finalize contract export, lock initial commercial, unlock step 4, set exactly 25.00%
     if (stepData.stepNumber === 3 && finalStatus === 'completed') {
-      updatedProject = finalizeContractExportStep3(updatedProject, project.contractHolder || 'Administrador TCT');
+      updatedProject.contractExported = true;
+      updatedProject.contractExportDate = updatedProject.contractExportDate || new Date().toISOString();
+      updatedProject.initialCommercialLocked = true;
       if (s1Has && s2Has && s3Has) {
         updatedProject.contractPendingAttachment = false;
       }
@@ -494,10 +580,10 @@ FECHA: ${acceptanceDate}
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4">
       <div className="bg-white w-full max-w-4xl rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh] text-slate-900">
         
-        {/* Header */}
-        <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800 shrink-0">
-          <div className="flex items-center space-x-3">
-            <div className={`w-10 h-10 rounded-2xl flex items-center justify-center font-black text-base shadow-md ${
+        {/* Header with Navigation Icons (Atrás, Adelante, Salir) in top-right */}
+        <div className="px-5 sm:px-6 py-3.5 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800 shrink-0 gap-3">
+          <div className="flex items-center space-x-3 min-w-0">
+            <div className={`w-10 h-10 rounded-2xl flex items-center justify-center font-black text-base shadow-md shrink-0 ${
               stepData.status === 'completed' 
                 ? 'bg-emerald-500 text-slate-950' 
                 : stepData.status === 'in_progress' 
@@ -506,12 +592,12 @@ FECHA: ${acceptanceDate}
             }`}>
               {stepData.stepNumber}
             </div>
-            <div>
+            <div className="min-w-0 truncate">
               <div className="flex items-center space-x-2">
-                <span className="text-[10px] font-bold text-amber-400 uppercase tracking-wide">
+                <span className="text-[10px] font-bold text-amber-400 uppercase tracking-wide truncate">
                   Fase {currentPhase.phaseNumber}: {currentPhase.name}
                 </span>
-                <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase shrink-0 ${
                   stepData.status === 'completed' 
                     ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' 
                     : stepData.status === 'in_progress' 
@@ -521,18 +607,57 @@ FECHA: ${acceptanceDate}
                   {stepData.status === 'completed' ? 'Completado' : stepData.status === 'in_progress' ? 'En Ejecución' : 'Pendiente'}
                 </span>
               </div>
-              <h2 className="text-base sm:text-lg font-black text-white mt-0.5">
+              <h2 className="text-sm sm:text-base font-black text-white mt-0.5 truncate">
                 {stepData.title}
               </h2>
             </div>
           </div>
 
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          {/* Navigation Controls in Top-Right Header */}
+          <div className="flex items-center space-x-1.5 sm:space-x-2 shrink-0">
+            {/* Atrás Button */}
+            <button
+              type="button"
+              onClick={handleNavigatePrevStep}
+              disabled={currentStepGlobalIndex === 0}
+              className={`px-2.5 sm:px-3 py-1.5 rounded-xl border text-xs font-black flex items-center gap-1 transition-all ${
+                currentStepGlobalIndex > 0
+                  ? 'bg-slate-800 hover:bg-slate-700 text-amber-300 border-slate-700 hover:border-amber-400/50 cursor-pointer shadow-xs active:scale-95'
+                  : 'bg-slate-800/40 text-slate-600 border-slate-800 cursor-not-allowed opacity-50'
+              }`}
+              title={currentStepGlobalIndex > 0 ? `Paso anterior: Paso ${allSteps[currentStepGlobalIndex - 1].step.stepNumber}` : 'Primer paso'}
+            >
+              <ChevronLeft className="w-4 h-4" />
+              <span className="hidden sm:inline">Atrás</span>
+            </button>
+
+            {/* Adelante Button */}
+            <button
+              type="button"
+              onClick={handleNavigateNextStep}
+              disabled={currentStepGlobalIndex >= allSteps.length - 1}
+              className={`px-2.5 sm:px-3 py-1.5 rounded-xl border text-xs font-black flex items-center gap-1 transition-all ${
+                currentStepGlobalIndex < allSteps.length - 1
+                  ? 'bg-slate-800 hover:bg-slate-700 text-amber-300 border-slate-700 hover:border-amber-400/50 cursor-pointer shadow-xs active:scale-95'
+                  : 'bg-slate-800/40 text-slate-600 border-slate-800 cursor-not-allowed opacity-50'
+              }`}
+              title={currentStepGlobalIndex < allSteps.length - 1 ? `Paso siguiente: Paso ${allSteps[currentStepGlobalIndex + 1].step.stepNumber}` : 'Último paso'}
+            >
+              <span className="hidden sm:inline">Adelante</span>
+              <ChevronRight className="w-4 h-4" />
+            </button>
+
+            {/* Salir / Cerrar Button */}
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-1.5 sm:px-3 sm:py-1.5 rounded-xl bg-slate-800 hover:bg-red-950/60 hover:text-red-300 text-slate-300 border border-slate-700 hover:border-red-500/50 transition-colors cursor-pointer flex items-center gap-1 font-bold text-xs"
+              title="Salir / Cerrar ventana"
+            >
+              <span className="hidden sm:inline">Salir</span>
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
         {/* Modal Scrollable Content */}

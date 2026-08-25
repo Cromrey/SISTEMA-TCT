@@ -11,13 +11,15 @@ import {
   ProductionProject,
   StaffMember,
   TCTCompanyInfo,
-  TCTCompanyBankAccount
+  TCTCompanyBankAccount,
+  TCTContractDesign
 } from '../types';
 import { 
   getStoredRules, 
   saveMasterRules, 
   resetMasterRulesToDefault,
-  INITIAL_COMPANY_INFO
+  INITIAL_COMPANY_INFO,
+  INITIAL_CONTRACT_DESIGN
 } from '../utils/rulesStorage';
 import { 
   getStoredUsers, 
@@ -96,10 +98,13 @@ import {
   CreditCard,
   QrCode,
   UserMinus,
-  Film
+  Film,
+  Palette,
+  Type,
+  Image as ImageIcon
 } from 'lucide-react';
 
-export type SettingsTab = 'company' | 'staff_assignment' | 'checklists' | 'equipment' | 'packages' | 'services' | 'formats' | 'users' | 'shortcuts' | 'system';
+export type SettingsTab = 'company' | 'contract_design' | 'staff_assignment' | 'checklists' | 'equipment' | 'packages' | 'services' | 'formats' | 'users' | 'shortcuts' | 'system';
 
 interface AdminSettingsModalProps {
   onClose: () => void;
@@ -152,6 +157,11 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
   const [newBankAccountNum, setNewBankAccountNum] = useState('');
   const [newBankCci, setNewBankCci] = useState('');
   const [newBankCurrency, setNewBankCurrency] = useState<'PEN' | 'USD'>('PEN');
+
+  // --- Contract Design & Template Customization State ---
+  const [contractDesign, setContractDesign] = useState<TCTContractDesign>(
+    rules.contractDesign ? { ...INITIAL_CONTRACT_DESIGN, ...rules.contractDesign } : INITIAL_CONTRACT_DESIGN
+  );
 
   // --- Personnel & Equipment Assignment State ---
   const [projectsList, setProjectsList] = useState<ProductionProject[]>(getStoredProjects());
@@ -330,6 +340,56 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
     const updatedAccounts = (companyInfo.bankAccounts || []).filter(b => b.id !== bankId);
     setCompanyInfo({ ...companyInfo, bankAccounts: updatedAccounts });
     notifySuccess('Cuenta bancaria eliminada');
+  };
+
+  // -------------------------------------------------------------
+  // 0.05. CONTRACT DESIGN & HEADER CUSTOMIZATION
+  // -------------------------------------------------------------
+  const handleSaveContractDesign = () => {
+    const updatedRules: TCTMasterRules = {
+      ...rules,
+      contractDesign: { ...contractDesign }
+    };
+    saveMasterRules(updatedRules);
+    setRules(updatedRules);
+    if (onRulesUpdated) onRulesUpdated();
+    notifySuccess('✓ Diseño, encabezado y cláusulas de contrato guardados correctamente');
+  };
+
+  const handleResetContractDesign = () => {
+    if (window.confirm('¿Deseas restablecer el diseño del contrato a la plantilla predeterminada de Corporación TCT?')) {
+      const resetDesign = { ...INITIAL_CONTRACT_DESIGN };
+      setContractDesign(resetDesign);
+      const updatedRules: TCTMasterRules = {
+        ...rules,
+        contractDesign: resetDesign
+      };
+      saveMasterRules(updatedRules);
+      setRules(updatedRules);
+      if (onRulesUpdated) onRulesUpdated();
+      notifySuccess('🔄 Diseño de contrato restablecido a los valores oficiales de fábrica');
+    }
+  };
+
+  const handleCustomLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        alert('El archivo de imagen no debe superar los 2MB.');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const result = event.target?.result as string;
+        setContractDesign({
+          ...contractDesign,
+          logoType: 'custom',
+          customLogoUrl: result
+        });
+        notifySuccess('✓ Logo institucional cargado correctamente');
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   // -------------------------------------------------------------
@@ -1032,6 +1092,21 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
             <span className="sm:hidden">Empresa</span>
           </button>
 
+          {/* TAB 0.05: DISEÑO Y ENCABEZADO DE CONTRATO */}
+          <button
+            onClick={() => setActiveTab('contract_design')}
+            className={`px-3 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+              activeTab === 'contract_design'
+                ? 'bg-amber-600 text-white shadow-md ring-2 ring-amber-400'
+                : 'text-amber-950 bg-amber-200/60 hover:bg-amber-200'
+            }`}
+            title="Diseño visual de contrato, logos, fuentes, colores, encabezado y cláusulas de difusión"
+          >
+            <Palette className="w-4 h-4 text-amber-900" />
+            <span className="hidden sm:inline">2. Diseño Contrato</span>
+            <span className="sm:hidden">Contrato</span>
+          </button>
+
           {/* TAB 0.1: ASIGNACIÓN DE PERSONAL & EQUIPOS */}
           <button
             onClick={() => setActiveTab('staff_assignment')}
@@ -1043,7 +1118,7 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
             title="Asignación de Personal Técnico y Equipos por Contrato"
           >
             <UserCheck className="w-4 h-4" />
-            <span className="hidden sm:inline">2. Asignación Personal</span>
+            <span className="hidden sm:inline">3. Asignación Personal</span>
             <span className="sm:hidden">Personal</span>
           </button>
 
@@ -1057,7 +1132,7 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
             }`}
           >
             <ListChecks className="w-4 h-4" />
-            <span className="hidden sm:inline">3. Checklists (12 Pasos)</span>
+            <span className="hidden sm:inline">4. Checklists (12 Pasos)</span>
             <span className="sm:hidden">Checklists</span>
           </button>
 
@@ -1431,6 +1506,356 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
                         </button>
                       </div>
                     </div>
+                  </div>
+
+                </div>
+
+              </div>
+            </div>
+          )}
+
+          {/* ========================================================= */}
+          {/* TAB 0.05: DISEÑO, ENCABEZADO Y CLÁUSULAS DEL CONTRATO */}
+          {/* ========================================================= */}
+          {activeTab === 'contract_design' && (
+            <div className="space-y-6 animate-in fade-in">
+              <div className="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200 shadow-xs space-y-6">
+                
+                {/* Header with Save & Reset */}
+                <div className="flex items-center justify-between flex-wrap gap-3 pb-4 border-b border-slate-100">
+                  <div>
+                    <span className="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 font-black text-[10px] border border-amber-300">
+                      Personalización de Plantilla de Contrato
+                    </span>
+                    <h4 className="font-black text-slate-900 text-lg mt-1 flex items-center gap-2">
+                      <Palette className="w-5 h-5 text-amber-600" />
+                      <span>Diseño, Encabezado, Fuentes, Colores y Cláusulas del Contrato</span>
+                    </h4>
+                    <p className="text-xs text-slate-500">
+                      Personalice los textos del encabezado, el logo institucional, la tipografía, los colores y las cláusulas de difusión en internet de los contratos generados.
+                    </p>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={handleResetContractDesign}
+                      className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      <span>Restablecer Oficial</span>
+                    </button>
+                    <button
+                      onClick={handleSaveContractDesign}
+                      className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs transition-all shadow-md flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <Save className="w-3.5 h-3.5" />
+                      <span>Guardar Diseño Contrato</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Grid of Customization Panels */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  
+                  {/* Panel 1: Encabezado y Logo */}
+                  <div className="space-y-4 bg-slate-50/70 p-4 sm:p-5 rounded-2xl border border-slate-200">
+                    <h5 className="font-black text-sm text-slate-900 flex items-center gap-2">
+                      <Building className="w-4 h-4 text-amber-600" />
+                      <span>1. Encabezado y Logotipo del Contrato</span>
+                    </h5>
+
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1">Título Principal de la Empresa en Contrato:</label>
+                        <input
+                          type="text"
+                          value={contractDesign.headerTitle}
+                          onChange={(e) => setContractDesign({ ...contractDesign, headerTitle: e.target.value })}
+                          className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 focus:border-amber-500 focus:outline-none"
+                          placeholder="CORPORACIÓN TCT"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1">Subtítulo / Rubro Institucional:</label>
+                        <input
+                          type="text"
+                          value={contractDesign.headerSubtitle}
+                          onChange={(e) => setContractDesign({ ...contractDesign, headerSubtitle: e.target.value })}
+                          className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-800 focus:border-amber-500 focus:outline-none"
+                          placeholder="Servicios Audiovisuales, Producción Cinematográfica & Fotografía Profesional"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1">Información Legal / RUC / Dirección en Encabezado:</label>
+                        <input
+                          type="text"
+                          value={contractDesign.headerLegalInfo}
+                          onChange={(e) => setContractDesign({ ...contractDesign, headerLegalInfo: e.target.value })}
+                          className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-mono text-slate-800 focus:border-amber-500 focus:outline-none"
+                          placeholder="RUC: 20608941253 • Jr. Las Camelias 450, San Isidro, Lima • Tel: (01) 748-9200"
+                        />
+                      </div>
+
+                      {/* Logo Selector */}
+                      <div className="pt-2 border-t border-slate-200">
+                        <label className="block text-xs font-bold text-slate-700 mb-2">Logotipo en el Contrato:</label>
+                        <div className="flex items-center gap-3">
+                          <label className="flex items-center gap-1.5 cursor-pointer text-xs font-bold text-slate-800">
+                            <input
+                              type="radio"
+                              name="logoTypeSelection"
+                              checked={contractDesign.logoType === 'official'}
+                              onChange={() => setContractDesign({ ...contractDesign, logoType: 'official' })}
+                              className="accent-amber-600"
+                            />
+                            <span>Logo Oficial TCT</span>
+                          </label>
+
+                          <label className="flex items-center gap-1.5 cursor-pointer text-xs font-bold text-slate-800">
+                            <input
+                              type="radio"
+                              name="logoTypeSelection"
+                              checked={contractDesign.logoType === 'custom'}
+                              onChange={() => setContractDesign({ ...contractDesign, logoType: 'custom' })}
+                              className="accent-amber-600"
+                            />
+                            <span>Logo Personalizado / Imagen</span>
+                          </label>
+                        </div>
+
+                        {contractDesign.logoType === 'custom' && (
+                          <div className="mt-3 p-3 bg-white rounded-xl border border-slate-200 flex items-center gap-3">
+                            {contractDesign.customLogoUrl ? (
+                              <img
+                                src={contractDesign.customLogoUrl}
+                                alt="Logo Personalizado"
+                                className="w-12 h-12 object-contain rounded-lg border border-slate-200 bg-slate-50"
+                                referrerPolicy="no-referrer"
+                              />
+                            ) : (
+                              <div className="w-12 h-12 rounded-lg border-2 border-dashed border-slate-300 flex items-center justify-center text-slate-400">
+                                <ImageIcon className="w-6 h-6" />
+                              </div>
+                            )}
+                            <div className="flex-1">
+                              <label className="inline-block px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-amber-400 font-bold text-xs rounded-lg cursor-pointer transition-all">
+                                <Upload className="w-3.5 h-3.5 inline mr-1" />
+                                Subir Imagen Logo
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  onChange={handleCustomLogoUpload}
+                                  className="hidden"
+                                />
+                              </label>
+                              <p className="text-[10px] text-slate-500 mt-1">PNG, JPG o WebP con fondo transparente recomendado (máx. 2MB)</p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Panel 2: Tipografía y Paleta de Colores */}
+                  <div className="space-y-4 bg-slate-50/70 p-4 sm:p-5 rounded-2xl border border-slate-200">
+                    <h5 className="font-black text-sm text-slate-900 flex items-center gap-2">
+                      <Type className="w-4 h-4 text-indigo-600" />
+                      <span>2. Tipografía & Estilo Visual</span>
+                    </h5>
+
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1.5">Familia Tipográfica del Contrato:</label>
+                        <div className="grid grid-cols-2 gap-2">
+                          {[
+                            { id: 'sans', label: 'Modern Sans', desc: 'Sans-serif moderna y limpia', previewClass: 'font-sans' },
+                            { id: 'serif', label: 'Editorial Serif', desc: 'Serif formal y distinguida', previewClass: 'font-serif' },
+                            { id: 'geometric', label: 'Geométrica Pro', desc: 'Sans de alta densidad técnica', previewClass: 'font-sans tracking-tight' },
+                            { id: 'mono', label: 'Monospace Tech', desc: 'Tipografía monospace técnica', previewClass: 'font-mono' }
+                          ].map(fontOpt => (
+                            <button
+                              key={fontOpt.id}
+                              type="button"
+                              onClick={() => setContractDesign({ ...contractDesign, fontFamily: fontOpt.id as any })}
+                              className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                                contractDesign.fontFamily === fontOpt.id
+                                  ? 'bg-amber-500/10 border-amber-500 ring-2 ring-amber-500/30'
+                                  : 'bg-white border-slate-200 hover:border-slate-300'
+                              }`}
+                            >
+                              <span className={`text-xs font-bold text-slate-900 block ${fontOpt.previewClass}`}>
+                                {fontOpt.label}
+                              </span>
+                              <span className="text-[10px] text-slate-500">{fontOpt.desc}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Accent Color Palette */}
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1.5">Color de Acento en Títulos:</label>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {[
+                            { color: '#b45309', label: 'Ámbar Oficial' },
+                            { color: '#1e40af', label: 'Azul Marino' },
+                            { color: '#0f172a', label: 'Pizarra Oscuro' },
+                            { color: '#047857', label: 'Esmeralda' },
+                            { color: '#6b21a8', label: 'Púrpura' }
+                          ].map(c => (
+                            <button
+                              key={c.color}
+                              type="button"
+                              onClick={() => setContractDesign({ ...contractDesign, primaryColor: c.color })}
+                              className={`px-3 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-2 cursor-pointer transition-all ${
+                                contractDesign.primaryColor === c.color
+                                  ? 'bg-slate-900 text-white border-slate-900'
+                                  : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                              }`}
+                            >
+                              <span className="w-3.5 h-3.5 rounded-full shrink-0 border border-black/20" style={{ backgroundColor: c.color }} />
+                              <span>{c.label}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* advisor signature role */}
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1">Cargo Institucional del Asesor en la Firma:</label>
+                        <input
+                          type="text"
+                          value={contractDesign.signerAdvisorRole}
+                          onChange={(e) => setContractDesign({ ...contractDesign, signerAdvisorRole: e.target.value })}
+                          className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 focus:border-amber-500 focus:outline-none"
+                          placeholder="Director de Producción / Asesor Comercial"
+                        />
+                        <p className="text-[10px] text-slate-500 mt-1">
+                          En el contrato, el cargo se mostrará en una línea y el nombre completo en la línea siguiente.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Panel 3: Cláusulas y Textos Legales */}
+                  <div className="space-y-4 bg-slate-50/70 p-4 sm:p-5 rounded-2xl border border-slate-200 lg:col-span-2">
+                    <h5 className="font-black text-sm text-slate-900 flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-amber-600" />
+                      <span>3. Títulos, Cláusulas y Textos Legales del Contrato</span>
+                    </h5>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1">Título Central del Contrato:</label>
+                        <input
+                          type="text"
+                          value={contractDesign.contractTitle}
+                          onChange={(e) => setContractDesign({ ...contractDesign, contractTitle: e.target.value })}
+                          className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 focus:border-amber-500 focus:outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1">Texto Introductorio del Contrato:</label>
+                        <input
+                          type="text"
+                          value={contractDesign.contractIntroText}
+                          onChange={(e) => setContractDesign({ ...contractDesign, contractIntroText: e.target.value })}
+                          className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-800 focus:border-amber-500 focus:outline-none"
+                        />
+                      </div>
+
+                      <div className="md:col-span-2">
+                        <label className="block text-xs font-bold text-slate-700 mb-1">Regla de Conservación de Material (Cláusula 4 - RAW & Master):</label>
+                        <textarea
+                          rows={2}
+                          value={contractDesign.clause4PreservationText}
+                          onChange={(e) => setContractDesign({ ...contractDesign, clause4PreservationText: e.target.value })}
+                          className="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-xs text-slate-800 focus:border-amber-500 focus:outline-none"
+                        />
+                      </div>
+
+                      <div className="md:col-span-2">
+                        <label className="block text-xs font-bold text-slate-700 mb-1">Pie de Página Oficial del Contrato:</label>
+                        <input
+                          type="text"
+                          value={contractDesign.footerText}
+                          onChange={(e) => setContractDesign({ ...contractDesign, footerText: e.target.value })}
+                          className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-mono text-slate-900 focus:border-amber-500 focus:outline-none"
+                          placeholder="Documento emitido formalmente por el Sistema Integrado de Gestión Audiovisual de Corporación TCT: SIGAT • Perú"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Panel 4: Vista Previa en Vivo del Encabezado, Cláusula de Publicación y Pie */}
+                  <div className="space-y-3 bg-white p-5 rounded-2xl border-2 border-slate-900 shadow-md lg:col-span-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-black uppercase text-slate-900 tracking-wider flex items-center gap-1.5">
+                        <Sparkles className="w-4 h-4 text-amber-500" />
+                        Vista Previa en Vivo del Diseño de Contrato
+                      </span>
+                      <span className="text-[10px] font-bold text-slate-500 font-mono">
+                        Tipografía: {contractDesign.fontFamily.toUpperCase()}
+                      </span>
+                    </div>
+
+                    {/* Simulation Card */}
+                    <div className={`p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3 text-slate-900 ${
+                      contractDesign.fontFamily === 'serif' ? 'font-serif' :
+                      contractDesign.fontFamily === 'mono' ? 'font-mono' :
+                      contractDesign.fontFamily === 'geometric' ? 'font-sans tracking-tight' : 'font-sans'
+                    }`}>
+                      {/* Sim Header */}
+                      <div className="flex items-center justify-between border-b-2 border-slate-900 pb-2">
+                        <div className="flex items-center space-x-2.5">
+                          {contractDesign.logoType === 'custom' && contractDesign.customLogoUrl ? (
+                            <img src={contractDesign.customLogoUrl} alt="Logo" className="w-10 h-10 object-contain rounded-md" referrerPolicy="no-referrer" />
+                          ) : (
+                            <TCTLogo size="sm" variant="icon-only" />
+                          )}
+                          <div>
+                            <h4 className="text-sm font-black uppercase text-slate-950">{contractDesign.headerTitle}</h4>
+                            <p className="text-[9px] font-bold text-amber-700">{contractDesign.headerSubtitle}</p>
+                            <p className="text-[8px] text-slate-500 font-mono">{contractDesign.headerLegalInfo}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <span className="bg-slate-900 text-amber-400 font-mono text-[10px] font-black px-2 py-0.5 rounded-md">
+                            CONTRATO-TCT-2026-001
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Sim Agreement */}
+                      <div className="p-2.5 bg-amber-50/70 border border-amber-200 rounded-lg text-[10px]">
+                        <p className="font-bold text-slate-800">
+                          ★ AUTORIZACIÓN DE DIFUSIÓN EN INTERNET: EL CLIENTE declara que <strong>ACEPTA</strong> de forma libre y voluntaria la publicación de extractos de video y fotos en las redes de <strong>{contractDesign.headerTitle}</strong>.
+                        </p>
+                      </div>
+
+                      {/* Sim Signatures */}
+                      <div className="grid grid-cols-2 gap-4 text-center pt-2 border-t border-slate-300 text-[9px]">
+                        <div>
+                          <div className="h-10 border-b border-dashed border-slate-400 w-32 mx-auto mb-1"></div>
+                          <p className="font-bold uppercase text-slate-700">{contractDesign.signerAdvisorRole}</p>
+                          <p className="font-black text-slate-900">Michael Romero</p>
+                        </div>
+                        <div>
+                          <div className="h-10 border-b border-dashed border-slate-400 w-32 mx-auto mb-1"></div>
+                          <p className="font-bold uppercase text-slate-700">El Contratante</p>
+                          <p className="font-black text-slate-900">Juan Pérez Silva</p>
+                        </div>
+                      </div>
+
+                      {/* Sim Footer */}
+                      <div className="text-center text-[8px] text-slate-500 pt-1 border-t border-slate-200 font-mono">
+                        {contractDesign.footerText}
+                      </div>
+                    </div>
+
                   </div>
 
                 </div>

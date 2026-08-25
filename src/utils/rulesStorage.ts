@@ -1,7 +1,23 @@
-import { TCTMasterRules, TCTMasterPackage, EquipmentItem, MasterStepChecklistRule, TemplateDocumentFormat, TCTCompanyInfo } from '../types';
+import { TCTMasterRules, TCTMasterPackage, EquipmentItem, MasterStepChecklistRule, TemplateDocumentFormat, TCTCompanyInfo, TCTContractDesign } from '../types';
 import { getIdbItem, setIdbItem, STORES } from './indexedDb';
 
 const RULES_STORAGE_KEY = 'tct_master_rules_v1';
+
+export const INITIAL_CONTRACT_DESIGN: TCTContractDesign = {
+  headerTitle: 'CORPORACIÓN TCT',
+  headerSubtitle: 'Servicios Audiovisuales, Producción Cinematográfica & Fotografía Profesional',
+  headerLegalInfo: 'RUC: 20608941253 • Jr. Las Camelias 450, San Isidro, Lima • Tel: (01) 748-9200',
+  logoType: 'official',
+  fontFamily: 'sans',
+  primaryColor: '#0f172a',
+  accentColor: '#b45309',
+  contractTitle: 'CONTRATO PRIVADO DE PRESTACIÓN DE SERVICIOS AUDIOVISUALES',
+  contractIntroText: 'Conste por el presente documento el contrato de servicios celebrado entre CORPORACIÓN TCT y EL CLIENTE.',
+  clause4PreservationText: '* CORPORACIÓN TCT conservará los archivos MASTER y brutos, hasta un plazo de 03 días posteriores a la fecha programada de entrega del material. De no recoger en la fecha de entrega sólo se conservará el archivo MASTER.',
+  internetPublishingAgreementText: 'EL CLIENTE declara que de forma libre, voluntaria y expresa la publicación, exhibición y difusión de extractos de los videos y fotografías del evento en las plataformas de internet, redes sociales y portafolio profesional de CORPORACIÓN TCT.',
+  footerText: 'Documento emitido formalmente por el Sistema Integrado de Gestión Audiovisual de Corporación TCT: SIGAT • Perú',
+  signerAdvisorRole: 'Director de Producción / Asesor Comercial'
+};
 
 export const INITIAL_COMPANY_INFO: TCTCompanyInfo = {
   legalName: 'CORPORACIÓN TCT S.A.C.',
@@ -541,6 +557,7 @@ export const INITIAL_RULES: TCTMasterRules = {
   equipmentCatalog: INITIAL_EQUIPMENT_CATALOG,
   stepChecklists: INITIAL_STEP_CHECKLISTS,
   templateFormats: INITIAL_TEMPLATE_FORMATS,
+  contractDesign: INITIAL_CONTRACT_DESIGN,
   standardExtraHourRate: 150,
   maxDiscountPercentageAllowed: 25,
   authorizedContractHolders: [
@@ -567,7 +584,8 @@ export const getStoredRules = (): TCTMasterRules => {
         packages: parsed.packages || INITIAL_PACKAGES,
         equipmentCatalog: parsed.equipmentCatalog || INITIAL_EQUIPMENT_CATALOG,
         stepChecklists: parsed.stepChecklists || INITIAL_STEP_CHECKLISTS,
-        templateFormats: parsed.templateFormats || INITIAL_TEMPLATE_FORMATS
+        templateFormats: parsed.templateFormats || INITIAL_TEMPLATE_FORMATS,
+        contractDesign: parsed.contractDesign ? { ...INITIAL_CONTRACT_DESIGN, ...parsed.contractDesign } : INITIAL_CONTRACT_DESIGN
       };
       memoryRulesCache = combined;
       return combined;

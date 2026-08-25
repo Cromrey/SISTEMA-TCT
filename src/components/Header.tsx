@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { UserRole, StaffMember, AuthUser } from '../types';
 import { TCTLogo } from './TCTLogo';
 import { 
-  Clapperboard
+  Clapperboard,
+  LogOut,
+  Sliders
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -19,7 +21,7 @@ interface HeaderProps {
   onOpenRulesModal?: () => void;
   onOpenUsersManagement?: () => void;
   onOpenCalendar?: () => void;
-  onLogout?: () => void;
+  onLogout?: (deepExit?: boolean) => void;
   onResetData?: () => void;
   searchQuery?: string;
   onSearchChange?: (query: string) => void;
@@ -39,8 +41,43 @@ export const Header: React.FC<HeaderProps> = ({
   allUsers = [],
   onStaffChange,
   onUserSelect,
-  onOpenNewProject
+  onOpenNewProject,
+  onOpenRulesModal,
+  onLogout
 }) => {
+  const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Single click (Cerrar sesión) vs Double click (Salir completo del aplicativo)
+  const handleExitClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (clickTimeoutRef.current) {
+      // Second click within threshold -> Double Click (Deep Exit)
+      clearTimeout(clickTimeoutRef.current);
+      clickTimeoutRef.current = null;
+      if (onLogout) {
+        onLogout(true);
+      }
+    } else {
+      // First click -> wait for potential second click
+      clickTimeoutRef.current = setTimeout(() => {
+        clickTimeoutRef.current = null;
+        if (onLogout) {
+          onLogout(false);
+        }
+      }, 280);
+    }
+  };
+
+  const handleDoubleClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (clickTimeoutRef.current) {
+      clearTimeout(clickTimeoutRef.current);
+      clickTimeoutRef.current = null;
+    }
+    if (onLogout) {
+      onLogout(true);
+    }
+  };
   // Find current active user job title or cargo
   const activeUser = allUsers.find(u => 
     (currentRole === 'employee' && u.fullName === currentStaff.name) || 
@@ -117,42 +154,36 @@ export const Header: React.FC<HeaderProps> = ({
                 </div>
 
                 <div className="flex items-center space-x-1 sm:space-x-1.5">
-                  {currentUser?.role === 'admin' ? (
-                    <select
-                      id="select-active-system-user"
-                      aria-label="Seleccionar usuario activo"
-                      value={
-                        currentRole === 'admin' 
-                          ? (allUsers.find(u => u.role === 'admin')?.id || 'admin') 
-                          : (currentStaff?.id || allStaff[0]?.id || '')
-                      }
-                      onChange={(e) => handleSelectUser(e.target.value)}
-                      className="bg-transparent text-xs font-black text-white focus:outline-none cursor-pointer max-w-[130px] sm:max-w-[190px] truncate pr-1"
-                    >
-                      {allUsers.length > 0 ? (
-                        allUsers.map((usr) => (
-                          <option key={usr.id} value={usr.id} className="bg-slate-900 text-white">
-                            {usr.fullName}
+                  <select
+                    id="select-active-system-user"
+                    aria-label="Seleccionar usuario activo"
+                    value={
+                      activeUser?.id || (currentRole === 'admin' 
+                        ? (allUsers.find(u => u.role === 'admin')?.id || 'admin') 
+                        : (currentStaff?.id || allStaff[0]?.id || ''))
+                    }
+                    onChange={(e) => handleSelectUser(e.target.value)}
+                    className="bg-transparent text-xs font-black text-white focus:outline-none cursor-pointer max-w-[140px] sm:max-w-[200px] truncate pr-1"
+                  >
+                    {allUsers.length > 0 ? (
+                      allUsers.map((usr) => (
+                        <option key={usr.id} value={usr.id} className="bg-slate-900 text-white font-bold">
+                          {usr.role === 'admin' ? '🛡️ ' : '🎬 '} {usr.fullName}
+                        </option>
+                      ))
+                    ) : (
+                      <>
+                        <option value="admin" className="bg-slate-900 text-white">
+                          🛡️ Ing. Michael RomeroReyes
+                        </option>
+                        {allStaff.map((st) => (
+                          <option key={st.id} value={st.id} className="bg-slate-900 text-white">
+                            🎬 {st.name}
                           </option>
-                        ))
-                      ) : (
-                        <>
-                          <option value="admin" className="bg-slate-900 text-white">
-                            Ing. Michael RomeroReyes
-                          </option>
-                          {allStaff.map((st) => (
-                            <option key={st.id} value={st.id} className="bg-slate-900 text-white">
-                              {st.name}
-                            </option>
-                          ))}
-                        </>
-                      )}
-                    </select>
-                  ) : (
-                    <span className="text-xs font-black text-white max-w-[140px] sm:max-w-[200px] truncate px-1">
-                      {currentUser?.fullName || currentStaff.name}
-                    </span>
-                  )}
+                        ))}
+                      </>
+                    )}
+                  </select>
 
                   {/* Role / Cargo Badge right beside user */}
                   <span className={`px-2 py-0.5 rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-wider whitespace-nowrap shadow-xs ${
@@ -165,6 +196,20 @@ export const Header: React.FC<HeaderProps> = ({
                 </div>
               </div>
             </div>
+
+            {/* Reglas Maestras & Configuración Button (Admin Only) */}
+            {currentRole === 'admin' && onOpenRulesModal && (
+              <button
+                id="btn-header-rules-admin"
+                onClick={onOpenRulesModal}
+                className="p-2 sm:px-3 sm:py-2.5 bg-slate-950/90 hover:bg-slate-800 active:scale-95 text-amber-400 hover:text-amber-300 rounded-xl border border-slate-800 hover:border-amber-400/50 shadow-inner transition-all shrink-0 cursor-pointer flex items-center justify-center gap-1.5 font-black text-xs group"
+                title="Reglas Maestras, Personalización de Contrato & Configuración (Admin)"
+                aria-label="Reglas y Configuración"
+              >
+                <Sliders className="w-4 h-4 text-amber-400 group-hover:rotate-45 transition-transform" />
+                <span className="hidden md:inline font-bold">Reglas</span>
+              </button>
+            )}
 
             {/* Nueva Producción Button */}
             <button
@@ -180,6 +225,19 @@ export const Header: React.FC<HeaderProps> = ({
               <span className="sm:hidden absolute -top-1 -right-1 w-3.5 h-3.5 bg-slate-950 text-amber-400 font-black text-[9px] rounded-full flex items-center justify-center border border-amber-400 shadow-xs">
                 +
               </span>
+            </button>
+
+            {/* Salir / Logout Button (Single Click: Logout / Double Click: Salir Completo) */}
+            <button
+              id="btn-header-logout"
+              onClick={handleExitClick}
+              onDoubleClick={handleDoubleClick}
+              className="p-2 sm:px-3 sm:py-2.5 bg-slate-950/90 hover:bg-red-950/80 active:scale-95 text-slate-300 hover:text-red-300 rounded-xl border border-slate-800 hover:border-red-500/50 shadow-inner transition-all shrink-0 cursor-pointer flex items-center justify-center gap-1.5 font-black text-xs group"
+              title="Salir: 1 Clic para Cerrar Sesión • Doble Clic para Salir del Sistema"
+              aria-label="Salir"
+            >
+              <LogOut className="w-4 h-4 text-red-400 group-hover:text-red-300 group-hover:scale-110 transition-transform shrink-0" />
+              <span className="hidden md:inline font-bold">Salir</span>
             </button>
 
           </div>

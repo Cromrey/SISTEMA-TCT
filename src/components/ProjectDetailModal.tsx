@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { ProductionProject, StepData, AuthUser, StaffMember, EquipmentItem } from '../types';
 import { PhaseSequenceBar } from './PhaseSequenceBar';
 import { StepExecutionModal } from './StepExecutionModal';
@@ -24,6 +24,7 @@ import {
   Upload,
   Eye,
   Check,
+  ChevronLeft,
   ChevronRight,
   ShieldCheck,
   Layers,
@@ -84,7 +85,19 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
   const [newEquipCategory, setNewEquipCategory] = useState<'Cámara' | 'Audio' | 'Iluminación' | 'Dron' | 'Gimbal / Soporte' | 'Lentes' | 'Otro'>('Cámara');
   const [newEquipSerial, setNewEquipSerial] = useState('');
 
-  const availableUsers = getStoredUsers();
+  const [availableUsers, setAvailableUsers] = useState<AuthUser[]>(getStoredUsers());
+
+  useEffect(() => {
+    const handleUsersUpdate = () => {
+      setAvailableUsers(getStoredUsers());
+    };
+    window.addEventListener('tct_users_updated', handleUsersUpdate);
+    window.addEventListener('storage', handleUsersUpdate);
+    return () => {
+      window.removeEventListener('tct_users_updated', handleUsersUpdate);
+      window.removeEventListener('storage', handleUsersUpdate);
+    };
+  }, []);
 
   const progressInfo = getProjectProgressInfo(project);
 
@@ -404,48 +417,74 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center space-x-1.5 sm:space-x-2">
+          <div className="flex items-center space-x-1.5 sm:space-x-2 shrink-0">
+            {/* Atrás Button */}
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-2 sm:px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 hover:border-amber-400/50 text-xs font-bold flex items-center gap-1 transition-all cursor-pointer shadow-xs active:scale-95"
+              title="Volver a la vista principal"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              <span className="hidden sm:inline">Atrás</span>
+            </button>
+
+            {/* Adelante Button (Avanza al paso activo / formulario) */}
+            {activeStepObj && (
+              <button
+                type="button"
+                onClick={() => setSelectedStepCoord({ phaseIndex: activeStepObj.phaseIdx, stepIndex: activeStepObj.stepIdx })}
+                className="px-2 sm:px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 hover:border-amber-400/50 text-xs font-bold flex items-center gap-1 transition-all cursor-pointer shadow-xs active:scale-95"
+                title={`Ir al hito en curso: Paso ${activeStepObj.step.stepNumber}`}
+              >
+                <span className="hidden sm:inline">Adelante</span>
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            )}
+
             {onOpenContractExport && (
               <button
                 type="button"
                 onClick={() => onOpenContractExport(project)}
-                className="px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs flex items-center gap-1 shadow-md transition-all shrink-0 cursor-pointer"
+                className="px-2 sm:px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs flex items-center gap-1 shadow-md transition-all shrink-0 cursor-pointer"
                 title="Exportar Contrato Oficial"
               >
                 <FileText className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Exportar Contrato</span>
+                <span className="hidden md:inline">Exportar Contrato</span>
               </button>
             )}
 
             <button
               type="button"
               onClick={() => onOpenReportPrint(project)}
-              className="px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1 shadow-md transition-all shrink-0 cursor-pointer"
+              className="px-2 sm:px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1 shadow-md transition-all shrink-0 cursor-pointer"
               title="Reporte PDF"
             >
               <Printer className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Reporte PDF</span>
+              <span className="hidden md:inline">Reporte PDF</span>
             </button>
 
             {onDeleteProject && currentRole === 'admin' && (
               <button
                 type="button"
                 onClick={() => onDeleteProject(project.id)}
-                className="px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl bg-red-600/20 hover:bg-red-600 text-red-300 hover:text-white border border-red-500/40 font-bold text-xs flex items-center gap-1 shadow-md transition-all shrink-0 cursor-pointer"
+                className="px-2 sm:px-2.5 py-1.5 rounded-xl bg-red-600/20 hover:bg-red-600 text-red-300 hover:text-white border border-red-500/40 font-bold text-xs flex items-center gap-1 shadow-md transition-all shrink-0 cursor-pointer"
                 title="Eliminar este contrato permanentemente"
               >
                 <Trash2 className="w-3.5 h-3.5" />
-                <span className="hidden md:inline">Borrar</span>
+                <span className="hidden lg:inline">Borrar</span>
               </button>
             )}
 
+            {/* Salir Button */}
             <button
               type="button"
               onClick={onClose}
-              className="p-1.5 sm:p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
-              title="Cerrar modal"
+              className="p-1.5 sm:px-3 sm:py-1.5 rounded-xl bg-slate-800 hover:bg-red-950/60 hover:text-red-300 text-slate-300 border border-slate-700 hover:border-red-500/50 transition-colors cursor-pointer flex items-center gap-1 font-bold text-xs"
+              title="Salir / Cerrar ventana"
             >
-              <X className="w-5 h-5" />
+              <span className="hidden sm:inline">Salir</span>
+              <X className="w-4 h-4" />
             </button>
           </div>
         </div>
@@ -970,9 +1009,22 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
 
         {/* Footer */}
         <div className="px-4 sm:px-6 py-3 bg-slate-100 border-t border-slate-200 flex items-center justify-between shrink-0 flex-wrap gap-2">
-          <span className="text-[11px] text-slate-500 font-medium">
-            Última actualización: {new Date(project.updatedAt).toLocaleString()}
-          </span>
+          <div className="flex items-center space-x-3">
+            <span className="text-[11px] text-slate-500 font-medium">
+              Última actualización: {new Date(project.updatedAt).toLocaleString()}
+            </span>
+            {onDeleteProject && currentRole === 'admin' && (
+              <button
+                type="button"
+                onClick={() => onDeleteProject(project.id)}
+                className="px-3 py-1.5 rounded-xl bg-red-600/10 hover:bg-red-600/20 text-red-700 text-xs font-bold transition-colors flex items-center gap-1.5 border border-red-300 cursor-pointer"
+                title="Eliminar este expediente de forma justificada"
+              >
+                <Trash2 className="w-3.5 h-3.5 text-red-600" />
+                <span>Eliminar Expediente</span>
+              </button>
+            )}
+          </div>
 
           <div className="flex items-center space-x-2">
             <button
@@ -1046,6 +1098,7 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
           project={project}
           phaseIndex={selectedStepCoord.phaseIndex}
           stepIndex={selectedStepCoord.stepIndex}
+          currentRole={currentRole}
           onClose={() => setSelectedStepCoord(null)}
           onSaveStep={(updated) => {
             onUpdateProject(updated);

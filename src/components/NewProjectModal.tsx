@@ -29,7 +29,9 @@ import {
   Eye,
   AlertCircle,
   CheckCircle2,
-  Globe
+  Globe,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 
 interface NewProjectModalProps {
@@ -44,6 +46,7 @@ interface EventScheduleDay {
   date: string;
   startTime: string;
   endTime: string;
+  reference?: string;
 }
 
 const EVENT_TYPES: EventType[] = [
@@ -143,6 +146,21 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
   const [giftIncluded, setGiftIncluded] = useState(false);
   const [specialContractClause, setSpecialContractClause] = useState('');
 
+  // Contract specific requirements & policies
+  const defaultCrew = initialPackage?.includesDrone
+    ? '2 Videógrafos Cine 4K, 1 Fotógrafo Principal, 1 Piloto Operador de Dron Acreditado'
+    : '2 Videógrafos Cine 4K, 1 Fotógrafo Principal';
+  const [technicalCrewDeployment, setTechnicalCrewDeployment] = useState<string>(defaultCrew);
+  const [usbCapacity, setUsbCapacity] = useState<string>('128GB');
+  const [includeRevisionsPolicy, setIncludeRevisionsPolicy] = useState<boolean>(true);
+  const [revisionRounds, setRevisionRounds] = useState<number>(2);
+  const [revisionDaysLimit, setRevisionDaysLimit] = useState<number>(5);
+  const [rawCustodyDays, setRawCustodyDays] = useState<number>(3);
+  const [rescheduleNoticeMonths, setRescheduleNoticeMonths] = useState<number>(1);
+  const [appliesIgv, setAppliesIgv] = useState<boolean>(false);
+  const [additionalCustomClauseTitle, setAdditionalCustomClauseTitle] = useState<string>('Acuerdos Especiales Adicionales (Opcional)');
+  const [additionalCustomClause, setAdditionalCustomClause] = useState<string>('');
+
   // Client Authorization for Online Publication (SI / NO)
   const [authorizeInternetPublishing, setAuthorizeInternetPublishing] = useState<boolean>(true);
 
@@ -170,7 +188,9 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
   const initialDepositNum = initialDepositStr === '' ? 0 : Number(parseFloat(initialDepositStr).toFixed(2)) || 0;
 
   const extraHoursTotal = Number((extraHoursCountNum * extraHourRate).toFixed(2));
-  const computedTotal = Number(Math.max(0, listPriceNum - discountAmountNum + extraHoursTotal).toFixed(2));
+  const baseSubtotal = Number(Math.max(0, listPriceNum - discountAmountNum + extraHoursTotal).toFixed(2));
+  const igvAmount = appliesIgv ? Number((baseSubtotal * 0.18).toFixed(2)) : 0;
+  const computedTotal = appliesIgv ? Number((baseSubtotal + igvAmount).toFixed(2)) : baseSubtotal;
   const finalBalance = Number(Math.max(0, computedTotal - initialDepositNum).toFixed(2));
 
   // Package selector handler
@@ -185,6 +205,10 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
       setStandardHours(pkg.standardHours);
       setIncludesDrone(pkg.includesDrone);
       setIncludesPhotobook(pkg.includesPhotobook);
+      setTechnicalCrewDeployment(pkg.includesDrone
+        ? '2 Videógrafos Cine 4K, 1 Fotógrafo Principal, 1 Piloto Operador de Dron Acreditado'
+        : '2 Videógrafos Cine 4K, 1 Fotógrafo Principal'
+      );
     }
   };
 
@@ -325,7 +349,7 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
       eventTime: formattedScheduleString,
       eventStartTime: eventSchedules[0]?.startTime || '16:00',
       eventEndTime: eventSchedules[0]?.endTime || '02:00',
-      eventSchedules: eventSchedules.map(s => ({ date: s.date, startTime: s.startTime, endTime: s.endTime })),
+      eventSchedules: eventSchedules.map(s => ({ date: s.date, startTime: s.startTime, endTime: s.endTime, reference: s.reference?.trim() || undefined })),
       selectedPackageName,
       listPrice: listPriceNum,
       discountAmount: discountAmountNum,
@@ -334,6 +358,8 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
       extraHoursCount: extraHoursCountNum,
       extraHourRate: Number(extraHourRate),
       additionalEquipmentNotes: additionalEquipmentNotes.trim(),
+      appliesIgv,
+      igvAmount,
       totalBudget: computedTotal,
       initialDeposit: initialDepositNum,
       paymentMethodDeposit,
@@ -349,6 +375,16 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
       specialContractClause: specialContractClause.trim(),
       authorizeInternetPublishing,
       estimatedDeliveryDate: estimatedDelivery,
+      // Contract technical & policy clauses
+      usbCapacity: usbCapacity.trim() || '128GB',
+      technicalCrewDeployment: technicalCrewDeployment.trim(),
+      includeRevisionsPolicy,
+      revisionRounds: Number(revisionRounds) || 2,
+      revisionDaysLimit: Number(revisionDaysLimit) || 5,
+      rawCustodyDays: Number(rawCustodyDays) || 3,
+      rescheduleNoticeMonths: Number(rescheduleNoticeMonths) || 1,
+      additionalCustomClauseTitle: additionalCustomClauseTitle.trim(),
+      additionalCustomClause: additionalCustomClause.trim(),
       assignedStaff: [
         { id: `st-${Date.now()}-1`, name: 'Carlos Mendoza', role: 'Director de Cámara', phone: '+51 912 345 678', confirmed: true },
         { id: `st-${Date.now()}-2`, name: 'Valeria Castro', role: 'Fotógrafo Principal', phone: '+51 923 456 789', confirmed: true }
@@ -388,13 +424,40 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
             </div>
           </div>
 
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
-            title="Cerrar ventana"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center space-x-1.5 sm:space-x-2 shrink-0">
+            {/* Atrás Button */}
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-2.5 py-1.5 sm:py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 hover:border-amber-400/50 text-xs font-bold flex items-center gap-1 transition-all cursor-pointer shadow-xs"
+              title="Atrás / Cancelar"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              <span className="hidden sm:inline">Atrás</span>
+            </button>
+
+            {/* Adelante / Crear Button */}
+            <button
+              type="button"
+              onClick={handleSubmit}
+              className="px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs flex items-center gap-1 transition-all cursor-pointer shadow-md"
+              title="Adelante / Registrar Proyecto"
+            >
+              <span className="hidden sm:inline">Adelante</span>
+              <ChevronRight className="w-4 h-4" />
+            </button>
+
+            {/* Salir Button */}
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-1.5 sm:px-3 sm:py-2 rounded-xl bg-slate-800 hover:bg-red-950/60 hover:text-red-300 text-slate-300 border border-slate-700 hover:border-red-500/50 transition-colors cursor-pointer flex items-center gap-1 font-bold text-xs"
+              title="Salir / Cerrar ventana"
+            >
+              <span className="hidden sm:inline">Salir</span>
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
         {/* Validation Errors Banner */}
@@ -648,20 +711,20 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
                     </span>
                   </div>
 
-                  <div className="sm:col-span-4">
+                  <div className="sm:col-span-3">
                     <label className="block text-[10px] text-slate-500 font-bold mb-0.5">Fecha del Evento</label>
                     <input
                       type="date"
                       value={schedule.date}
                       onChange={(e) => handleUpdateScheduleDay(schedule.id, 'date', e.target.value)}
-                      className="w-full p-1.5 text-xs font-bold border border-slate-300 rounded-lg focus:ring-1 focus:ring-amber-500"
+                      className="w-full p-1.5 text-xs font-bold border border-slate-300 rounded-lg focus:ring-1 focus:ring-amber-500 font-mono"
                       required
                     />
                   </div>
 
-                  <div className="sm:col-span-3">
+                  <div className="sm:col-span-2">
                     <label className="block text-[10px] text-slate-500 font-bold mb-0.5 flex items-center gap-1">
-                      <Clock className="w-3 h-3 text-blue-500" /> Hora Inicio
+                      <Clock className="w-3 h-3 text-blue-500" /> Inicio
                     </label>
                     <input
                       type="time"
@@ -672,9 +735,9 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
                     />
                   </div>
 
-                  <div className="sm:col-span-3">
+                  <div className="sm:col-span-2">
                     <label className="block text-[10px] text-slate-500 font-bold mb-0.5 flex items-center gap-1">
-                      <Clock className="w-3 h-3 text-red-500" /> Hora Fin
+                      <Clock className="w-3 h-3 text-red-500" /> Fin
                     </label>
                     <input
                       type="time"
@@ -685,12 +748,37 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
                     />
                   </div>
 
+                  <div className="sm:col-span-3">
+                    <label className="block text-[10px] text-slate-500 font-bold mb-0.5">
+                      Referencia del Día <span className="text-slate-400 font-normal">(Opcional)</span>
+                    </label>
+                    <input
+                      type="text"
+                      list={`schedule-ref-list-${schedule.id}`}
+                      placeholder="Ej: Día Central, Víspera..."
+                      value={schedule.reference || ''}
+                      onChange={(e) => handleUpdateScheduleDay(schedule.id, 'reference', e.target.value)}
+                      className="w-full p-1.5 text-xs border border-slate-300 rounded-lg focus:ring-1 focus:ring-amber-500 font-medium placeholder:text-slate-400"
+                    />
+                    <datalist id={`schedule-ref-list-${schedule.id}`}>
+                      <option value="Día Central" />
+                      <option value="Víspera" />
+                      <option value="Alba" />
+                      <option value="Chaki Tincuchi" />
+                      <option value="Atipanakuy" />
+                      <option value="Sesión de fotos" />
+                      <option value="Misa y Ceremonia" />
+                      <option value="Recepción & Fiesta" />
+                      <option value="Almuerzo de Confraternidad" />
+                    </datalist>
+                  </div>
+
                   <div className="sm:col-span-1 flex justify-end">
                     {eventSchedules.length > 1 && (
                       <button
                         type="button"
                         onClick={() => handleRemoveScheduleDay(schedule.id)}
-                        className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                        className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
                         title="Eliminar este día"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -924,6 +1012,32 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
               </div>
             </div>
 
+            {/* Checkbox: Aplica IGV (18%) */}
+            <div className="p-3 rounded-xl bg-amber-50/70 border border-amber-300/80 flex items-center justify-between">
+              <label className="flex items-center space-x-2.5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={appliesIgv}
+                  onChange={(e) => setAppliesIgv(e.target.checked)}
+                  className="w-4 h-4 text-amber-600 rounded cursor-pointer"
+                />
+                <div>
+                  <span className="font-black text-amber-950 text-xs block">
+                    Aplica IGV (18%)
+                  </span>
+                  <span className="text-[10px] text-amber-800">
+                    Se calculará el 18% sobre (Precio Base - Descuento + Horas Extra) y se sumará al presupuesto total pactado.
+                  </span>
+                </div>
+              </label>
+              {appliesIgv && (
+                <div className="text-right shrink-0">
+                  <span className="text-[10px] text-slate-500 font-bold block">Monto IGV (18%):</span>
+                  <span className="text-xs font-black font-mono text-amber-900">+ S/. {igvAmount.toFixed(2)}</span>
+                </div>
+              )}
+            </div>
+
             {/* Additional equipment / services field */}
             <div className="text-xs">
               <label className="block text-slate-700 font-bold mb-1">
@@ -941,10 +1055,17 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
             {/* Summary Totals & Deposit Box */}
             <div className="bg-slate-900 text-white p-4 rounded-2xl grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
               <div>
-                <span className="text-slate-400 text-[11px] block font-bold">PRESUPUESTO TOTAL (S/.)</span>
+                <span className="text-slate-400 text-[11px] block font-bold">
+                  PRESUPUESTO TOTAL (S/.) {appliesIgv ? '(Inc. IGV)' : ''}
+                </span>
                 <span className="text-xl font-black text-amber-400 font-mono">
                   S/. {computedTotal.toFixed(2)}
                 </span>
+                {appliesIgv && (
+                  <span className="text-[9.5px] text-slate-400 block mt-0.5">
+                    Subtotal: S/. {baseSubtotal.toFixed(2)} | IGV: S/. {igvAmount.toFixed(2)}
+                  </span>
+                )}
               </div>
 
               <div className="space-y-1.5">
@@ -1070,18 +1191,202 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
               </label>
             </div>
 
-            {/* Special Additional Clause (Cláusula Quinta en Contrato) */}
+            {/* Section: Technical Crew & USB Delivery Configuration */}
+            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3">
+              <label className="block text-xs font-black text-slate-900 uppercase tracking-wide flex items-center gap-1.5">
+                <ShieldCheck className="w-4 h-4 text-amber-600" />
+                Despliegue Técnico, Capacidad USB y Políticas de Custodia & Revisiones
+              </label>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                {/* Despliegue Técnico y Personal */}
+                <div>
+                  <label className="block text-slate-700 font-bold mb-1">
+                    Despliegue Técnico & Personal Acreditado <span className="text-slate-400 font-normal">(Según paquete)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={technicalCrewDeployment}
+                    onChange={(e) => setTechnicalCrewDeployment(e.target.value)}
+                    placeholder="Ej: 2 Videógrafos Cine 4K, 1 Fotógrafo Principal, 1 Piloto Dron"
+                    className="w-full p-2 text-xs border border-slate-300 rounded-xl bg-white font-medium"
+                  />
+                  <span className="text-[10px] text-slate-400 block mt-0.5">
+                    Se ajusta automáticamente con el paquete y es 100% editable
+                  </span>
+                </div>
+
+                {/* Capacidad de USB */}
+                <div>
+                  <label className="block text-slate-700 font-bold mb-1">
+                    Capacidad de Memoria USB 3.2 a Entregar
+                  </label>
+                  <div className="flex gap-2">
+                    <select
+                      value={usbCapacity}
+                      onChange={(e) => setUsbCapacity(e.target.value)}
+                      className="w-1/2 p-2 text-xs font-bold border border-slate-300 rounded-xl bg-white"
+                    >
+                      <option value="32GB">USB 32GB</option>
+                      <option value="64GB">USB 64GB</option>
+                      <option value="128GB">USB 128GB (Estándar)</option>
+                      <option value="256GB">USB 256GB</option>
+                      <option value="512GB">USB 512GB</option>
+                    </select>
+                    <input
+                      type="text"
+                      value={usbCapacity}
+                      onChange={(e) => setUsbCapacity(e.target.value)}
+                      placeholder="Capacidad personalizada"
+                      className="w-1/2 p-2 text-xs border border-slate-300 rounded-xl bg-white font-mono"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Políticas de Revisiones, Custodia y Reprogramación */}
+              <div className="p-3 bg-white rounded-xl border border-slate-200 space-y-2.5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100">
+                  <div>
+                    <span className="font-bold text-xs text-slate-800 block">¿Incluir Política de Revisiones en el Contrato?</span>
+                    <span className="text-[10px] text-slate-500">Si se desmarca, la cláusula de revisiones no figurará en el contrato.</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setIncludeRevisionsPolicy(true)}
+                      className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
+                        includeRevisionsPolicy 
+                          ? 'bg-amber-600 text-white shadow-sm' 
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      ✓ SÍ
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIncludeRevisionsPolicy(false)}
+                      className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
+                        !includeRevisionsPolicy 
+                          ? 'bg-slate-800 text-white shadow-sm' 
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      ✗ NO
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5 text-xs">
+                  <div className={`p-2.5 rounded-xl border transition-all ${includeRevisionsPolicy ? 'bg-white border-slate-200' : 'bg-slate-50 border-slate-200 opacity-50'}`}>
+                    <label className="block text-[10px] text-slate-600 font-bold mb-1">
+                      Rondas de Revisiones
+                    </label>
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="number"
+                        min={0}
+                        max={10}
+                        disabled={!includeRevisionsPolicy}
+                        value={revisionRounds}
+                        onChange={(e) => setRevisionRounds(parseInt(e.target.value) || 0)}
+                        className="w-full p-1.5 text-xs font-black border border-slate-300 rounded-lg text-center"
+                      />
+                      <span className="text-[10px] text-slate-500 font-bold shrink-0">rondas</span>
+                    </div>
+                  </div>
+
+                  <div className={`p-2.5 rounded-xl border transition-all ${includeRevisionsPolicy ? 'bg-white border-slate-200' : 'bg-slate-50 border-slate-200 opacity-50'}`}>
+                    <label className="block text-[10px] text-slate-600 font-bold mb-1">
+                      Plazo Solicitud Revisiones
+                    </label>
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="number"
+                        min={1}
+                        max={30}
+                        disabled={!includeRevisionsPolicy}
+                        value={revisionDaysLimit}
+                        onChange={(e) => setRevisionDaysLimit(parseInt(e.target.value) || 5)}
+                        className="w-full p-1.5 text-xs font-black border border-slate-300 rounded-lg text-center"
+                      />
+                      <span className="text-[10px] text-slate-500 font-bold shrink-0">días hab.</span>
+                    </div>
+                  </div>
+
+                  <div className="p-2.5 bg-white rounded-xl border border-slate-200">
+                    <label className="block text-[10px] text-slate-600 font-bold mb-1">
+                      Custodia Archivos Brutos/Master
+                    </label>
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="number"
+                        min={1}
+                        max={60}
+                        value={rawCustodyDays}
+                        onChange={(e) => setRawCustodyDays(parseInt(e.target.value) || 3)}
+                        className="w-full p-1.5 text-xs font-black border border-slate-300 rounded-lg text-center"
+                      />
+                      <span className="text-[10px] text-slate-500 font-bold shrink-0">días post.</span>
+                    </div>
+                  </div>
+
+                  <div className="p-2.5 bg-white rounded-xl border border-slate-200">
+                    <label className="block text-[10px] text-slate-600 font-bold mb-1">
+                      Anticipación Reprogramación
+                    </label>
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="number"
+                        min={1}
+                        max={12}
+                        value={rescheduleNoticeMonths}
+                        onChange={(e) => setRescheduleNoticeMonths(parseInt(e.target.value) || 1)}
+                        className="w-full p-1.5 text-xs font-black border border-slate-300 rounded-lg text-center"
+                      />
+                      <span className="text-[10px] text-slate-500 font-bold shrink-0">mes(es)</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Automatic Legal & Operating Clauses Preview Banner */}
+              <div className="bg-amber-50/70 p-3 rounded-xl border border-amber-200/80 space-y-1.5 text-[11px] text-amber-950">
+                <span className="font-black text-amber-900 block uppercase text-[10px] flex items-center gap-1">
+                  ✓ Cláusulas Habilitadas Automáticamente en el Contrato:
+                </span>
+                <ul className="space-y-1 text-[10px] leading-relaxed">
+                  <li>
+                    <strong>• Propiedad Intelectual:</strong> Los derechos patrimoniales sobre el material audiovisual producido corresponden a Corporación TCT, otorgando al Cliente la autorización para su libre uso, reproducción y difusión según lo pactado.
+                  </li>
+                  <li>
+                    <strong>• Postergación / Reprogramación:</strong> Mín. deberá solicitarse con {rescheduleNoticeMonths} mes de anticipación previa disponibilidad; caso contrario el adelanto inicial no será reembolsable.
+                  </li>
+                  <li>
+                    <strong>• Logística de Campo:</strong> Para la jornada de cobertura audiovisual, EL CLIENTE proveerá oportunamente de viáticos al personal técnico acreditado.
+                  </li>
+                  <li>
+                    <strong>• Política de Custodia:</strong> * CORPORACIÓN TCT conservará los archivos MASTER y brutos, hasta un plazo de 0{rawCustodyDays} días posteriores a la fecha programada de entrega del material. De no recoger el Cliente en la fecha de entrega pactada sólo se conservará el archivo MASTER final.
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            {/* Special Additional Clause (Cláusula Quinta en Contrato - Opcional) */}
             <div className="text-xs space-y-1">
               <label className="block text-slate-700 font-bold flex items-center justify-between">
-                <span>Cláusula Quinta Especial / Acuerdos Adicionales (Opcional)</span>
+                <span>Cláusula Especial Adicional (Opcional)</span>
                 <span className="text-[10px] text-slate-400 font-normal">
-                  * Si se registra, figurará en el contrato. Si queda vacío, no se mostrará Cláusula Quinta.
+                  * Si se registra algún detalle, figurará en el contrato. Si queda vacío, no se mostrará.
                 </span>
               </label>
               <textarea
                 rows={2}
-                value={specialContractClause}
-                onChange={(e) => setSpecialContractClause(e.target.value)}
+                value={additionalCustomClause}
+                onChange={(e) => {
+                  setAdditionalCustomClause(e.target.value);
+                  setSpecialContractClause(e.target.value);
+                }}
                 placeholder="Ej. Se acuerda entregar 1 reel vertical para Instagram a los 5 días hábiles..."
                 className="w-full p-2 border border-slate-300 rounded-xl bg-white text-xs text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-amber-500 focus:outline-none"
               />

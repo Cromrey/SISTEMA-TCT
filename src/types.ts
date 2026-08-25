@@ -180,7 +180,9 @@ export interface ProductionProject {
   listPrice?: number; // Precio de lista original
   discountAmount?: number; // Descuento aplicado en S/.
   discountReason?: string; // Motivo del descuento
-  totalBudget: number; // Precio final pactado
+  appliesIgv?: boolean; // Aplica IGV (18%)
+  igvAmount?: number; // Monto calculado del 18% de IGV
+  totalBudget: number; // Precio final pactado (incluye IGV si aplica)
   initialDeposit: number;
   paymentMethodDeposit?: string;
   depositOperationCode?: string; // Código de Operación bancaria
@@ -200,17 +202,26 @@ export interface ProductionProject {
   proformaAttachmentUrl?: string; // Proforma en PDF o Imagen
   proformaAttachmentName?: string;
   
-  // Production specifics
+  // Production specifics & Contract terms
   includesPhotobook: boolean;
   includesPhotoshoot?: boolean; // Sesión fotográfica (1 cámara de foto, plazo 15 días)
   includesDrone: boolean;
   giftIncluded?: boolean; // Regalo sorpresa entregado el mismo día de los entregables finales
   usbSpecification?: string; // e.g. "Memoria USB 3.2 de 128 GB" o especificación personalizada
-  specialContractClause?: string; // Cláusula especial / acuerdos mutuos entre cliente y TCT
+  usbCapacity?: string; // e.g. "128GB", "64GB", "32GB", "256GB"
+  technicalCrewDeployment?: string; // e.g. "2 Videógrafos Cine 4K, 1 Fotógrafo Principal, 1 Piloto Operador de Dron Acreditado"
+  includeRevisionsPolicy?: boolean; // Si se activa muestra la política de revisiones, si es false está oculta
+  revisionRounds?: number; // e.g. 2 rondas de revisiones menores
+  revisionDaysLimit?: number; // e.g. 5 días posteriores a la entrega del borrador
+  rawCustodyDays?: number; // e.g. 3 días posteriores a la entrega final
+  rescheduleNoticeMonths?: number; // e.g. 1 mes de anticipación
+  specialContractClause?: string; // Cláusula especial / acuerdos mutuos opcionales
+  additionalCustomClauseTitle?: string;
+  additionalCustomClause?: string;
   estimatedDeliveryDate: string;
   
   // Multiple event schedules / shifts if applicable
-  eventSchedules?: Array<{ date: string; startTime: string; endTime: string }>;
+  eventSchedules?: Array<{ id?: string; date: string; startTime: string; endTime: string; reference?: string; notes?: string }>;
   
   // Client Authorization for Online Publication (SI / NO)
   authorizeInternetPublishing?: boolean;
@@ -384,12 +395,30 @@ export interface TCTCompanyInfo {
   contractMasterStorageDays: number; // default 5 days
 }
 
+export interface TCTContractDesign {
+  headerTitle: string; // "CORPORACIÓN TCT"
+  headerSubtitle: string; // "Servicios Audiovisuales, Producción Cinematográfica & Fotografía Profesional"
+  headerLegalInfo: string; // "RUC: 20608941253 • Jr. Las Camelias 450, San Isidro, Lima • Tel: (01) 748-9200"
+  logoType: 'official' | 'custom';
+  customLogoUrl?: string;
+  fontFamily: 'sans' | 'serif' | 'mono' | 'geometric';
+  primaryColor: string; // e.g. '#0f172a'
+  accentColor: string; // e.g. '#b45309' or '#f59e0b'
+  contractTitle: string; // "CONTRATO PRIVADO DE PRESTACIÓN DE SERVICIOS AUDIOVISUALES"
+  contractIntroText: string; // "Conste por el presente documento el contrato de servicios celebrado entre CORPORACIÓN TCT y EL CLIENTE."
+  clause4PreservationText: string;
+  internetPublishingAgreementText: string;
+  footerText: string; // "Documento emitido formalmente por el Sistema Integrado de Gestión Audiovisual de Corporación TCT: SIGAT • Perú"
+  signerAdvisorRole: string; // "Director de Producción / Asesor Comercial"
+}
+
 export interface TCTMasterRules {
   companyInfo?: TCTCompanyInfo;
   packages: TCTMasterPackage[];
   equipmentCatalog: EquipmentItem[];
   stepChecklists: MasterStepChecklistRule[];
   templateFormats: TemplateDocumentFormat[];
+  contractDesign?: TCTContractDesign;
   standardExtraHourRate: number;
   maxDiscountPercentageAllowed: number;
   authorizedContractHolders: string[];

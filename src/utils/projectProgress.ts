@@ -3,6 +3,9 @@ import { ProductionProject } from '../types';
 export interface ProjectProgressInfo {
   totalSteps: number;
   completedSteps: number;
+  totalChecklistCount: number;
+  checkedChecklistCount: number;
+  totalAttachmentsCount: number;
   rawPercentage: number;
   percentage: number;
   formattedPercentage: string;
@@ -13,18 +16,22 @@ export interface ProjectProgressInfo {
   isStrikethrough: boolean;
   isStep3Blinking: boolean;
   needsStep123Attachments: boolean;
+  isContractSigned: boolean;
 }
 
 export const getProjectProgressInfo = (project: ProductionProject): ProjectProgressInfo => {
   let totalSteps = 0;
   let completedSteps = 0;
-  let hasAttachmentsInSteps = 0;
+  let totalChecklistCount = 0;
+  let checkedChecklistCount = 0;
+  let totalAttachmentsCount = 0;
   let completedStepsWithoutAttachments = 0;
 
   // Track attachments specifically for steps 1, 2, 3
   let step1HasAttachment = Boolean(project.proformaAttachmentUrl);
   let step2HasAttachment = Boolean(project.depositReceiptUrl);
   let step3HasAttachment = false;
+  let step3Status = 'pending';
 
   if (project.phases && Array.isArray(project.phases)) {
     project.phases.forEach(phase => {
@@ -32,16 +39,28 @@ export const getProjectProgressInfo = (project: ProductionProject): ProjectProgr
         phase.steps.forEach(step => {
           totalSteps += 1;
           const hasAtt = Boolean(step.attachments && step.attachments.length > 0);
-          
-          if (step.stepNumber === 1 && hasAtt) step1HasAttachment = true;
-          if (step.stepNumber === 2 && hasAtt) step2HasAttachment = true;
-          if (step.stepNumber === 3 && hasAtt) step3HasAttachment = true;
+          const attCount = step.attachments ? step.attachments.length : 0;
+          totalAttachmentsCount += attCount;
+
+          if (step.stepNumber === 1 && (hasAtt || project.proformaAttachmentUrl)) step1HasAttachment = true;
+          if (step.stepNumber === 2 && (hasAtt || project.depositReceiptUrl)) step2HasAttachment = true;
+          if (step.stepNumber === 3) {
+            step3Status = step.status;
+            if (hasAtt || project.contractExported) step3HasAttachment = true;
+          }
+
+          if (step.checklist && Array.isArray(step.checklist)) {
+            step.checklist.forEach(item => {
+              totalChecklistCount += 1;
+              if (item.completed) {
+                checkedChecklistCount += 1;
+              }
+            });
+          }
 
           if (step.status === 'completed') {
             completedSteps += 1;
-            if (hasAtt) {
-              hasAttachmentsInSteps += 1;
-            } else {
+            if (!hasAtt && step.stepNumber <= 3) {
               completedStepsWithoutAttachments += 1;
             }
           }
@@ -50,74 +69,88 @@ export const getProjectProgressInfo = (project: ProductionProject): ProjectProgr
     });
   }
 
+  // Include project-level attachments in count
+  if (project.proformaAttachmentUrl) totalAttachmentsCount += 1;
+  if (project.depositReceiptUrl) totalAttachmentsCount += 1;
+
   // If there are no steps defined, default to 12
   const total = totalSteps > 0 ? totalSteps : 12;
+  const effectiveTotalChecklist = totalChecklistCount > 0 ? totalChecklistCount : 36;
   
-  // Custom milestone mapping:
-  // Step 3 active or completed (Contract Generation & Formalization Phase 1) = exactly 25.00%
-  let rawPercentage = 0;
-  if (completedSteps === 0) {
-    rawPercentage = 0.0;
-  } else if (completedSteps === 1) {
-    rawPercentage = 8.33;
-  } else if (completedSteps === 2 || completedSteps === 3 || project.contractExported) {
-    rawPercentage = 25.00;
+  // Is Step 3 (Firma de Contrato) finalized?
+  const isContractSigned = Boolean(
+    (step3Status === 'completed' || completedSteps >= 3) && 
+    (step3HasAttachment || project.contractExported)
+  );
+
+  // Dynamic progress calculation based on:
+  // - Checklist items completed (50% weight)
+  // - Step status completions (35% weight)
+  // - Required attachments uploaded (15% weight)
+  const checklistRatio = effectiveTotalChecklist > 0 ? checkedChecklistCount / effectiveTotalChecklist : 0;
+  const stepRatio = total > 0 ? completedSteps / total : 0;
+  const initialAttRatio = (Number(step1HasAttachment) + Number(step2HasAttachment) + Number(step3HasAttachment)) / 3;
+
+  let calculatedPercentage = 0;
+  if (completedSteps === 0 && checkedChecklistCount === 0 && totalAttachmentsCount === 0) {
+    calculatedPercentage = 0;
   } else {
-    // 4 to 12 steps
-    const remainingSteps = completedSteps - 3;
-    const remainingRatio = 25.00 + (remainingSteps / 9) * 75.00;
-    rawPercentage = Number(Math.min(100, remainingRatio).toFixed(2));
+    // Weighted progress
+    const weighted = (checklistRatio * 50) + (stepRatio * 35) + (Math.min(1, totalAttachmentsCount / 6) * 15);
+    calculatedPercentage = Math.min(100, Math.max(0, weighted));
+
+    // Cap progress according to milestone bounds
+    if (!isContractSigned) {
+      // Before contract signing is finalized, progress is bounded between 0% and 25.00%
+      const preSigningRatio = (checkedChecklistCount + totalAttachmentsCount + completedSteps) / (effectiveTotalChecklist * 0.25 + 3 + 3);
+      calculatedPercentage = Math.min(25.00, Number((preSigningRatio * 25.00).toFixed(2)));
+    } else {
+      // After contract signing, ensure at least 25.00% and scale up to 100%
+      const postRatio = (checkedChecklistCount + totalAttachmentsCount + (completedSteps * 2)) / (effectiveTotalChecklist + 10 + (total * 2));
+      calculatedPercentage = Math.min(100, Math.max(25.00, Number((25.00 + postRatio * 75.00).toFixed(2))));
+      if (completedSteps >= 12) {
+        calculatedPercentage = 100.00;
+      }
+    }
   }
 
-  const formattedPercentage = `${rawPercentage.toFixed(2)}%`;
-
-  // Check if steps 1, 2, 3 have their supporting proof attachments
-  const allInitialThreeHaveAttachments = step1HasAttachment && step2HasAttachment && step3HasAttachment;
-
-  // Strikethrough condition:
-  // When contract is generated from Nueva Producción or step 3 is pending proof/attachments
-  const isStrikethrough = Boolean(
-    project.contractPendingAttachment ||
-    (completedSteps >= 3 && !allInitialThreeHaveAttachments && completedSteps <= 4)
-  );
-
-  const isStep3Blinking = isStrikethrough || (completedSteps === 3 && !allInitialThreeHaveAttachments);
+  // Strikethrough rule:
+  // Shows 0% or calculated % crossed out (tachado) until contract is signed
+  const isStrikethrough = !isContractSigned;
+  const isStep3Blinking = isStrikethrough && (completedSteps >= 2 || checkedChecklistCount >= 3);
   const needsStep123Attachments = isStrikethrough;
 
-  // Validation requirement: check if attachments are present
-  const hasUploadedFiles = 
-    hasAttachmentsInSteps > 0 || 
-    Boolean(project.proformaAttachmentUrl) || 
-    Boolean(project.depositReceiptUrl) || 
-    Boolean(project.contractExported);
+  const rawPercentage = calculatedPercentage;
+  const formattedPercentage = `${rawPercentage.toFixed(2)}%`;
 
-  const isValidated = !isStrikethrough && (
-    completedSteps === 0 || 
-    Boolean(project.contractExported && allInitialThreeHaveAttachments) ||
-    completedStepsWithoutAttachments === 0
-  );
-  
+  const isValidated = isContractSigned && completedStepsWithoutAttachments === 0;
   const pendingAttachmentsCount = isValidated ? 0 : completedStepsWithoutAttachments;
 
   let validationMessage = '';
   if (isStrikethrough) {
-    validationMessage = '⚠️ AVANCE AL 25.00% EN REVISIÓN (TACHADO): Se debe adjuntar por única vez en los Pasos 1, 2 y 3 los archivos de sustento (Proforma, Voucher de Adelanto y Contrato Firmado) para validar formalmente el cumplimiento y habilitar el Paso 4.';
+    validationMessage = `⚠️ AVANCE ${formattedPercentage} EN REVISIÓN (TACHADO): Comenzará a habilitarse el avance oficial sin tachar una vez se complete la firma del contrato y se adjunten las evidencias iniciales.`;
   } else if (!isValidated) {
     validationMessage = '⚠️ ATENCIÓN: Se debe añadir los archivos adjuntos obligatorios en los pasos completados para validar el porcentaje de avance real.';
+  } else {
+    validationMessage = '✓ Avance validado con contrato firmado y evidencias de soporte.';
   }
 
   return {
     totalSteps: total,
     completedSteps,
+    totalChecklistCount: effectiveTotalChecklist,
+    checkedChecklistCount,
+    totalAttachmentsCount,
     rawPercentage,
     percentage: rawPercentage,
     formattedPercentage,
-    hasMandatoryAttachments: hasUploadedFiles,
+    hasMandatoryAttachments: totalAttachmentsCount > 0,
     isValidated,
     pendingAttachmentsCount,
     validationMessage,
     isStrikethrough,
     isStep3Blinking,
-    needsStep123Attachments
+    needsStep123Attachments,
+    isContractSigned
   };
 };
