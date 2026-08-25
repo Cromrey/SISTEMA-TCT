@@ -204,8 +204,16 @@ export interface ProductionProject {
   
   // Production specifics & Contract terms
   includesPhotobook: boolean;
+  photobookPagesCount?: number; // Número de páginas del fotobook (ej. 30, 40, 50 páginas)
   includesPhotoshoot?: boolean; // Sesión fotográfica (1 cámara de foto, plazo 15 días)
   includesDrone: boolean;
+  includesFlyerDesign?: boolean; // Diseño de 01 Flyer digital de invitación
+  flyerAnticipationDays?: number; // Días de anticipación para entrega del Flyer (ej. 15 días)
+  includesAudioVideoSpot?: boolean; // Producir 01 Spot Publicitario de Audio y Video
+  spotDuration?: string; // Duración del Spot (ej. "30 seg", "45 seg", "60 seg")
+  spotPrice?: number; // Precio por la creación del spot en S/.
+  includesLiveStreaming?: boolean; // Transmisión en vivo por internet (Streaming HD)
+  liveStreamPrice?: number; // Precio del streaming (si es 0 figura como CORTESÍA)
   giftIncluded?: boolean; // Regalo sorpresa entregado el mismo día de los entregables finales
   usbSpecification?: string; // e.g. "Memoria USB 3.2 de 128 GB" o especificación personalizada
   usbCapacity?: string; // e.g. "128GB", "64GB", "32GB", "256GB"

@@ -53,6 +53,21 @@ export async function exportElementToPdf(
     }
 
     const safeFilename = filename.toLowerCase().endsWith('.pdf') ? filename : `${filename}.pdf`;
+    
+    // Add page numbers on exported PDF (autonumerado 1/n páginas)
+    const totalPages = pdf.getNumberOfPages();
+    for (let i = 1; i <= totalPages; i++) {
+      pdf.setPage(i);
+      pdf.setFontSize(8);
+      pdf.setTextColor(100, 116, 139);
+      pdf.text(
+        `Corporación TCT • Contrato de Servicios Audiovisuales • (${i}/${totalPages} páginas)`,
+        pdfWidth / 2,
+        pdfHeight - 4,
+        { align: 'center' }
+      );
+    }
+
     pdf.save(safeFilename);
     return true;
   } catch (error) {

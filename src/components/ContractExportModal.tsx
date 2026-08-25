@@ -98,7 +98,10 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
   };
 
   const totalExtraHours = (currentData.extraHoursCount || 0) * (currentData.extraHourRate || 150);
-  const baseSubtotal = (currentData.listPrice || currentData.totalBudget) - (currentData.discountAmount || 0) + totalExtraHours;
+  const spotPriceNum = currentData.includesAudioVideoSpot ? (currentData.spotPrice || 0) : 0;
+  const liveStreamPriceNum = currentData.includesLiveStreaming ? (currentData.liveStreamPrice || 0) : 0;
+  const baseServicesTotal = (currentData.listPrice || currentData.totalBudget) + spotPriceNum + liveStreamPriceNum;
+  const baseSubtotal = baseServicesTotal - (currentData.discountAmount || 0) + totalExtraHours;
   const appliesIgv = Boolean(currentData.appliesIgv);
   const igvAmount = appliesIgv 
     ? (currentData.igvAmount !== undefined && currentData.igvAmount > 0 
@@ -564,7 +567,9 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
                       const curList = editedProject.listPrice || editedProject.totalBudget || 0;
                       const curDisc = editedProject.discountAmount || 0;
                       const curExtra = (editedProject.extraHoursCount || 0) * (editedProject.extraHourRate || 150);
-                      const sub = curList - curDisc + curExtra;
+                      const curSpot = editedProject.includesAudioVideoSpot ? (editedProject.spotPrice || 0) : 0;
+                      const curLive = editedProject.includesLiveStreaming ? (editedProject.liveStreamPrice || 0) : 0;
+                      const sub = curList + curSpot + curLive - curDisc + curExtra;
                       const igv = checked ? Number((sub * 0.18).toFixed(2)) : 0;
                       const tot = checked ? Number((sub + igv).toFixed(2)) : Number(sub.toFixed(2));
                       setEditedProject({
@@ -596,6 +601,29 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
                   <td className="p-1.5 text-slate-600">{currentData.selectedPackageName || 'Servicio Audiovisual'}</td>
                   <td className="p-1.5 text-right font-mono font-bold">S/. {(currentData.listPrice || currentData.totalBudget).toLocaleString()}</td>
                 </tr>
+
+                {/* Spot de Audio y Video (antes de descuento) */}
+                {currentData.includesAudioVideoSpot ? (
+                  <tr className="bg-rose-50/40">
+                    <td className="p-1.5 font-bold text-rose-950">Producir 01 Spot de Audio y Video</td>
+                    <td className="p-1.5 text-rose-900 text-[9px]">Duración: {currentData.spotDuration || '30 seg'} • Edición y locución publicitaria</td>
+                    <td className="p-1.5 text-right font-mono font-bold text-rose-900">+ S/. {(currentData.spotPrice || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                  </tr>
+                ) : null}
+
+                {/* Transmisión en Vivo por Internet (antes de descuento) */}
+                {currentData.includesLiveStreaming ? (
+                  <tr className="bg-sky-50/40">
+                    <td className="p-1.5 font-bold text-sky-950">Transmisión en Vivo por Internet (Streaming HD)</td>
+                    <td className="p-1.5 text-sky-900 text-[9px]">
+                      {(currentData.liveStreamPrice || 0) === 0 ? 'Transmisión HD en vivo (CORTESÍA)' : 'Transmisión HD en vivo y switchera digital'}
+                    </td>
+                    <td className="p-1.5 text-right font-mono font-bold text-sky-900">
+                      {(currentData.liveStreamPrice || 0) === 0 ? 'S/. 0.00 (CORTESÍA)' : `+ S/. ${(currentData.liveStreamPrice || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                    </td>
+                  </tr>
+                ) : null}
+
                 {currentData.discountAmount && currentData.discountAmount > 0 ? (
                   <tr className="bg-emerald-50/50">
                     <td className="p-1.5 font-bold text-emerald-900">Descuento Promocional Autorizado</td>
@@ -603,6 +631,7 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
                     <td className="p-1.5 text-right font-mono font-bold text-emerald-700">- S/. {currentData.discountAmount.toLocaleString()}</td>
                   </tr>
                 ) : null}
+
                 {currentData.extraHoursCount && currentData.extraHoursCount > 0 ? (
                   <tr>
                     <td className="p-1.5 font-bold text-purple-900">Horas Adicionales ({currentData.extraHoursCount} hrs)</td>
@@ -610,6 +639,7 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
                     <td className="p-1.5 text-right font-mono font-bold text-purple-900">+ S/. {totalExtraHours.toLocaleString()}</td>
                   </tr>
                 ) : null}
+
                 {appliesIgv ? (
                   <tr className="bg-amber-50/40">
                     <td className="p-1.5 font-bold text-amber-950">IGV (18%)</td>
@@ -617,6 +647,7 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
                     <td className="p-1.5 text-right font-mono font-bold text-amber-900">+ S/. {igvAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                   </tr>
                 ) : null}
+
                 <tr className="bg-slate-100 font-black">
                   <td className="p-1.5 text-slate-900">PRESUPUESTO TOTAL PACTADO:</td>
                   <td className="p-1.5 text-slate-600 text-[9px]">
@@ -626,6 +657,7 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
                     S/. {computedTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </td>
                 </tr>
+
                 <tr>
                   <td className="p-1.5 font-bold text-slate-900">1. Adelanto Inicial (Firma / Reserva)</td>
                   <td className="p-1.5 text-slate-600">
@@ -640,6 +672,7 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
                   </td>
                   <td className="p-1.5 text-right font-mono font-bold text-emerald-700">S/. {currentData.initialDeposit.toLocaleString()}</td>
                 </tr>
+
                 <tr className="bg-amber-50/60 font-bold">
                   <td className="p-1.5 text-amber-950">2. Saldo en Campo (Límite 7:00 PM)</td>
                   <td className="p-1.5 text-amber-900 text-[9px]">
@@ -653,26 +686,13 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
             </table>
           </div>
 
-          {/* Clause 4: Deliverables, USB, Revisions (Optional) & Custody */}
+          {/* Clause 4: Entregables y Especificaciones */}
           <div className="space-y-1 page-break-inside-avoid">
             <h3 className="font-black text-slate-900 uppercase tracking-wide flex items-center justify-between text-[11px]">
               <div className="flex items-center gap-1">
                 <span className="w-3.5 h-3.5 rounded-full bg-slate-900 text-amber-400 text-[9px] flex items-center justify-center font-bold">4</span>
-                <span>
-                  CLÁUSULA CUARTA: ENTREGABLES, ESPECIFICACIÓN DE USB{currentData.includeRevisionsPolicy ? ', POLÍTICA DE REVISIONES' : ''} Y CUSTODIA
-                </span>
+                <span>CLÁUSULA CUARTA: ENTREGABLES Y ESPECIFICACIONES</span>
               </div>
-              {isEditing && (
-                <label className="flex items-center gap-1.5 text-[10px] font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-300 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={Boolean(editedProject.includeRevisionsPolicy)}
-                    onChange={(e) => setEditedProject({ ...editedProject, includeRevisionsPolicy: e.target.checked })}
-                    className="w-3.5 h-3.5 text-amber-600 rounded"
-                  />
-                  <span>¿Activar Política de Revisiones?</span>
-                </label>
-              )}
             </h3>
 
             <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 space-y-2 text-[10px]">
@@ -689,7 +709,7 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
                   )}
                 </div>
 
-                {/* 2. Sesión Fotográfica (Conditional based on photoshoot checkbox) */}
+                {/* 2. Sesión Fotográfica (Conditional) */}
                 {currentData.includesPhotoshoot && (
                   <div className="p-2 bg-white rounded-lg border border-slate-200 shadow-2xs">
                     <span className="font-black text-slate-900 block flex items-center gap-1">
@@ -700,29 +720,76 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
                   </div>
                 )}
 
-                {/* 3. Fotobook (Conditional based on photobook checkbox) */}
+                {/* 3. Fotobook (con número de páginas editable) */}
                 {currentData.includesPhotobook && (
                   <div className="p-2 bg-white rounded-lg border border-slate-200 shadow-2xs">
                     <span className="font-black text-slate-900 block flex items-center gap-1">
-                      📖 Fotobook
+                      📖 Fotobook ({currentData.photobookPagesCount || 30} páginas)
                     </span>
                     <span className="text-[10px] text-pink-700 font-bold">
                       Plazo: 30 días hábiles
                     </span>
-                    <p className="text-[9px] text-slate-600 font-medium mt-0.5">Maquetación, aprobación y encuadernado</p>
+                    <p className="text-[9px] text-slate-600 font-medium mt-0.5">
+                      {currentData.photobookPagesCount || 30} páginas en papel fotográfico premium, maquetación y encuadernado
+                    </p>
                   </div>
                 )}
 
-                {/* 4. Memoria USB (Always present) */}
+                {/* 4. Diseño 01 Flyer de Invitación (Conditional) */}
+                {currentData.includesFlyerDesign && (
+                  <div className="p-2 bg-white rounded-lg border border-slate-200 shadow-2xs">
+                    <span className="font-black text-slate-900 block flex items-center gap-1">
+                      🎨 Flyer de Invitación
+                    </span>
+                    <span className="text-[10px] text-indigo-700 font-bold">
+                      {currentData.flyerAnticipationDays || 15} días anticipación
+                    </span>
+                    <p className="text-[9px] text-slate-600 font-medium mt-0.5">
+                      Diseño 01 flyer digital exclusivo para redes sociales e invitaciones
+                    </p>
+                  </div>
+                )}
+
+                {/* 5. Spot de Audio y Video (Conditional) */}
+                {currentData.includesAudioVideoSpot && (
+                  <div className="p-2 bg-white rounded-lg border border-slate-200 shadow-2xs">
+                    <span className="font-black text-slate-900 block flex items-center gap-1">
+                      🎬 Spot Audio y Video
+                    </span>
+                    <span className="text-[10px] text-rose-700 font-bold">
+                      {currentData.spotDuration || '30 seg'} de duración
+                    </span>
+                    <p className="text-[9px] text-slate-600 font-medium mt-0.5">
+                      Edición comercial dinámica para pantallas y redes sociales
+                    </p>
+                  </div>
+                )}
+
+                {/* 6. Transmisión en Vivo por Internet (Conditional) */}
+                {currentData.includesLiveStreaming && (
+                  <div className="p-2 bg-white rounded-lg border border-slate-200 shadow-2xs">
+                    <span className="font-black text-slate-900 block flex items-center gap-1">
+                      📡 Transmisión en Vivo
+                    </span>
+                    <span className="text-[10px] text-sky-700 font-bold">
+                      {(currentData.liveStreamPrice || 0) === 0 ? 'Streaming HD (CORTESÍA)' : 'Streaming HD en Directo'}
+                    </span>
+                    <p className="text-[9px] text-slate-600 font-medium mt-0.5">
+                      Transmisión multicámara en vivo con switchera digital y retorno
+                    </p>
+                  </div>
+                )}
+
+                {/* 7. Memoria USB (Always present) */}
                 <div className="p-2 bg-white rounded-lg border border-slate-200 shadow-2xs">
                   <span className="font-black text-slate-900 block flex items-center gap-1">
                     💾 Memoria USB 3.2 ({currentData.usbCapacity || currentData.usbSpecification || '128GB'})
                   </span>
                   <span className="text-[10px] text-emerald-700 font-bold">Entrega con Saldo S/. 0</span>
-                  <p className="text-[9px] text-slate-600 font-medium mt-0.5">Material final masterizado en alta velocidad</p>
+                  <p className="text-[9px] text-slate-600 font-medium mt-0.5">Material final masterizado en alta resolución</p>
                 </div>
 
-                {/* 5. Regalo Sorpresa (Conditional based on giftIncluded, styled cleanly similar to others) */}
+                {/* 8. Regalo Sorpresa (Conditional) */}
                 {currentData.giftIncluded && (
                   <div className="p-2 bg-white rounded-lg border border-slate-200 shadow-2xs">
                     <span className="font-black text-slate-900 block flex items-center gap-1">
@@ -734,15 +801,6 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
                 )}
 
               </div>
-
-              {/* Policy: Revisions limit (Opcional - solo visible si includeRevisionsPolicy es true) */}
-              {currentData.includeRevisionsPolicy && (
-                <div className="bg-white p-2.5 rounded-lg border border-slate-200 text-slate-800 text-[10px] leading-relaxed">
-                  <p>
-                    * <strong>Política de Revisiones:</strong> EL CLIENTE tiene derecho a <strong>{currentData.revisionRounds || 2} rondas de revisiones</strong> menores de edición sin costo dentro de un plazo máximo de <strong>{currentData.revisionDaysLimit || 5} días hábiles</strong> posteriores a la entrega del primer borrador digital.
-                  </p>
-                </div>
-              )}
 
               {/* Preservation rule for master and raw files con título Política de Custodia */}
               <div className="bg-amber-50/90 p-3 rounded-xl border border-amber-300 text-amber-950 font-medium text-[10px] leading-relaxed shadow-2xs space-y-0.5">
@@ -766,20 +824,20 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
                     />
                   </div>
                   <div>
-                    <label className="font-bold text-slate-700 block">Rondas Revisión:</label>
+                    <label className="font-bold text-slate-700 block">Páginas Fotobook:</label>
                     <input
                       type="number"
-                      value={editedProject.revisionRounds || 2}
-                      onChange={(e) => setEditedProject({ ...editedProject, revisionRounds: parseInt(e.target.value) || 2 })}
+                      value={editedProject.photobookPagesCount || 30}
+                      onChange={(e) => setEditedProject({ ...editedProject, photobookPagesCount: parseInt(e.target.value) || 30 })}
                       className="w-full p-1 border rounded bg-white text-[9px]"
                     />
                   </div>
                   <div>
-                    <label className="font-bold text-slate-700 block">Días Límite Revisión:</label>
+                    <label className="font-bold text-slate-700 block">Días Anticipación Flyer:</label>
                     <input
                       type="number"
-                      value={editedProject.revisionDaysLimit || 5}
-                      onChange={(e) => setEditedProject({ ...editedProject, revisionDaysLimit: parseInt(e.target.value) || 5 })}
+                      value={editedProject.flyerAnticipationDays || 15}
+                      onChange={(e) => setEditedProject({ ...editedProject, flyerAnticipationDays: parseInt(e.target.value) || 15 })}
                       className="w-full p-1 border rounded bg-white text-[9px]"
                     />
                   </div>
@@ -797,40 +855,72 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
             </div>
           </div>
 
-          {/* Clause 5: General Conditions, Intellectual Property, Postponement & Field Logistics */}
+          {/* Clause 5: Política de Revisiones, Propiedad Intelectual y Difusión, Postergación y Condiciones Generes */}
           <div className="space-y-1 page-break-inside-avoid">
-            <h3 className="font-black text-slate-900 uppercase tracking-wide flex items-center gap-1 text-[11px]">
-              <span className="w-3.5 h-3.5 rounded-full bg-slate-900 text-amber-400 text-[9px] flex items-center justify-center font-bold">5</span>
-              CLÁUSULA QUINTA: PROPIEDAD INTELECTUAL, POSTERGACIÓN Y CONDICIONES GENERALES
+            <h3 className="font-black text-slate-900 uppercase tracking-wide flex items-center justify-between text-[11px]">
+              <div className="flex items-center gap-1">
+                <span className="w-3.5 h-3.5 rounded-full bg-slate-900 text-amber-400 text-[9px] flex items-center justify-center font-bold">5</span>
+                <span>
+                  CLÁUSULA QUINTA: {currentData.includeRevisionsPolicy ? 'POLÍTICA DE REVISIONES, ' : ''}PROPIEDAD INTELECTUAL Y DIFUSIÓN, POSTERGACIÓN Y CONDICIONES GENERALES
+                </span>
+              </div>
+              {isEditing && (
+                <label className="flex items-center gap-1.5 text-[10px] font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-300 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(editedProject.includeRevisionsPolicy)}
+                    onChange={(e) => setEditedProject({ ...editedProject, includeRevisionsPolicy: e.target.checked })}
+                    className="w-3.5 h-3.5 text-amber-600 rounded"
+                  />
+                  <span>¿Activar Política de Revisiones?</span>
+                </label>
+              )}
             </h3>
 
             <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 space-y-1.5 text-[10px] leading-relaxed">
-              {/* 5.1 Propiedad Intelectual */}
+              {/* 5.1 Política de Revisiones (Opcional - solo visible si includeRevisionsPolicy es true) */}
+              {currentData.includeRevisionsPolicy && (
+                <div className="p-2 bg-white rounded-lg border border-slate-200 text-slate-800">
+                  <p>
+                    <strong>5.1. Política de Revisiones:</strong> EL CLIENTE tiene derecho a <strong>{currentData.revisionRounds || 2} rondas de revisiones</strong> menores de edición sin costo dentro de un plazo máximo de <strong>{currentData.revisionDaysLimit || 5} días hábiles</strong> posteriores a la entrega del primer borrador digital.
+                  </p>
+                </div>
+              )}
+
+              {/* 5.2 (o 5.1) Propiedad Intelectual y Difusión */}
               <div className="p-2 bg-white rounded-lg border border-slate-200">
                 <p className="text-slate-800">
-                  <strong>5.1. Propiedad Intelectual:</strong> Los derechos patrimoniales sobre el material audiovisual producido corresponden a Corporación TCT, otorgando al Cliente la autorización para su libre uso, reproducción y difusión según lo pactado.
+                  {currentData.authorizeInternetPublishing ? (
+                    <>
+                      <strong>5.2. Propiedad Intelectual y Difusión:</strong> Los derechos patrimoniales sobre el material audiovisual producido corresponden a Corporación TCT, otorgando al Cliente la autorización para su libre uso, reproducción y difusión según lo pactado.
+                    </>
+                  ) : (
+                    <>
+                      <strong>5.2. Propiedad Intelectual:</strong> Los derechos patrimoniales sobre el material audiovisual producido corresponden a Corporación TCT.
+                    </>
+                  )}
                 </p>
               </div>
 
-              {/* 5.2 Postergación */}
+              {/* 5.3 Postergación */}
               <div className="p-2 bg-white rounded-lg border border-slate-200">
                 <p className="text-slate-800">
-                  <strong>5.2. Postergación o Reprogramación:</strong> Cualquier solicitud de cambio de fecha deberá realizarse con un mínimo de <strong>{currentData.rescheduleNoticeMonths || 1} mes de anticipación</strong> y estará sujeta a disponibilidad técnica y de agenda de la empresa. En caso contrario o desistimiento unilateral, el adelanto inicial no será reembolsable.
+                  <strong>5.3. Postergación o Reprogramación:</strong> Cualquier solicitud de cambio de fecha deberá realizarse con un mínimo de <strong>{currentData.rescheduleNoticeMonths || 1} mes de anticipación</strong> y estará sujeta a disponibilidad técnica y de agenda de la empresa. En caso contrario o desistimiento unilateral, el adelanto inicial no será reembolsable.
                 </p>
               </div>
 
-              {/* 5.3 Logística de Campo */}
+              {/* 5.4 Logística de Campo */}
               <div className="p-2 bg-white rounded-lg border border-slate-200">
                 <p className="text-slate-800">
-                  <strong>5.3. Logística de Campo:</strong> Para la jornada de cobertura audiovisual, EL CLIENTE proveerá oportunamente de viáticos al personal técnico acreditado asignado al evento.
+                  <strong>5.4. Logística de Campo:</strong> Para la jornada de cobertura audiovisual, EL CLIENTE proveerá oportunamente de <strong>viáticos</strong> al personal técnico acreditado asignado al evento.
                 </p>
               </div>
 
-              {/* 5.4 Cláusula Adicional Especial (Opcional - solo si existe o en edición) */}
+              {/* 5.5 Cláusula Adicional Especial (Opcional - solo si existe o en edición) */}
               {(hasSpecialClause || isEditing) && (
                 <div className="p-2 bg-amber-50/60 rounded-lg border border-amber-200 space-y-1">
                   <span className="font-black text-amber-950 block text-[9.5px]">
-                    5.4. Acuerdos Especiales Adicionales:
+                    5.5. Acuerdos Especiales Adicionales:
                   </span>
                   {isEditing ? (
                     <textarea

@@ -141,8 +141,16 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
 
   // Deliverables - Desactivados inicialmente (false por defecto)
   const [includesPhotobook, setIncludesPhotobook] = useState(false);
+  const [photobookPagesCount, setPhotobookPagesCount] = useState<number>(30);
   const [includesPhotoshoot, setIncludesPhotoshoot] = useState(false);
   const [includesDrone, setIncludesDrone] = useState(false);
+  const [includesFlyerDesign, setIncludesFlyerDesign] = useState(false);
+  const [flyerAnticipationDays, setFlyerAnticipationDays] = useState<number>(15);
+  const [includesAudioVideoSpot, setIncludesAudioVideoSpot] = useState(false);
+  const [spotDuration, setSpotDuration] = useState<string>('30 seg');
+  const [spotPriceStr, setSpotPriceStr] = useState<string>('0.00');
+  const [includesLiveStreaming, setIncludesLiveStreaming] = useState(false);
+  const [liveStreamPriceStr, setLiveStreamPriceStr] = useState<string>('0.00');
   const [giftIncluded, setGiftIncluded] = useState(false);
   const [specialContractClause, setSpecialContractClause] = useState('');
 
@@ -186,9 +194,12 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
   const discountAmountNum = discountAmountStr === '' ? 0 : Number(parseFloat(discountAmountStr).toFixed(2)) || 0;
   const extraHoursCountNum = extraHoursCountStr === '' ? 0 : Number(parseFloat(extraHoursCountStr).toFixed(2)) || 0;
   const initialDepositNum = initialDepositStr === '' ? 0 : Number(parseFloat(initialDepositStr).toFixed(2)) || 0;
+  const spotPriceNum = includesAudioVideoSpot && spotPriceStr !== '' ? Number(parseFloat(spotPriceStr).toFixed(2)) || 0 : 0;
+  const liveStreamPriceNum = includesLiveStreaming && liveStreamPriceStr !== '' ? Number(parseFloat(liveStreamPriceStr).toFixed(2)) || 0 : 0;
 
   const extraHoursTotal = Number((extraHoursCountNum * extraHourRate).toFixed(2));
-  const baseSubtotal = Number(Math.max(0, listPriceNum - discountAmountNum + extraHoursTotal).toFixed(2));
+  const baseServicesTotal = Number((listPriceNum + spotPriceNum + liveStreamPriceNum).toFixed(2));
+  const baseSubtotal = Number(Math.max(0, baseServicesTotal - discountAmountNum + extraHoursTotal).toFixed(2));
   const igvAmount = appliesIgv ? Number((baseSubtotal * 0.18).toFixed(2)) : 0;
   const computedTotal = appliesIgv ? Number((baseSubtotal + igvAmount).toFixed(2)) : baseSubtotal;
   const finalBalance = Number(Math.max(0, computedTotal - initialDepositNum).toFixed(2));
@@ -369,8 +380,16 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
       finalBalance,
       currency: 'PEN',
       includesPhotobook,
+      photobookPagesCount: includesPhotobook ? (Number(photobookPagesCount) || 30) : undefined,
       includesPhotoshoot,
       includesDrone,
+      includesFlyerDesign,
+      flyerAnticipationDays: includesFlyerDesign ? (Number(flyerAnticipationDays) || 15) : undefined,
+      includesAudioVideoSpot,
+      spotDuration: includesAudioVideoSpot ? (spotDuration.trim() || '30 seg') : undefined,
+      spotPrice: includesAudioVideoSpot ? spotPriceNum : undefined,
+      includesLiveStreaming,
+      liveStreamPrice: includesLiveStreaming ? liveStreamPriceNum : undefined,
       giftIncluded,
       specialContractClause: specialContractClause.trim(),
       authorizeInternetPublishing,
@@ -1012,6 +1031,130 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
               </div>
             </div>
 
+            {/* Extra Production Services: Spot de Audio/Video y Transmisión en Vivo */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs pt-1">
+              {/* 01 Spot Publicitario de Audio y Video */}
+              <div className={`p-3 rounded-2xl border transition-all ${
+                includesAudioVideoSpot 
+                  ? 'bg-rose-50/70 border-rose-300 ring-1 ring-rose-300' 
+                  : 'bg-slate-50 border-slate-200'
+              }`}>
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={includesAudioVideoSpot}
+                      onChange={(e) => setIncludesAudioVideoSpot(e.target.checked)}
+                      className="w-4 h-4 text-rose-600 rounded cursor-pointer"
+                    />
+                    <div>
+                      <span className="font-black text-rose-950 text-xs block">
+                        🎬 Producir 01 Spot de Audio y Video
+                      </span>
+                      <span className="text-[10px] text-slate-500">
+                        Edición comercial dinámica para pantallas y redes
+                      </span>
+                    </div>
+                  </label>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                    includesAudioVideoSpot ? 'bg-rose-600 text-white' : 'bg-slate-200 text-slate-600'
+                  }`}>
+                    {includesAudioVideoSpot ? 'SÍ' : 'NO'}
+                  </span>
+                </div>
+
+                {includesAudioVideoSpot && (
+                  <div className="grid grid-cols-2 gap-2 pt-1 border-t border-rose-200/70">
+                    <div>
+                      <label className="block text-[10px] text-rose-900 font-bold mb-0.5">
+                        Duración del Spot:
+                      </label>
+                      <input
+                        type="text"
+                        value={spotDuration}
+                        onChange={(e) => setSpotDuration(e.target.value)}
+                        placeholder="Ej. 30 seg, 60 seg"
+                        className="w-full p-1.5 text-xs font-bold border border-rose-300 rounded-lg bg-white text-rose-950"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] text-rose-900 font-bold mb-0.5">
+                        Precio Creación (S/.):
+                      </label>
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        value={spotPriceStr}
+                        onChange={handleNumericInput(setSpotPriceStr)}
+                        placeholder="0.00"
+                        className="w-full p-1.5 text-xs font-bold font-mono border border-rose-300 rounded-lg bg-white text-rose-950"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Transmisión en Vivo por Internet (Live Streaming HD) */}
+              <div className={`p-3 rounded-2xl border transition-all ${
+                includesLiveStreaming 
+                  ? 'bg-sky-50/70 border-sky-300 ring-1 ring-sky-300' 
+                  : 'bg-slate-50 border-slate-200'
+              }`}>
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={includesLiveStreaming}
+                      onChange={(e) => setIncludesLiveStreaming(e.target.checked)}
+                      className="w-4 h-4 text-sky-600 rounded cursor-pointer"
+                    />
+                    <div>
+                      <span className="font-black text-sky-950 text-xs block">
+                        📡 Transmisión en Vivo por Internet (Streaming HD)
+                      </span>
+                      <span className="text-[10px] text-slate-500">
+                        Difusión en tiempo real en redes o canal privado
+                      </span>
+                    </div>
+                  </label>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                    includesLiveStreaming ? 'bg-sky-600 text-white' : 'bg-slate-200 text-slate-600'
+                  }`}>
+                    {includesLiveStreaming ? 'SÍ' : 'NO'}
+                  </span>
+                </div>
+
+                {includesLiveStreaming && (
+                  <div className="flex items-center justify-between gap-2 pt-1 border-t border-sky-200/70">
+                    <div className="flex-1">
+                      <label className="block text-[10px] text-sky-900 font-bold mb-0.5">
+                        Precio Streaming (S/.) [0 = CORTESÍA]:
+                      </label>
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        value={liveStreamPriceStr}
+                        onChange={handleNumericInput(setLiveStreamPriceStr)}
+                        placeholder="0.00"
+                        className="w-full p-1.5 text-xs font-bold font-mono border border-sky-300 rounded-lg bg-white text-sky-950"
+                      />
+                    </div>
+                    <div className="shrink-0 self-end pb-1">
+                      {(parseFloat(liveStreamPriceStr || '0') === 0) ? (
+                        <span className="inline-block px-2.5 py-1 rounded-lg bg-emerald-600 text-white font-black text-[10px] shadow-xs">
+                          🎁 CORTESÍA (S/. 0.00)
+                        </span>
+                      ) : (
+                        <span className="inline-block px-2.5 py-1 rounded-lg bg-sky-900 text-sky-200 font-mono font-bold text-[10px]">
+                          + S/. {(parseFloat(liveStreamPriceStr || '0')).toFixed(2)}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
             {/* Checkbox: Aplica IGV (18%) */}
             <div className="p-3 rounded-xl bg-amber-50/70 border border-amber-300/80 flex items-center justify-between">
               <label className="flex items-center space-x-2.5 cursor-pointer">
@@ -1140,55 +1283,124 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
               </div>
             </div>
 
-            {/* Deliverable Checkboxes with updated requested names */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 pt-1 text-xs">
-              <label className="flex items-center space-x-2.5 cursor-pointer p-3 rounded-xl bg-pink-50 border border-pink-200 hover:bg-pink-100/70 transition-colors">
-                <input
-                  type="checkbox"
-                  checked={includesPhotobook}
-                  onChange={(e) => setIncludesPhotobook(e.target.checked)}
-                  className="w-4 h-4 text-pink-600 rounded"
-                />
-                <span className="font-bold text-pink-950 text-xs">
-                  Incluye Fotobook (plazo 30 Días)
-                </span>
-              </label>
+            {/* Deliverable Checkboxes with updated requested options */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 pt-1 text-xs">
+              {/* Fotobook con páginas editables */}
+              <div className={`p-3 rounded-xl border transition-all ${
+                includesPhotobook ? 'bg-pink-50 border-pink-300 ring-1 ring-pink-300' : 'bg-slate-50 border-slate-200'
+              }`}>
+                <label className="flex items-center space-x-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={includesPhotobook}
+                    onChange={(e) => setIncludesPhotobook(e.target.checked)}
+                    className="w-4 h-4 text-pink-600 rounded"
+                  />
+                  <span className="font-bold text-pink-950 text-xs">
+                    Incluye Fotobook (plazo 30 Días)
+                  </span>
+                </label>
+                {includesPhotobook && (
+                  <div className="mt-2 pt-2 border-t border-pink-200/70 flex items-center justify-between gap-2">
+                    <span className="text-[11px] font-bold text-pink-900">Número de Páginas:</span>
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="number"
+                        min={10}
+                        max={120}
+                        value={photobookPagesCount}
+                        onChange={(e) => setPhotobookPagesCount(parseInt(e.target.value) || 30)}
+                        className="w-16 p-1 text-xs font-black text-center border border-pink-300 rounded-lg bg-white text-pink-950"
+                      />
+                      <span className="text-[10px] text-pink-700 font-bold">págs</span>
+                    </div>
+                  </div>
+                )}
+              </div>
 
-              <label className="flex items-center space-x-2.5 cursor-pointer p-3 rounded-xl bg-purple-50 border border-purple-200 hover:bg-purple-100/70 transition-colors">
-                <input
-                  type="checkbox"
-                  checked={includesPhotoshoot}
-                  onChange={(e) => setIncludesPhotoshoot(e.target.checked)}
-                  className="w-4 h-4 text-purple-600 rounded"
-                />
-                <span className="font-bold text-purple-950 text-xs">
-                  Incluye sesión fotográfica (1 camara de foto, plazo 15 días )
-                </span>
-              </label>
+              {/* Flyer Digital de Invitación */}
+              <div className={`p-3 rounded-xl border transition-all ${
+                includesFlyerDesign ? 'bg-indigo-50 border-indigo-300 ring-1 ring-indigo-300' : 'bg-slate-50 border-slate-200'
+              }`}>
+                <label className="flex items-center space-x-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={includesFlyerDesign}
+                    onChange={(e) => setIncludesFlyerDesign(e.target.checked)}
+                    className="w-4 h-4 text-indigo-600 rounded"
+                  />
+                  <span className="font-bold text-indigo-950 text-xs">
+                    Diseño 01 Flyer Digital Invitación
+                  </span>
+                </label>
+                {includesFlyerDesign && (
+                  <div className="mt-2 pt-2 border-t border-indigo-200/70 flex items-center justify-between gap-2">
+                    <span className="text-[11px] font-bold text-indigo-900">Anticipación Entrega:</span>
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="number"
+                        min={1}
+                        max={60}
+                        value={flyerAnticipationDays}
+                        onChange={(e) => setFlyerAnticipationDays(parseInt(e.target.value) || 15)}
+                        className="w-16 p-1 text-xs font-black text-center border border-indigo-300 rounded-lg bg-white text-indigo-950"
+                      />
+                      <span className="text-[10px] text-indigo-700 font-bold">días</span>
+                    </div>
+                  </div>
+                )}
+              </div>
 
-              <label className="flex items-center space-x-2.5 cursor-pointer p-3 rounded-xl bg-sky-50 border border-sky-200 hover:bg-sky-100/70 transition-colors">
-                <input
-                  type="checkbox"
-                  checked={includesDrone}
-                  onChange={(e) => setIncludesDrone(e.target.checked)}
-                  className="w-4 h-4 text-sky-600 rounded"
-                />
-                <span className="font-bold text-sky-950 text-xs">
-                  Incluye Cobertura Dron 4K
-                </span>
-              </label>
+              {/* Sesión Fotográfica */}
+              <div className={`p-3 rounded-xl border transition-all ${
+                includesPhotoshoot ? 'bg-purple-50 border-purple-300' : 'bg-slate-50 border-slate-200'
+              }`}>
+                <label className="flex items-center space-x-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={includesPhotoshoot}
+                    onChange={(e) => setIncludesPhotoshoot(e.target.checked)}
+                    className="w-4 h-4 text-purple-600 rounded"
+                  />
+                  <span className="font-bold text-purple-950 text-xs">
+                    Incluye sesión fotográfica (1 camara de foto, plazo 15 días )
+                  </span>
+                </label>
+              </div>
 
-              <label className="flex items-center space-x-2.5 cursor-pointer p-3 rounded-xl bg-amber-50/80 border border-amber-200 hover:bg-amber-100/70 transition-colors">
-                <input
-                  type="checkbox"
-                  checked={giftIncluded}
-                  onChange={(e) => setGiftIncluded(e.target.checked)}
-                  className="w-4 h-4 text-amber-600 rounded"
-                />
-                <span className="font-bold text-amber-950 text-xs">
-                  Incluye Regalo Sorpresa TCT (día de entrega)
-                </span>
-              </label>
+              {/* Dron 4K */}
+              <div className={`p-3 rounded-xl border transition-all ${
+                includesDrone ? 'bg-sky-50 border-sky-300' : 'bg-slate-50 border-slate-200'
+              }`}>
+                <label className="flex items-center space-x-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={includesDrone}
+                    onChange={(e) => setIncludesDrone(e.target.checked)}
+                    className="w-4 h-4 text-sky-600 rounded"
+                  />
+                  <span className="font-bold text-sky-950 text-xs">
+                    Incluye Cobertura Dron 4K
+                  </span>
+                </label>
+              </div>
+
+              {/* Regalo Sorpresa TCT */}
+              <div className={`p-3 rounded-xl border transition-all ${
+                giftIncluded ? 'bg-amber-50 border-amber-300' : 'bg-slate-50 border-slate-200'
+              }`}>
+                <label className="flex items-center space-x-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={giftIncluded}
+                    onChange={(e) => setGiftIncluded(e.target.checked)}
+                    className="w-4 h-4 text-amber-600 rounded"
+                  />
+                  <span className="font-bold text-amber-950 text-xs">
+                    Incluye Regalo Sorpresa TCT (día de entrega)
+                  </span>
+                </label>
+              </div>
             </div>
 
             {/* Section: Technical Crew & USB Delivery Configuration */}
@@ -1353,11 +1565,13 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
               {/* Automatic Legal & Operating Clauses Preview Banner */}
               <div className="bg-amber-50/70 p-3 rounded-xl border border-amber-200/80 space-y-1.5 text-[11px] text-amber-950">
                 <span className="font-black text-amber-900 block uppercase text-[10px] flex items-center gap-1">
-                  ✓ Cláusulas Habilitadas Automáticamente en el Contrato:
+                  ✓ Cláusulas Habilitadas en el Contrato:
                 </span>
                 <ul className="space-y-1 text-[10px] leading-relaxed">
                   <li>
-                    <strong>• Propiedad Intelectual:</strong> Los derechos patrimoniales sobre el material audiovisual producido corresponden a Corporación TCT, otorgando al Cliente la autorización para su libre uso, reproducción y difusión según lo pactado.
+                    <strong>• {authorizeInternetPublishing ? 'Propiedad Intelectual y Difusión' : 'Propiedad Intelectual'}:</strong> {authorizeInternetPublishing 
+                      ? 'Los derechos patrimoniales sobre el material audiovisual producido corresponden a Corporación TCT, otorgando al Cliente la autorización para su libre uso, reproducción y difusión según lo pactado.'
+                      : 'Los derechos patrimoniales sobre el material audiovisual producido corresponden a Corporación TCT.'}
                   </li>
                   <li>
                     <strong>• Postergación / Reprogramación:</strong> Mín. deberá solicitarse con {rescheduleNoticeMonths} mes de anticipación previa disponibilidad; caso contrario el adelanto inicial no será reembolsable.
@@ -1392,13 +1606,20 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
               />
             </div>
 
-            {/* Online Publication Authorization (Resaltado en Color Especial y Negrita) */}
+            {/* Online Publication Authorization (SI / NO) */}
             <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-500/15 via-amber-400/10 to-amber-500/15 border-2 border-amber-400/80 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div className="flex items-center space-x-2.5">
                 <Globe className="w-5 h-5 text-amber-600 shrink-0" />
-                <span className="text-xs sm:text-sm font-black text-slate-950 tracking-tight">
-                  El Cliente autoriza la publicacion del evento, en internet
-                </span>
+                <div>
+                  <span className="text-xs sm:text-sm font-black text-slate-950 tracking-tight block">
+                    ¿Autoriza la publicación en internet y medios digitales? (SI / NO)
+                  </span>
+                  <span className="text-[10px] text-slate-600">
+                    {authorizeInternetPublishing 
+                      ? '✓ Habilita cláusula completa de Propiedad Intelectual y Difusión.' 
+                      : '✕ Mostrará únicamente los derechos patrimoniales a favor de Corporación TCT.'}
+                  </span>
+                </div>
               </div>
 
               <div className="flex items-center space-x-2 shrink-0 self-end sm:self-auto">
