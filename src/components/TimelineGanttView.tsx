@@ -110,9 +110,10 @@ export const TimelineGanttView: React.FC<TimelineGanttViewProps> = ({
 
       const tasks: GanttTaskItem[] = [];
 
-      // Phase 1: Pre-producción (14 to 3 days before event)
+      // Phase 1: Pre-producción (Flyer lead days: 20 to 3 days before event)
+      const flyerLeadDays = project.flyerLeadDays || 20;
       const p1Start = new Date(eventDateObj);
-      p1Start.setDate(p1Start.getDate() - 14);
+      p1Start.setDate(p1Start.getDate() - flyerLeadDays);
       const p1Step1End = new Date(eventDateObj);
       p1Step1End.setDate(p1Step1End.getDate() - 7);
       const p1Step2End = new Date(eventDateObj);
@@ -159,9 +160,10 @@ export const TimelineGanttView: React.FC<TimelineGanttViewProps> = ({
       const p6DeliveryEnd = new Date(p6DeliveryStart);
       p6DeliveryEnd.setDate(p6DeliveryEnd.getDate() + 5);
 
+      const custodyDays = project.rawCustodyDays || 3;
       const p6PurgeStart = new Date(p6DeliveryEnd);
       const p6PurgeEnd = new Date(p6PurgeStart);
-      p6PurgeEnd.setDate(p6PurgeEnd.getDate() + 3); // 3 Days Final Storage Policy
+      p6PurgeEnd.setDate(p6PurgeEnd.getDate() + custodyDays); // Custody Policy (default 3 days)
 
       // Map step definitions to actual dates
       const stepDateMap: Record<number, { start: Date; end: Date; milestone?: boolean; sla?: number }> = {

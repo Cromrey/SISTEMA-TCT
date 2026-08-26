@@ -17,7 +17,43 @@ export interface ProjectProgressInfo {
   isStep3Blinking: boolean;
   needsStep123Attachments: boolean;
   isContractSigned: boolean;
+  isStep2Checklist3Complete: boolean;
 }
+
+/**
+ * Checks if the project has satisfied requirements up to Checklist 3 of Step 2
+ * Unlocks the progress percentage strikethrough (erasing tachado) and enables printing.
+ */
+export const checkIsStep2Checklist3Complete = (project: ProductionProject): boolean => {
+  if (!project.phases || !Array.isArray(project.phases) || project.phases.length === 0) {
+    return false;
+  }
+  const allSteps = project.phases.flatMap(p => p.steps || []);
+  const step2 = allSteps.find(s => s.stepNumber === 2);
+  const step3 = allSteps.find(s => s.stepNumber === 3);
+
+  // If contract is exported or Step 3 or subsequent is in progress/completed
+  if (project.contractExported || (step3 && (step3.status === 'completed' || step3.status === 'in_progress'))) {
+    return true;
+  }
+
+  // If Step 2 is marked completed or at least 2 steps completed
+  const completedSteps = allSteps.filter(s => s.status === 'completed').length;
+  if (completedSteps >= 2 || (step2 && step2.status === 'completed')) {
+    return true;
+  }
+
+  // Check Step 2 checklist: completed up to checklist 3
+  if (step2 && step2.checklist && Array.isArray(step2.checklist) && step2.checklist.length > 0) {
+    const checkedCount = step2.checklist.filter(c => c.completed).length;
+    const checklist3Completed = Boolean(step2.checklist[2]?.completed);
+    if (checklist3Completed || checkedCount >= 3 || (step2.checklist.length <= 3 && checkedCount === step2.checklist.length)) {
+      return true;
+    }
+  }
+
+  return false;
+};
 
 export const getProjectProgressInfo = (project: ProductionProject): ProjectProgressInfo => {
   let totalSteps = 0;
@@ -90,6 +126,8 @@ export const getProjectProgressInfo = (project: ProductionProject): ProjectProgr
     (step3HasAttachment || project.contractExported)
   );
 
+  const isStep2DoneWithChecklist3 = checkIsStep2Checklist3Complete(project);
+
   let calculatedPercentage = 0;
   if (completedSteps === 0 && checkedChecklistCount === 0 && totalAttachmentsCount === 0) {
     calculatedPercentage = 0;
@@ -117,10 +155,10 @@ export const getProjectProgressInfo = (project: ProductionProject): ProjectProgr
     }
   }
 
-  // Strikethrough rule: percentage is strikethrough (tachado) until Step 3 is signed with attachment
-  const isStrikethrough = !isContractSigned;
-  const isStep3Blinking = isStrikethrough && (completedSteps >= 2 || checkedChecklistCount >= 3);
-  const needsStep123Attachments = isStrikethrough;
+  // Strikethrough rule: percentage is strikethrough (tachado) until Step 2 Checklist 3 is completed
+  const isStrikethrough = !isStep2DoneWithChecklist3;
+  const isStep3Blinking = !isContractSigned && isStep2DoneWithChecklist3;
+  const needsStep123Attachments = !isContractSigned;
 
   const rawPercentage = calculatedPercentage;
   const formattedPercentage = `${rawPercentage.toFixed(2)}%`;
@@ -130,7 +168,9 @@ export const getProjectProgressInfo = (project: ProductionProject): ProjectProgr
 
   let validationMessage = '';
   if (isStrikethrough) {
-    validationMessage = `⚠️ AVANCE ${formattedPercentage} EN REVISIÓN (TACHADO): Se habilitará el avance oficial sin tachar una vez se complete la firma del contrato (Paso 3) y se adjunte el documento firmado.`;
+    validationMessage = `⚠️ AVANCE ${formattedPercentage} EN REVISIÓN (TACHADO): Se habilitará el avance oficial sin tachar y la impresión al completar hasta el Checklist 3 del Paso 2 (Recepción y validación de adelanto).`;
+  } else if (!isContractSigned) {
+    validationMessage = `⚡ AVANCE HABILITADO (${formattedPercentage}): Checklist de anticipo verificado. Hito activo: Firma y suscripción de contrato (Paso 3).`;
   } else if (completedSteps >= 12 && !step12HasAttachment) {
     validationMessage = '⚠️ PASO 12 PENDIENTE DE ADJUNTO: Para alcanzar el 100.00%, adjunte el Acta de Conformidad o comprobante de entrega.';
   } else if (!isValidated) {
@@ -155,6 +195,7 @@ export const getProjectProgressInfo = (project: ProductionProject): ProjectProgr
     isStrikethrough,
     isStep3Blinking,
     needsStep123Attachments,
-    isContractSigned
+    isContractSigned,
+    isStep2Checklist3Complete: isStep2DoneWithChecklist3
   };
 };

@@ -38,7 +38,8 @@ import {
   Trash2,
   Trophy,
   Users,
-  UserPlus
+  UserPlus,
+  Sliders
 } from 'lucide-react';
 import { CalendarView } from './CalendarView';
 import { ExecutiveSummaryModule } from './ExecutiveSummaryModule';
@@ -71,6 +72,7 @@ interface AdminDashboardProps {
   onOpenReportPrint: (project: ProductionProject) => void;
   onOpenContractExport: (project: ProductionProject) => void;
   onOpenAnalytics: () => void;
+  onOpenRulesModal?: () => void;
   onUpdateProject?: (project: ProductionProject) => void;
   onDeleteProject?: (projectId: string) => void;
   savedQuickFilter?: 'all' | 'pending' | 'in_progress' | 'completed' | 'overdue' | 'due_this_week' | 'high_priority' | 'waiting_approval' | 'phase_specific';
@@ -94,6 +96,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onOpenReportPrint,
   onOpenContractExport,
   onOpenAnalytics,
+  onOpenRulesModal,
   onUpdateProject,
   onDeleteProject,
   savedQuickFilter = 'all',
@@ -326,13 +329,19 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       ? effectiveUsersList.find(u => u.id === selectedUserFilter)
       : null;
 
+    const uName = selectedUserObj ? (selectedUserObj.username || '').toLowerCase() : '';
+    const uFullFirst = selectedUserObj ? (selectedUserObj.fullName || '').toLowerCase().split(' ')[0] : '';
+
     const matchesUser = !selectedUserObj || (
-      p.contractHolder?.toLowerCase().includes(selectedUserObj.username.toLowerCase()) ||
-      p.contractHolder?.toLowerCase().includes(selectedUserObj.fullName.toLowerCase().split(' ')[0].toLowerCase()) ||
-      (p.assignedStaff && p.assignedStaff.some(s => 
-        s.toLowerCase().includes(selectedUserObj.username.toLowerCase()) || 
-        s.toLowerCase().includes(selectedUserObj.fullName.toLowerCase().split(' ')[0].toLowerCase())
-      ))
+      (p.contractHolder && uName && p.contractHolder.toLowerCase().includes(uName)) ||
+      (p.contractHolder && uFullFirst && p.contractHolder.toLowerCase().includes(uFullFirst)) ||
+      (p.createdByName && uName && p.createdByName.toLowerCase().includes(uName)) ||
+      (p.createdByName && uFullFirst && p.createdByName.toLowerCase().includes(uFullFirst)) ||
+      (p.assignedStaff && Array.isArray(p.assignedStaff) && p.assignedStaff.some(s => {
+        const sName = typeof s === 'string' ? s : (s && typeof s === 'object' ? s.name || '' : '');
+        const sNameLower = sName.toLowerCase();
+        return (uName && sNameLower.includes(uName)) || (uFullFirst && sNameLower.includes(uFullFirst));
+      }))
     );
 
     return matchesSearch && matchesType && matchesGroup && matchesUser;
@@ -477,11 +486,22 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <span>Ver Calendario</span>
             </button>
 
+            {onOpenRulesModal && (
+              <button
+                onClick={onOpenRulesModal}
+                className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer border border-slate-300"
+                title="Configuración de Reglas del Sistema, Plantillas y Parámetros TCT"
+              >
+                <Sliders className="w-4 h-4 text-amber-600" />
+                <span>Reglas</span>
+              </button>
+            )}
+
             {onOpenUsersManagement && (
               <button
                 onClick={onOpenUsersManagement}
                 className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer border border-slate-300"
-                title="Administración y Creación de Usuarios"
+                title="Administración y Creación de Usuarios (Empleados y Admins)"
               >
                 <UserPlus className="w-4 h-4 text-slate-700" />
                 <span>Usuarios</span>
@@ -537,14 +557,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
             {/* Individual user pills */}
             {effectiveUsersList.map((usr) => {
-              const userProjectsCount = projects.filter(p => 
-                p.contractHolder?.toLowerCase().includes(usr.username.toLowerCase()) ||
-                p.contractHolder?.toLowerCase().includes(usr.fullName.toLowerCase().split(' ')[0].toLowerCase()) ||
-                (p.assignedStaff && p.assignedStaff.some(s => 
-                  s.toLowerCase().includes(usr.username.toLowerCase()) || 
-                  s.toLowerCase().includes(usr.fullName.toLowerCase().split(' ')[0].toLowerCase())
-                ))
-              ).length;
+              const usrName = (usr.username || '').toLowerCase();
+              const usrFullFirst = (usr.fullName || '').toLowerCase().split(' ')[0];
+
+              const userProjectsCount = projects.filter(p => {
+                const holderMatch = (p.contractHolder && usrName && p.contractHolder.toLowerCase().includes(usrName)) ||
+                                    (p.contractHolder && usrFullFirst && p.contractHolder.toLowerCase().includes(usrFullFirst));
+                const creatorMatch = (p.createdByName && usrName && p.createdByName.toLowerCase().includes(usrName)) ||
+                                     (p.createdByName && usrFullFirst && p.createdByName.toLowerCase().includes(usrFullFirst));
+                const staffMatch = p.assignedStaff && Array.isArray(p.assignedStaff) && p.assignedStaff.some(s => {
+                  const sName = typeof s === 'string' ? s : (s && typeof s === 'object' ? s.name || '' : '');
+                  const sNameLower = sName.toLowerCase();
+                  return (usrName && sNameLower.includes(usrName)) || (usrFullFirst && sNameLower.includes(usrFullFirst));
+                });
+                return holderMatch || creatorMatch || staffMatch;
+              }).length;
 
               const isSelected = selectedUserFilter === usr.id;
 

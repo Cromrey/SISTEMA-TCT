@@ -4,8 +4,8 @@ import { ProductionProject } from '../types';
 
 /**
  * High-reliability PDF & Printable Document Handler for Corporación TCT
- * Works seamlessly in desktop browsers (PC/Mac), mobile devices, and inside sandboxed environments.
- * Strictly includes "TCT" watermark across all generated documents.
+ * Strict A4 Vertical format (210mm x 297mm) with multi-page slicing,
+ * TCT Watermark, dynamic compagination (1/n páginas), and full signature rendering.
  */
 
 export async function exportElementToPdf(
@@ -20,11 +20,11 @@ export async function exportElementToPdf(
   }
 
   try {
-    // Ensure element scroll position doesn't clip content on desktop
+    // Preserve scroll position and make sure content is unclipped
     const prevScrollTop = targetEl.scrollTop;
     targetEl.scrollTop = 0;
 
-    // Render the DOM node to canvas using high-DPI scaling
+    // Render DOM node to high-DPI canvas
     const canvas = await html2canvas(targetEl, {
       scale: 2,
       useCORS: true,
@@ -33,65 +33,79 @@ export async function exportElementToPdf(
       backgroundColor: '#ffffff',
       scrollX: 0,
       scrollY: 0,
-      windowWidth: Math.max(targetEl.scrollWidth, 900)
+      windowWidth: Math.max(targetEl.scrollWidth, 960)
     });
 
     targetEl.scrollTop = prevScrollTop;
 
-    const imgData = canvas.toDataURL('image/jpeg', 0.98);
-    const pdf = new jsPDF('p', 'mm', 'a4');
-    const pdfWidth = pdf.internal.pageSize.getWidth(); // 210mm
-    const pdfHeight = pdf.internal.pageSize.getHeight(); // 297mm
+    const pdf = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4'
+    });
 
-    const marginX = 6;
-    const marginY = 6;
-    const contentWidth = pdfWidth - (marginX * 2);
-    const contentHeight = (canvas.height * contentWidth) / canvas.width;
+    const pdfWidth = 210; // A4 width mm
+    const pdfHeight = 297; // A4 height mm
+    const marginX = 8;
+    const marginY = 10;
+    const contentWidthMm = pdfWidth - (marginX * 2); // 194mm
+    const contentHeightMm = pdfHeight - (marginY * 2); // 277mm
 
-    let heightLeft = contentHeight;
-    let position = marginY;
+    // Calculate canvas pixels per page
+    const pxPerMm = canvas.width / contentWidthMm;
+    const pageSlicePx = contentHeightMm * pxPerMm;
+    const totalPages = Math.max(1, Math.ceil(canvas.height / pageSlicePx));
 
-    // Add first page content
-    pdf.addImage(imgData, 'JPEG', marginX, position, contentWidth, contentHeight);
-    heightLeft -= (pdfHeight - (marginY * 2));
+    for (let page = 0; page < totalPages; page++) {
+      if (page > 0) {
+        pdf.addPage('a4', 'portrait');
+      }
 
-    // Subsequent pages if document exceeds 1 page
-    while (heightLeft > 0) {
-      position = heightLeft - contentHeight + marginY;
-      pdf.addPage();
-      pdf.addImage(imgData, 'JPEG', marginX, position, contentWidth, contentHeight);
-      heightLeft -= (pdfHeight - (marginY * 2));
-    }
+      // Slice the canvas for the current page
+      const pageCanvas = document.createElement('canvas');
+      pageCanvas.width = canvas.width;
+      const currentSliceHeight = Math.min(pageSlicePx, canvas.height - (page * pageSlicePx));
+      pageCanvas.height = currentSliceHeight;
 
-    const safeFilename = filename.toLowerCase().endsWith('.pdf') ? filename : `${filename}.pdf`;
-    
-    // Inject "TCT" Watermark and Page Numbers across all pages (autonumerado 1/n páginas)
-    const totalPages = pdf.getNumberOfPages();
-    for (let i = 1; i <= totalPages; i++) {
-      pdf.setPage(i);
+      const ctx = pageCanvas.getContext('2d');
+      if (ctx) {
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+        ctx.drawImage(
+          canvas,
+          0, page * pageSlicePx, canvas.width, currentSliceHeight,
+          0, 0, canvas.width, currentSliceHeight
+        );
 
-      // Watermark "TCT" centered and rotated in subtle tone
+        const pageImgData = pageCanvas.toDataURL('image/jpeg', 0.98);
+        const sliceHeightMm = (currentSliceHeight * contentWidthMm) / canvas.width;
+        pdf.addImage(pageImgData, 'JPEG', marginX, marginY, contentWidthMm, sliceHeightMm);
+      }
+
+      // Background Watermark "TCT" centered and rotated on every page
       pdf.saveGraphicsState();
-      pdf.setTextColor(220, 226, 235);
+      pdf.setTextColor(230, 235, 243);
       pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(85);
-      pdf.text('TCT', pdfWidth / 2, pdfHeight / 2 + 10, {
+      pdf.setFontSize(80);
+      pdf.text('TCT', pdfWidth / 2, pdfHeight / 2 + 5, {
         align: 'center',
         angle: 45
       });
       pdf.restoreGraphicsState();
 
-      // Footer numbering (1/n páginas)
-      pdf.setFontSize(8);
+      // Footer compagination (Página 1/n)
+      pdf.setFontSize(7.5);
       pdf.setTextColor(100, 116, 139);
+      pdf.setFont('helvetica', 'normal');
       pdf.text(
-        `Corporación TCT • Lima, Perú • Documento Oficial (${i}/${totalPages} páginas)`,
+        `Corporación TCT • Lima, Perú • Documento Oficial (Página ${page + 1}/${totalPages})`,
         pdfWidth / 2,
         pdfHeight - 4,
         { align: 'center' }
       );
     }
 
+    const safeFilename = filename.toLowerCase().endsWith('.pdf') ? filename : `${filename}.pdf`;
     pdf.save(safeFilename);
     return true;
   } catch (error) {
@@ -102,75 +116,24 @@ export async function exportElementToPdf(
 }
 
 export function printElement(elementId: string, docTitle: string = 'Documento Corporación TCT'): void {
+  const targetEl = document.getElementById(elementId);
+  if (!targetEl) {
+    console.error(`Target print element #${elementId} not found in DOM`);
+    return;
+  }
+
   try {
-    const targetEl = document.getElementById(elementId);
-    
-    // Inject optimized media print stylesheet with TCT watermark
-    const printStyleId = 'tct-dynamic-print-style';
-    let styleTag = document.getElementById(printStyleId) as HTMLStyleElement;
-    if (!styleTag) {
-      styleTag = document.createElement('style');
-      styleTag.id = printStyleId;
-      document.head.appendChild(styleTag);
-    }
+    // 1. Prepare styles collection (Tailwind styles + font rules + specific print formatting)
+    const styleTags = Array.from(document.querySelectorAll('link[rel="stylesheet"], style'))
+      .map(node => node.outerHTML)
+      .join('\n');
 
-    styleTag.innerHTML = `
-      @media print {
-        @page {
-          size: A4 portrait;
-          margin: 8mm 10mm;
-        }
-        body * {
-          visibility: hidden !important;
-        }
-        #${elementId}, #${elementId} * {
-          visibility: visible !important;
-        }
-        #${elementId} {
-          position: absolute !important;
-          left: 0 !important;
-          top: 0 !important;
-          width: 100% !important;
-          margin: 0 !important;
-          padding: 8px !important;
-          background: white !important;
-          color: #0f172a !important;
-          display: block !important;
-          -webkit-print-color-adjust: exact !important;
-          print-color-adjust: exact !important;
-        }
-        #${elementId}::before {
-          content: "TCT";
-          position: fixed;
-          top: 40%;
-          left: 30%;
-          font-size: 110px;
-          font-weight: 900;
-          color: rgba(200, 210, 225, 0.12);
-          transform: rotate(-35deg);
-          pointer-events: none;
-          z-index: 0;
-        }
-        .print\\:hidden, button, .no-print {
-          display: none !important;
-        }
-        .page-break-inside-avoid {
-          break-inside: avoid !important;
-          page-break-inside: avoid !important;
-        }
-      }
-    `;
+    // 2. Clone content HTML
+    const contentHtml = targetEl.innerHTML;
 
-    // Attempt direct window.print()
-    try {
-      window.print();
-      return;
-    } catch (directPrintErr) {
-      console.warn('Direct window.print failed, attempting iframe print...', directPrintErr);
-    }
-
-    // Fallback: hidden iframe print
+    // 3. Create a clean, isolated printing iframe
     const printFrame = document.createElement('iframe');
+    printFrame.setAttribute('aria-hidden', 'true');
     printFrame.style.position = 'fixed';
     printFrame.style.right = '0';
     printFrame.style.bottom = '0';
@@ -181,16 +144,11 @@ export function printElement(elementId: string, docTitle: string = 'Documento Co
     document.body.appendChild(printFrame);
 
     const frameDoc = printFrame.contentWindow?.document || printFrame.contentDocument;
-    if (!frameDoc) {
-      downloadPrintableHtml(elementId, `${docTitle}.html`, docTitle);
+    if (!frameDoc || !printFrame.contentWindow) {
+      // Fallback to popup or direct print
+      fallbackWindowPrint(contentHtml, docTitle, styleTags);
       return;
     }
-
-    const styles = Array.from(document.querySelectorAll('link[rel="stylesheet"], style'))
-      .map(node => node.outerHTML)
-      .join('\n');
-
-    const contentHtml = targetEl ? targetEl.innerHTML : document.body.innerHTML;
 
     frameDoc.open();
     frameDoc.write(`
@@ -200,33 +158,37 @@ export function printElement(elementId: string, docTitle: string = 'Documento Co
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>${docTitle}</title>
-        ${styles}
+        ${styleTags}
         <style>
           @page {
             size: A4 portrait;
-            margin: 8mm 10mm;
+            margin: 8mm 10mm 10mm 10mm;
           }
           * {
-            box-sizing: border-box;
+            box-sizing: border-box !important;
           }
-          body {
-            background: white !important;
+          html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            background: #ffffff !important;
             color: #0f172a !important;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
+            color-adjust: exact !important;
             font-size: 11px;
             line-height: 1.35;
-            position: relative;
+            overflow: visible !important;
+            height: auto !important;
           }
           body::before {
             content: "TCT";
             position: fixed;
-            top: 40%;
-            left: 30%;
-            font-size: 110px;
+            top: 45%;
+            left: 35%;
+            font-size: 120px;
             font-weight: 900;
-            color: rgba(200, 210, 225, 0.12);
+            color: rgba(200, 210, 225, 0.08);
             transform: rotate(-35deg);
             pointer-events: none;
             z-index: 0;
@@ -235,13 +197,18 @@ export function printElement(elementId: string, docTitle: string = 'Documento Co
             display: none !important;
           }
           .page-break-inside-avoid {
-            break-inside: avoid;
-            page-break-inside: avoid;
+            break-inside: avoid !important;
+            page-break-inside: avoid !important;
+          }
+          svg {
+            shape-rendering: geometricPrecision !important;
+            print-color-adjust: exact !important;
+            -webkit-print-color-adjust: exact !important;
           }
         </style>
       </head>
       <body>
-        <div class="p-2 sm:p-4 bg-white text-slate-900">
+        <div class="p-2 print:p-0">
           ${contentHtml}
         </div>
       </body>
@@ -249,24 +216,68 @@ export function printElement(elementId: string, docTitle: string = 'Documento Co
     `);
     frameDoc.close();
 
+    // Trigger print after styles and vectors finish evaluation
     setTimeout(() => {
       try {
         printFrame.contentWindow?.focus();
         printFrame.contentWindow?.print();
-        setTimeout(() => {
-          if (document.body.contains(printFrame)) {
-            document.body.removeChild(printFrame);
-          }
-        }, 3000);
       } catch (err) {
-        console.warn('Iframe print failed, falling back to downloadPrintableHtml', err);
-        downloadPrintableHtml(elementId, `${docTitle}.html`, docTitle);
+        console.warn('Iframe print restricted, triggering window fallback:', err);
+        fallbackWindowPrint(contentHtml, docTitle, styleTags);
+      } finally {
+        setTimeout(() => {
+          try {
+            if (document.body.contains(printFrame)) {
+              document.body.removeChild(printFrame);
+            }
+          } catch (e) {}
+        }, 3000);
       }
-    }, 400);
+    }, 450);
 
+  } catch (err) {
+    console.error('Print execution notice:', err);
+    // Direct system print fallback
+    window.print();
+  }
+}
+
+function fallbackWindowPrint(contentHtml: string, docTitle: string, styleTags: string): void {
+  try {
+    const printWin = window.open('', '_blank', 'width=900,height=800,menubar=no,toolbar=no,location=no,status=no');
+    if (!printWin) {
+      window.print();
+      return;
+    }
+
+    printWin.document.open();
+    printWin.document.write(`
+      <!DOCTYPE html>
+      <html lang="es">
+      <head>
+        <meta charset="utf-8">
+        <title>${docTitle}</title>
+        ${styleTags}
+        <style>
+          @page { size: A4 portrait; margin: 8mm 10mm 10mm 10mm; }
+          body { background: white !important; color: #0f172a !important; font-size: 11px; }
+          .print\\:hidden, button, .no-print { display: none !important; }
+        </style>
+      </head>
+      <body>
+        ${contentHtml}
+        <script>
+          window.onload = function() {
+            window.focus();
+            window.print();
+          };
+        </script>
+      </body>
+      </html>
+    `);
+    printWin.document.close();
   } catch (e) {
-    console.warn('Print helper error, downloading file fallback...', e);
-    downloadPrintableHtml(elementId, `${docTitle}.html`, docTitle);
+    window.print();
   }
 }
 

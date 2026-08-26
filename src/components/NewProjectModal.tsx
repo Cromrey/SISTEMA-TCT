@@ -141,16 +141,16 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
 
   // Deliverables - Desactivados inicialmente (false por defecto)
   const [includesPhotobook, setIncludesPhotobook] = useState(false);
-  const [photobookPagesCount, setPhotobookPagesCount] = useState<number>(30);
+  const [photobookPagesCount, setPhotobookPagesCount] = useState<number>(20);
   const [includesPhotoshoot, setIncludesPhotoshoot] = useState(false);
   const [includesDrone, setIncludesDrone] = useState(false);
   const [includesFlyerDesign, setIncludesFlyerDesign] = useState(false);
-  const [flyerAnticipationDays, setFlyerAnticipationDays] = useState<number>(15);
+  const [flyerAnticipationDays, setFlyerAnticipationDays] = useState<number>(20);
   const [includesAudioVideoSpot, setIncludesAudioVideoSpot] = useState(false);
   const [spotDuration, setSpotDuration] = useState<string>('30 seg');
-  const [spotPriceStr, setSpotPriceStr] = useState<string>('0.00');
+  const [spotPriceStr, setSpotPriceStr] = useState<string>('');
   const [includesLiveStreaming, setIncludesLiveStreaming] = useState(false);
-  const [liveStreamPriceStr, setLiveStreamPriceStr] = useState<string>('0.00');
+  const [liveStreamPriceStr, setLiveStreamPriceStr] = useState<string>('');
   const [giftIncluded, setGiftIncluded] = useState(false);
   const [specialContractClause, setSpecialContractClause] = useState('');
 
@@ -657,7 +657,7 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
               ))}
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
               <div>
                 <label className="block text-slate-700 font-bold mb-1 flex items-center justify-between">
                   <span>Título de la Producción *</span>
@@ -688,6 +688,17 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
                   value={eventLocation}
                   onChange={(e) => setEventLocation(e.target.value)}
                   placeholder="Salón / Distrito / Locación (Ej: Hacienda Villa, Cieneguilla)"
+                  className="w-full p-2.5 text-xs border border-slate-300 rounded-xl font-medium focus:ring-2 focus:ring-amber-500 focus:outline-none placeholder:text-slate-400 placeholder:font-normal bg-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-700 font-bold mb-1">Dirección Exacta del Evento</label>
+                <input
+                  type="text"
+                  value={eventAddress}
+                  onChange={(e) => setEventAddress(e.target.value)}
+                  placeholder="Av. Manuel Valle Km 5.5, Lurín"
                   className="w-full p-2.5 text-xs border border-slate-300 rounded-xl font-medium focus:ring-2 focus:ring-amber-500 focus:outline-none placeholder:text-slate-400 placeholder:font-normal bg-white"
                 />
               </div>
@@ -800,17 +811,6 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
                   </div>
                 </div>
               ))}
-            </div>
-
-            <div>
-              <label className="block text-slate-700 font-bold mb-1 text-xs">Dirección Exacta del Evento</label>
-              <input
-                type="text"
-                value={eventAddress}
-                onChange={(e) => setEventAddress(e.target.value)}
-                placeholder="Av. Manuel Valle Km 5.5, Lurín"
-                className="w-full p-2 text-xs border border-slate-300 rounded-xl"
-              />
             </div>
           </div>
 
@@ -1367,7 +1367,35 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
                   </label>
                 </div>
 
-                {/* 7. Regalo Sorpresa TCT (día de entrega) */}
+                {/* 7. Capacidad de Memoria USB 3.2 a Entregar (Ubicado antes de Regalo Sorpresa) */}
+                <div className="p-3 rounded-xl border bg-slate-50 border-slate-200">
+                  <label className="block text-slate-900 font-bold mb-1 text-xs">
+                    💾 Capacidad de Memoria USB 3.2 a Entregar
+                  </label>
+                  <div className="flex gap-2">
+                    <select
+                      value={usbCapacity}
+                      onChange={(e) => setUsbCapacity(e.target.value)}
+                      className="w-1/2 p-1.5 text-xs font-bold border border-slate-300 rounded-lg bg-white"
+                    >
+                      <option value="No se entregará USB">No se entregará USB (Solo Digital)</option>
+                      <option value="32GB">USB 32GB</option>
+                      <option value="64GB">USB 64GB</option>
+                      <option value="128GB">USB 128GB (Estándar)</option>
+                      <option value="256GB">USB 256GB</option>
+                      <option value="512GB">USB 512GB</option>
+                    </select>
+                    <input
+                      type="text"
+                      value={usbCapacity}
+                      onChange={(e) => setUsbCapacity(e.target.value)}
+                      placeholder="Personalizado"
+                      className="w-1/2 p-1.5 text-xs border border-slate-300 rounded-lg bg-white font-mono"
+                    />
+                  </div>
+                </div>
+
+                {/* 8. Regalo Sorpresa TCT (día de entrega) */}
                 <div className={`p-3 rounded-xl border transition-all ${
                   giftIncluded ? 'bg-amber-50 border-amber-300 ring-1 ring-amber-300' : 'bg-slate-50 border-slate-200'
                 }`}>
@@ -1386,7 +1414,7 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
               </div>
             </div>
 
-            {/* Section: Technical Crew, Additional Equipment, USB Delivery Configuration & Policies */}
+            {/* Section: Technical Crew, Additional Equipment & Policies */}
             <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3">
               <label className="block text-xs font-black text-slate-900 uppercase tracking-wide flex items-center gap-1.5">
                 <ShieldCheck className="w-4 h-4 text-amber-600" />
@@ -1411,47 +1439,61 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
                   </span>
                 </div>
 
-                {/* Capacidad de USB (Including No se entregará USB option) */}
+                {/* Equipos Adicionales / Cláusulas Especiales */}
                 <div>
                   <label className="block text-slate-700 font-bold mb-1">
-                    Capacidad de Memoria USB 3.2 a Entregar
+                    Equipos Adicionales / Requerimientos Técnicos Especiales
                   </label>
-                  <div className="flex gap-2">
-                    <select
-                      value={usbCapacity}
-                      onChange={(e) => setUsbCapacity(e.target.value)}
-                      className="w-1/2 p-2 text-xs font-bold border border-slate-300 rounded-xl bg-white"
-                    >
-                      <option value="No se entregará USB">No se entregará USB (Solo Digital)</option>
-                      <option value="32GB">USB 32GB</option>
-                      <option value="64GB">USB 64GB</option>
-                      <option value="128GB">USB 128GB (Estándar)</option>
-                      <option value="256GB">USB 256GB</option>
-                      <option value="512GB">USB 512GB</option>
-                    </select>
-                    <input
-                      type="text"
-                      value={usbCapacity}
-                      onChange={(e) => setUsbCapacity(e.target.value)}
-                      placeholder="Capacidad personalizada"
-                      className="w-1/2 p-2 text-xs border border-slate-300 rounded-xl bg-white font-mono"
-                    />
-                  </div>
+                  <input
+                    type="text"
+                    value={additionalEquipmentNotes}
+                    onChange={(e) => setAdditionalEquipmentNotes(e.target.value)}
+                    placeholder="Ej. 1 Dron adicional, trípodes heavy duty, 2 pantallas de retorno, grúa..."
+                    className="w-full p-2 border border-slate-300 rounded-xl bg-white text-xs"
+                  />
                 </div>
               </div>
 
-              {/* Equipos Adicionales / Cláusulas Especiales (Moved inside Despliegue Técnico section) */}
-              <div className="text-xs">
-                <label className="block text-slate-700 font-bold mb-1">
-                  Equipos Adicionales / Requerimientos Técnicos Especiales
-                </label>
-                <input
-                  type="text"
-                  value={additionalEquipmentNotes}
-                  onChange={(e) => setAdditionalEquipmentNotes(e.target.value)}
-                  placeholder="Ej. 1 Dron adicional, trípodes heavy duty, 2 pantallas de retorno, grúa..."
-                  className="w-full p-2 border border-slate-300 rounded-xl bg-white text-xs"
-                />
+              {/* Online Publication Authorization (SI / NO) - Ubicada antes de Políticas de Revisiones */}
+              <div className="p-3.5 rounded-2xl bg-gradient-to-r from-amber-500/15 via-amber-400/10 to-amber-500/15 border-2 border-amber-400/80 shadow-2xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div className="flex items-center space-x-2.5">
+                  <Globe className="w-5 h-5 text-amber-600 shrink-0" />
+                  <div>
+                    <span className="text-xs sm:text-sm font-black text-slate-950 tracking-tight block">
+                      ¿Autoriza la publicación en internet y medios digitales? (SI / NO)
+                    </span>
+                    <span className="text-[10px] text-slate-600">
+                      {authorizeInternetPublishing 
+                        ? '✓ Habilita cláusula completa de Propiedad Intelectual y Difusión.' 
+                        : '✕ Mostrará únicamente los derechos patrimoniales a favor de Corporación TCT.'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-2 shrink-0 self-end sm:self-auto">
+                  <button
+                    type="button"
+                    onClick={() => setAuthorizeInternetPublishing(true)}
+                    className={`px-4 py-1.5 rounded-xl font-black text-xs transition-all cursor-pointer ${
+                      authorizeInternetPublishing
+                        ? 'bg-emerald-600 text-white shadow-md ring-2 ring-emerald-400'
+                        : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-100'
+                    }`}
+                  >
+                    ✓ SI
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAuthorizeInternetPublishing(false)}
+                    className={`px-4 py-1.5 rounded-xl font-black text-xs transition-all cursor-pointer ${
+                      !authorizeInternetPublishing
+                        ? 'bg-red-600 text-white shadow-md ring-2 ring-red-400'
+                        : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-100'
+                    }`}
+                  >
+                    ✕ NO
+                  </button>
+                </div>
               </div>
 
               {/* Políticas de Revisiones en Distinct Colored Box */}
@@ -1605,48 +1647,6 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
                 placeholder="Ej. Se acuerda entregar 1 reel vertical para Instagram a los 5 días hábiles..."
                 className="w-full p-2 border border-slate-300 rounded-xl bg-white text-xs text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-amber-500 focus:outline-none"
               />
-            </div>
-
-            {/* Online Publication Authorization (SI / NO) */}
-            <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-500/15 via-amber-400/10 to-amber-500/15 border-2 border-amber-400/80 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-              <div className="flex items-center space-x-2.5">
-                <Globe className="w-5 h-5 text-amber-600 shrink-0" />
-                <div>
-                  <span className="text-xs sm:text-sm font-black text-slate-950 tracking-tight block">
-                    ¿Autoriza la publicación en internet y medios digitales? (SI / NO)
-                  </span>
-                  <span className="text-[10px] text-slate-600">
-                    {authorizeInternetPublishing 
-                      ? '✓ Habilita cláusula completa de Propiedad Intelectual y Difusión.' 
-                      : '✕ Mostrará únicamente los derechos patrimoniales a favor de Corporación TCT.'}
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex items-center space-x-2 shrink-0 self-end sm:self-auto">
-                <button
-                  type="button"
-                  onClick={() => setAuthorizeInternetPublishing(true)}
-                  className={`px-4 py-1.5 rounded-xl font-black text-xs transition-all cursor-pointer ${
-                    authorizeInternetPublishing
-                      ? 'bg-emerald-600 text-white shadow-md ring-2 ring-emerald-400'
-                      : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-100'
-                  }`}
-                >
-                  ✓ SI
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setAuthorizeInternetPublishing(false)}
-                  className={`px-4 py-1.5 rounded-xl font-black text-xs transition-all cursor-pointer ${
-                    !authorizeInternetPublishing
-                      ? 'bg-red-600 text-white shadow-md ring-2 ring-red-400'
-                      : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-100'
-                  }`}
-                >
-                  ✕ NO
-                </button>
-              </div>
             </div>
 
           </div>

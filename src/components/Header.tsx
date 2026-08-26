@@ -99,7 +99,7 @@ export const Header: React.FC<HeaderProps> = ({
         onRoleChange('admin');
       } else {
         onRoleChange('employee');
-        const staffMatch = allStaff.find(s => s.id === selectedUser.id || s.name.toLowerCase() === selectedUser.fullName.toLowerCase()) || {
+        const staffMatch = allStaff.find(s => s.id === selectedUser.id || (s.name && selectedUser.fullName && s.name.toLowerCase() === selectedUser.fullName.toLowerCase())) || {
           id: selectedUser.id,
           name: selectedUser.fullName,
           role: selectedUser.jobTitle || 'Técnico de Producción',

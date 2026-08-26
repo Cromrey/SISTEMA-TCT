@@ -56,12 +56,12 @@ export const TCTLogo: React.FC<TCTLogoProps> = ({
       {/* Official Circular TCT Logo Emblem with Golden Ring */}
       <div 
         style={{ height: currentSize.height, width: currentSize.width }}
-        className="relative shrink-0 flex items-center justify-center aspect-square rounded-full print:shadow-none"
+        className="relative shrink-0 flex items-center justify-center aspect-square rounded-full print:shadow-none print:w-auto print:h-auto"
       >
         {/* Golden Neon Ring Aura (screen only) */}
         <div className="absolute -inset-0.5 rounded-full ring-2 ring-amber-400/90 shadow-[0_0_12px_rgba(245,158,11,0.6)] print:hidden pointer-events-none z-0" />
 
-        <div className="w-full h-full rounded-full overflow-hidden relative z-10 bg-slate-900 flex items-center justify-center border-2 border-amber-400 shadow-sm print:border-amber-600 print:bg-slate-900">
+        <div className="w-full h-full rounded-full overflow-hidden relative z-10 bg-slate-900 flex items-center justify-center border-2 border-amber-400 shadow-sm print:border-amber-600 print:bg-slate-900 print:opacity-100">
           {!imgError && useImage ? (
             <img
               src="/assets/tct-logo.png"
@@ -69,34 +69,34 @@ export const TCTLogo: React.FC<TCTLogoProps> = ({
               referrerPolicy="no-referrer"
               onError={() => setImgError(true)}
               style={{ height: currentSize.height, width: currentSize.width }}
-              className="w-full h-full object-cover select-none"
+              className="w-full h-full object-cover select-none print:inline-block"
             />
           ) : (
             <svg
               viewBox="0 0 600 600"
               style={{ height: currentSize.height, width: currentSize.width }}
-              className="w-full h-full object-contain"
+              className="w-full h-full object-contain select-none print:inline-block"
               fill="none"
               xmlns="http://www.w3.org/2000/svg"
             >
               <defs>
-                <radialGradient id="tctCircleBg" cx="50%" cy="40%" r="60%">
+                <radialGradient id={`tctCircleBg-${size}`} cx="50%" cy="40%" r="60%">
                   <stop offset="0%" stopColor="#1e293b" />
                   <stop offset="60%" stopColor="#0f172a" />
                   <stop offset="100%" stopColor="#020617" />
                 </radialGradient>
-                <linearGradient id="tctGoldRing" x1="0%" y1="0%" x2="100%" y2="100%">
+                <linearGradient id={`tctGoldRing-${size}`} x1="0%" y1="0%" x2="100%" y2="100%">
                   <stop offset="0%" stopColor="#fef08a" />
                   <stop offset="40%" stopColor="#f59e0b" />
                   <stop offset="80%" stopColor="#d97706" />
                   <stop offset="100%" stopColor="#b45309" />
                 </linearGradient>
-                <linearGradient id="tctChromeWhite" x1="0%" y1="0%" x2="0%" y2="100%">
+                <linearGradient id={`tctChromeWhite-${size}`} x1="0%" y1="0%" x2="0%" y2="100%">
                   <stop offset="0%" stopColor="#ffffff" />
                   <stop offset="50%" stopColor="#f8fafc" />
                   <stop offset="100%" stopColor="#e2e8f0" />
                 </linearGradient>
-                <radialGradient id="tctLensIris" cx="44%" cy="38%" r="62%">
+                <radialGradient id={`tctLensIris-${size}`} cx="44%" cy="38%" r="62%">
                   <stop offset="0%" stopColor="#fbbf24" />
                   <stop offset="22%" stopColor="#f97316" />
                   <stop offset="44%" stopColor="#ec4899" />
@@ -107,8 +107,8 @@ export const TCTLogo: React.FC<TCTLogoProps> = ({
               </defs>
 
               {/* Background circular disc */}
-              <circle cx="300" cy="300" r="292" fill="url(#tctCircleBg)" />
-              <circle cx="300" cy="300" r="286" stroke="url(#tctGoldRing)" strokeWidth="12" />
+              <circle cx="300" cy="300" r="292" fill={`url(#tctCircleBg-${size})`} />
+              <circle cx="300" cy="300" r="286" stroke={`url(#tctGoldRing-${size})`} strokeWidth="12" />
 
               {/* Camera Body Silhouette */}
               <rect x="235" y="160" width="50" height="14" rx="5" fill="#94a3b8" />
@@ -122,21 +122,21 @@ export const TCTLogo: React.FC<TCTLogoProps> = ({
 
               {/* T C T Bold Letters */}
               {/* Left T */}
-              <path d="M 136 210 L 220 210 L 220 242 L 192 242 L 192 355 L 164 355 L 164 242 L 136 242 Z" fill="url(#tctChromeWhite)" />
+              <path d="M 136 210 L 220 210 L 220 242 L 192 242 L 192 355 L 164 355 L 164 242 L 136 242 Z" fill="#ffffff" />
               {/* Right T */}
-              <path d="M 380 210 L 464 210 L 464 242 L 436 242 L 436 355 L 408 355 L 408 242 L 380 242 Z" fill="url(#tctChromeWhite)" />
+              <path d="M 380 210 L 464 210 L 464 242 L 436 242 L 436 355 L 408 355 L 408 242 L 380 242 Z" fill="#ffffff" />
               {/* Center C */}
-              <path d="M 346 226 C 320 206, 280 206, 254 226 C 214 256, 214 324, 254 354 C 280 374, 320 374, 346 354 L 326 322 C 312 332, 288 332, 276 322 C 256 304, 256 276, 276 258 C 288 248, 312 248, 326 258 Z" fill="url(#tctChromeWhite)" />
+              <path d="M 346 226 C 320 206, 280 206, 254 226 C 214 256, 214 324, 254 354 C 280 374, 320 374, 346 354 L 326 322 C 312 332, 288 332, 276 322 C 256 304, 256 276, 276 258 C 288 248, 312 248, 326 258 Z" fill="#ffffff" />
 
               {/* Colorful Camera Optical Lens */}
               <circle cx="300" cy="290" r="62" fill="#090d16" stroke="#475569" strokeWidth="4" />
-              <circle cx="300" cy="290" r="50" fill="url(#tctLensIris)" />
+              <circle cx="300" cy="290" r="50" fill={`url(#tctLensIris-${size})`} />
               <circle cx="300" cy="290" r="18" fill="#020617" />
               {/* Lens highlight */}
               <circle cx="286" cy="276" r="6" fill="#ffffff" opacity="0.9" />
 
               {/* Text CORPORACIÓN TCT */}
-              <text x="300" y="474" textAnchor="middle" fill="url(#tctGoldRing)" fontSize="40" fontWeight="900" letterSpacing="6">
+              <text x="300" y="474" textAnchor="middle" fill="#f59e0b" fontSize="40" fontWeight="900" letterSpacing="6">
                 CORPORACIÓN TCT
               </text>
             </svg>
@@ -152,7 +152,7 @@ export const TCTLogo: React.FC<TCTLogoProps> = ({
               CORPORACIÓN TCT
             </span>
           </div>
-          <span className="font-slogan text-sm sm:text-base text-amber-300 font-medium tracking-wide leading-none select-none drop-shadow-sm -mt-0.5">
+          <span className="font-slogan text-sm sm:text-base text-amber-300 font-medium tracking-wide leading-tight select-none drop-shadow-sm -mt-0.5">
             Marcando Historia
           </span>
         </div>
@@ -160,4 +160,5 @@ export const TCTLogo: React.FC<TCTLogoProps> = ({
     </div>
   );
 };
+
 

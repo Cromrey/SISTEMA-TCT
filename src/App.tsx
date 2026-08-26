@@ -60,7 +60,7 @@ export default function App() {
     const session = getActiveSession();
     const staffList = usersToStaffMembers(getStoredUsers());
     if (session && session.role === 'employee') {
-      const match = staffList.find(s => s.id === session.id || s.name.toLowerCase() === session.fullName.toLowerCase());
+      const match = staffList.find(s => s.id === session.id || (s.name && session.fullName && s.name.toLowerCase() === session.fullName.toLowerCase()));
       if (match) return match;
     }
     return staffList[0] || INITIAL_FALLBACK_STAFF[0];
@@ -363,7 +363,7 @@ export default function App() {
     // If employee, auto-select their staff profile
     const staffList = usersToStaffMembers(getStoredUsers());
     if (user.role === 'employee') {
-      const match = staffList.find(s => s.id === user.id || s.name.toLowerCase() === user.fullName.toLowerCase());
+      const match = staffList.find(s => s.id === user.id || (s.name && user.fullName && s.name.toLowerCase() === user.fullName.toLowerCase()));
       if (match) {
         setCurrentStaff(match);
       } else {
@@ -598,7 +598,14 @@ export default function App() {
             onSaveQuickFilter={setSavedAdminFilter}
             allStaff={allStaff}
             allUsers={allUsers}
-            onOpenUsersManagement={() => setIsUsersModalOpen(true)}
+            onOpenRulesModal={() => {
+              setRulesInitialTab('checklists');
+              setIsRulesModalOpen(true);
+            }}
+            onOpenUsersManagement={() => {
+              setRulesInitialTab('users');
+              setIsRulesModalOpen(true);
+            }}
           />
         ) : (
           <StaffDashboard

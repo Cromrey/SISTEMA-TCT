@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ProductionProject } from '../types';
 import { TCTLogo } from './TCTLogo';
 import { printElement, exportElementToPdf, sendToWhatsAppPeru, buildReportWhatsAppText } from '../utils/printHelper';
+import { getStoredUsers } from '../utils/authStorage';
 import { 
   Printer, 
   X, 
@@ -35,6 +36,22 @@ export const ReportPrintModal: React.FC<ReportPrintModalProps> = ({
   onClose
 }) => {
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+
+  const systemUsers = getStoredUsers();
+  const matchedUser = systemUsers.find(u => {
+    const uFull = (u.fullName || '').toLowerCase();
+    const createdLower = (project.createdByName || '').toLowerCase();
+    const holderLower = (project.contractHolder || '').toLowerCase();
+    return (
+      (createdLower && uFull && uFull.includes(createdLower)) ||
+      (holderLower && uFull && uFull.includes(holderLower)) ||
+      (project.createdByDni && u.dni === project.createdByDni) ||
+      (project.contractHolderDni && u.dni === project.contractHolderDni)
+    );
+  });
+
+  const advisorName = project.createdByName || matchedUser?.fullName || (project.contractHolder ? project.contractHolder.split(' - ')[0] : 'Michael Romero');
+  const advisorDni = project.createdByDni || project.contractHolderDni || matchedUser?.dni || '45892314';
 
   const handleExportPdf = async () => {
     setIsGeneratingPdf(true);
@@ -88,41 +105,16 @@ export const ReportPrintModal: React.FC<ReportPrintModalProps> = ({
           </div>
 
           <div className="flex items-center space-x-1.5 sm:space-x-2 flex-wrap gap-1">
-            {/* Enviar Reporte a WhatsApp Perú 990010020 */}
-            <button
-              onClick={handleSendReportWhatsApp}
-              type="button"
-              className="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-md flex items-center gap-1.5 transition-all cursor-pointer"
-              title="Enviar Reporte Oficial al WhatsApp Perú 990010020"
-            >
-              <Send className="w-3.5 h-3.5" />
-              <span>WhatsApp (990010020)</span>
-            </button>
-
-            <button
-              onClick={handleExportPdf}
-              disabled={isGeneratingPdf}
-              className="px-3 sm:px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-black text-xs rounded-xl shadow-md flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
-              title="Descargar Ficha Técnica en formato PDF"
-            >
-              {isGeneratingPdf ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Download className="w-4 h-4" />
-              )}
-              <span>{isGeneratingPdf ? 'Generando PDF...' : 'Exportar a PDF'}</span>
-            </button>
-
             <button
               onClick={handlePrint}
-              className="px-3 sm:px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all cursor-pointer"
+              className="px-3.5 sm:px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-black text-xs rounded-xl flex items-center gap-1.5 transition-all cursor-pointer shadow-md"
               title="Abrir cuadro de diálogo de impresión"
             >
-              <Printer className="w-4 h-4 text-amber-400" />
-              <span>Imprimir</span>
+              <Printer className="w-4 h-4 text-slate-950" />
+              <span>Imprimir Ficha</span>
             </button>
 
-            {/* Navigation Icons (Atrás, Adelante, Salir) */}
+            {/* Navigation Icons (Atrás, Salir) */}
             <button
               type="button"
               onClick={onClose}
@@ -423,27 +415,31 @@ export const ReportPrintModal: React.FC<ReportPrintModalProps> = ({
             </p>
           </div>
 
-          {/* Official Signatures */}
+          {/* Official Signatures (Visibles y nítidas) */}
           <div className="pt-4 border-t-2 border-slate-900 grid grid-cols-2 gap-6 text-center text-[10px] page-break-inside-avoid">
-            <div className="space-y-6">
-              <div className="h-9 border-b border-slate-400 w-44 mx-auto flex items-end justify-center pb-0.5">
-                <span className="font-mono text-[9px] text-slate-400">Firma & Sello Corporativo</span>
+            <div className="space-y-2">
+              <div className="h-16 border-b-2 border-slate-900 w-48 mx-auto flex flex-col items-center justify-end pb-1 bg-slate-50/60 rounded-t-md">
+                <span className="font-mono text-[9px] text-slate-600 font-bold uppercase tracking-wider">Firma & Sello Corporativo</span>
+                <span className="text-[8px] text-amber-800 font-black">TCT PRODUCCIONES</span>
               </div>
-              <div>
-                <p className="font-black text-slate-900 uppercase">CORPORACIÓN TCT S.A.C.</p>
-                <p className="text-[9px] text-slate-500">Director de Producción / Asesor Comercial</p>
+              <div className="space-y-0.5">
+                <p className="font-black text-slate-900 uppercase text-[10px]">CORPORACIÓN TCT S.A.C.</p>
+                <p className="text-[9px] text-slate-600 font-medium">Director de Producción / Asesor Comercial</p>
+                <p className="text-[10px] text-slate-900 font-black">{advisorName}</p>
+                <p className="text-[9.5px] text-slate-900 font-black font-mono">DNI: {advisorDni}</p>
                 <p className="text-[8px] text-slate-400 font-mono">RUC: 20608941253</p>
               </div>
             </div>
 
-            <div className="space-y-6">
-              <div className="h-9 border-b border-slate-400 w-44 mx-auto flex items-end justify-center pb-0.5">
-                <span className="font-mono text-[9px] text-slate-400">Firma del Cliente</span>
+            <div className="space-y-2">
+              <div className="h-16 border-b-2 border-slate-900 w-48 mx-auto flex flex-col items-center justify-end pb-1 bg-slate-50/60 rounded-t-md">
+                <span className="font-mono text-[9px] text-slate-600 font-bold uppercase tracking-wider">Firma del Cliente</span>
+                <span className="text-[8px] text-slate-500 font-bold">Conforme</span>
               </div>
-              <div>
-                <p className="font-black text-slate-900 uppercase">{project.clientName}</p>
-                <p className="text-[9px] text-slate-500">DNI / RUC: {project.clientDniRuc || '73849201'}</p>
-                <p className="text-[8px] text-slate-400">El Contratante</p>
+              <div className="space-y-0.5">
+                <p className="font-black text-slate-900 uppercase text-[10px]">{project.clientName}</p>
+                <p className="text-[9.5px] text-slate-900 font-black font-mono">DNI / RUC: {project.clientDniRuc || '73849201'}</p>
+                <p className="text-[9px] font-black text-slate-600 uppercase tracking-wider">El Contratante</p>
               </div>
             </div>
           </div>

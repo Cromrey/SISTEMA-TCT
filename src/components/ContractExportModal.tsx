@@ -111,12 +111,17 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
   };
 
   const systemUsers = getStoredUsers();
-  const matchedUser = systemUsers.find(u => 
-    (currentData.createdByName && u.fullName.toLowerCase().includes(currentData.createdByName.toLowerCase())) ||
-    (currentData.contractHolder && u.fullName.toLowerCase().includes(currentData.contractHolder.toLowerCase())) ||
-    (currentData.createdByDni && u.dni === currentData.createdByDni) ||
-    (currentData.contractHolderDni && u.dni === currentData.contractHolderDni)
-  );
+  const matchedUser = systemUsers.find(u => {
+    const uFull = (u.fullName || '').toLowerCase();
+    const createdLower = (currentData.createdByName || '').toLowerCase();
+    const holderLower = (currentData.contractHolder || '').toLowerCase();
+    return (
+      (createdLower && uFull && uFull.includes(createdLower)) ||
+      (holderLower && uFull && uFull.includes(holderLower)) ||
+      (currentData.createdByDni && u.dni === currentData.createdByDni) ||
+      (currentData.contractHolderDni && u.dni === currentData.contractHolderDni)
+    );
+  });
 
   const advisorName = currentData.createdByName || matchedUser?.fullName || (currentData.contractHolder ? currentData.contractHolder.split(' - ')[0] : 'Michael Romero');
   const advisorDni = currentData.createdByDni || currentData.contractHolderDni || matchedUser?.dni || '45892314';
@@ -205,66 +210,31 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
               )
             )}
 
-            {/* Enviar Reporte a WhatsApp Perú 990010020 */}
-            <button
-              onClick={handleSendReportWhatsApp}
-              type="button"
-              className="px-3 py-1.5 sm:py-2 bg-emerald-700 hover:bg-emerald-600 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all cursor-pointer shadow-md"
-              title="Enviar Informe / Reporte del flujo secuencial de 12 pasos al WhatsApp 990010020"
-            >
-              <Send className="w-3.5 h-3.5" />
-              <span>Reporte a WhatsApp</span>
-            </button>
-
-            {/* Enviar Contrato a WhatsApp Perú 990010020 (Habilitado tras Paso 3) */}
-            <button
-              onClick={handleSendContractWhatsApp}
-              disabled={!isStep3Completed}
-              type="button"
-              className={`px-3 py-1.5 sm:py-2 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all cursor-pointer shadow-md ${
-                isStep3Completed
-                  ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
-                  : 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed opacity-60'
-              }`}
-              title={isStep3Completed ? "Enviar Contrato Oficial al WhatsApp 990010020" : "Bloqueado: Requiere firma y adjunto en Paso 3"}
-            >
-              {!isStep3Completed ? <Lock className="w-3.5 h-3.5 text-slate-500" /> : <Send className="w-3.5 h-3.5" />}
-              <span>Contrato a WhatsApp</span>
-            </button>
-
-            {/* Guardar / Exportar a PDF Button (Habilitado tras Paso 3) */}
-            <button
-              onClick={handleExportPdf}
-              disabled={isGeneratingPdf || !isStep3Completed}
-              className={`px-3.5 sm:px-4 py-1.5 sm:py-2 font-black text-xs rounded-xl shadow-lg flex items-center gap-2 transition-all cursor-pointer ${
-                isStep3Completed
-                  ? 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 hover:shadow-amber-500/20'
-                  : 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed opacity-60'
-              }`}
-              title={isStep3Completed ? "Descargar y Exportar Contrato Oficial en formato PDF" : "Bloqueado: Requiere completar y adjuntar firma en el Paso 3"}
-            >
-              {isGeneratingPdf ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : !isStep3Completed ? (
-                <Lock className="w-4 h-4 text-slate-500" />
-              ) : (
-                <Download className="w-4 h-4" />
-              )}
-              <span>{isGeneratingPdf ? 'Generando PDF...' : 'Exportar a PDF'}</span>
-            </button>
-
-            {/* Imprimir Button (Permitido siempre) */}
+            {/* Imprimir Contrato Button (Bloqueado si no se ha culminado el Paso 3) */}
             <button
               onClick={handlePrint}
               type="button"
-              className="px-3 sm:px-4 py-1.5 sm:py-2 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all cursor-pointer"
-              title="Abrir cuadro de diálogo de impresión en computadora o dispositivo"
+              disabled={!isStep3Completed}
+              className={`px-3 sm:px-4 py-1.5 sm:py-2 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all ${
+                isStep3Completed
+                  ? 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 shadow-md cursor-pointer'
+                  : 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed opacity-75'
+              }`}
+              title={
+                isStep3Completed
+                  ? "Imprimir contrato oficial"
+                  : "Impresión bloqueada: Requiere validación y firma de contrato en Paso 3"
+              }
             >
-              <Printer className="w-4 h-4 text-amber-400" />
-              <span>Imprimir</span>
+              {!isStep3Completed ? (
+                <Lock className="w-4 h-4 text-slate-500" />
+              ) : (
+                <Printer className="w-4 h-4 text-slate-950" />
+              )}
+              <span>Imprimir Contrato</span>
             </button>
 
-            {/* Navigation Icons (Atrás, Adelante, Salir) */}
+            {/* Navigation Icons (Atrás, Salir) */}
             <button
               type="button"
               onClick={onClose}
@@ -802,40 +772,14 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
                   )}
                 </div>
 
-                {/* 2. Sesión Fotográfica (Conditional) */}
-                {currentData.includesPhotoshoot && (
-                  <div className="p-2 bg-white rounded-lg border border-slate-200 shadow-2xs">
-                    <span className="font-black text-slate-900 block flex items-center gap-1">
-                      📸 Sesión Fotográfica
-                    </span>
-                    <span className="text-[10px] text-indigo-700 font-bold">15 días</span>
-                    <p className="text-[9px] text-slate-600 font-medium mt-0.5">fotografias editadas</p>
-                  </div>
-                )}
-
-                {/* 3. Fotobook (con número de páginas editable) */}
-                {currentData.includesPhotobook && (
-                  <div className="p-2 bg-white rounded-lg border border-slate-200 shadow-2xs">
-                    <span className="font-black text-slate-900 block flex items-center gap-1">
-                      📖 Fotobook ({currentData.photobookPagesCount || 30} páginas)
-                    </span>
-                    <span className="text-[10px] text-pink-700 font-bold">
-                      Plazo: 30 días hábiles
-                    </span>
-                    <p className="text-[9px] text-slate-600 font-medium mt-0.5">
-                      {currentData.photobookPagesCount || 30} páginas en papel fotográfico premium, maquetación y encuadernado
-                    </p>
-                  </div>
-                )}
-
-                {/* 4. Diseño 01 Flyer de Invitación (Conditional) */}
+                {/* 2. Diseño 01 Flyer de Invitación (Conditional - Ubicado antes del spot) */}
                 {currentData.includesFlyerDesign && (
                   <div className="p-2 bg-white rounded-lg border border-slate-200 shadow-2xs">
                     <span className="font-black text-slate-900 block flex items-center gap-1">
                       🎨 Flyer de Invitación
                     </span>
                     <span className="text-[10px] text-indigo-700 font-bold">
-                      {currentData.flyerAnticipationDays || 15} días anticipación
+                      {currentData.flyerAnticipationDays || 20} días anticipación
                     </span>
                     <p className="text-[9px] text-slate-600 font-medium mt-0.5">
                       Diseño 01 flyer digital exclusivo para redes sociales e invitaciones
@@ -843,63 +787,110 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
                   </div>
                 )}
 
-                {/* 5. Spot de Audio y Video (Conditional) */}
+                {/* 3. Spot de Audio y Video (Conditional) */}
                 {currentData.includesAudioVideoSpot && (
                   <div className="p-2 bg-white rounded-lg border border-slate-200 shadow-2xs">
                     <span className="font-black text-slate-900 block flex items-center gap-1">
                       🎬 Spot Audio y Video
                     </span>
                     <span className="text-[10px] text-rose-700 font-bold">
-                      {currentData.spotDuration || '30 seg'} de duración
+                      {spotPriceNum === 0 ? 'CORTESÍA GRATIS (S/. 0.00)' : `S/. ${spotPriceNum.toFixed(2)}`}
                     </span>
                     <p className="text-[9px] text-slate-600 font-medium mt-0.5">
-                      Edición comercial dinámica para pantallas y redes sociales
+                      {currentData.spotDuration || '30 seg'} de duración para pantallas y redes
                     </p>
                   </div>
                 )}
 
-                {/* 6. Transmisión en Vivo por Internet (Conditional) */}
+                {/* 4. Transmisión en Vivo por Internet (Conditional) */}
                 {currentData.includesLiveStreaming && (
                   <div className="p-2 bg-white rounded-lg border border-slate-200 shadow-2xs">
                     <span className="font-black text-slate-900 block flex items-center gap-1">
                       📡 Transmisión en Vivo
                     </span>
                     <span className="text-[10px] text-sky-700 font-bold">
-                      {(currentData.liveStreamPrice || 0) === 0 ? 'Streaming HD (CORTESÍA)' : 'Streaming HD en Directo'}
+                      {liveStreamPriceNum === 0 ? 'CORTESÍA GRATIS (S/. 0.00)' : `S/. ${liveStreamPriceNum.toFixed(2)}`}
                     </span>
                     <p className="text-[9px] text-slate-600 font-medium mt-0.5">
-                      Transmisión multicámara en vivo con switchera digital y retorno
+                      Transmisión multicámara en directo con retorno y switchera digital
                     </p>
                   </div>
                 )}
 
-                {/* 7. Memoria USB */}
+                {/* 5. Sesión Fotográfica (Conditional - Ubicado después de transmisión en vivo) */}
+                {currentData.includesPhotoshoot && (
+                  <div className="p-2 bg-white rounded-lg border border-slate-200 shadow-2xs">
+                    <span className="font-black text-slate-900 block flex items-center gap-1">
+                      📸 Sesión Fotográfica
+                    </span>
+                    <span className="text-[10px] text-indigo-700 font-bold">15 días hábiles</span>
+                    <p className="text-[9px] text-slate-600 font-medium mt-0.5">Fotografías editadas en alta definición</p>
+                  </div>
+                )}
+
+                {/* 6. Fotobook (con 20 páginas por defecto o editable) */}
+                {currentData.includesPhotobook && (
+                  <div className="p-2 bg-white rounded-lg border border-slate-200 shadow-2xs">
+                    <span className="font-black text-slate-900 block flex items-center gap-1">
+                      📖 Fotobook ({currentData.photobookPagesCount || 20} páginas)
+                    </span>
+                    <span className="text-[10px] text-pink-700 font-bold">
+                      Plazo: 30 días hábiles
+                    </span>
+                    <p className="text-[9px] text-slate-600 font-medium mt-0.5">
+                      {currentData.photobookPagesCount || 20} páginas en papel fotográfico premium, maquetación y encuadernado
+                    </p>
+                  </div>
+                )}
+
+                {/* 7. Cobertura Dron 4K (Conditional) */}
+                {currentData.includesDrone && (
+                  <div className="p-2 bg-white rounded-lg border border-slate-200 shadow-2xs">
+                    <span className="font-black text-slate-900 block flex items-center gap-1">
+                      🚁 Cobertura Dron 4K
+                    </span>
+                    <span className="text-[10px] text-sky-700 font-bold">Tomas aéreas cinematográficas</span>
+                    <p className="text-[9px] text-slate-600 font-medium mt-0.5">
+                      Registro aéreo con operador calificado
+                    </p>
+                  </div>
+                )}
+
+                {/* 8. Memoria USB (Mostrado completo: si es 0 / gratis o no se entrega) */}
                 <div className="p-2 bg-white rounded-lg border border-slate-200 shadow-2xs">
                   <span className="font-black text-slate-900 block flex items-center gap-1">
-                    💾 {currentData.usbCapacity === 'NO_USB' || currentData.usbCapacity === 'No se entregará USB' 
-                        ? 'Memoria USB: No se entregará USB' 
+                    💾 {currentData.usbCapacity === 'NO_USB' || currentData.usbCapacity === 'No se entregará USB' || currentData.usbCapacity === 'NO' || currentData.usbCapacity === 'No'
+                        ? 'Memoria USB' 
                         : `Memoria USB 3.2 (${currentData.usbCapacity || currentData.usbSpecification || '128GB'})`}
                   </span>
-                  <span className="text-[10px] text-emerald-700 font-bold">
-                    {currentData.usbCapacity === 'NO_USB' || currentData.usbCapacity === 'No se entregará USB' 
-                      ? 'Entrega mediante enlace digital seguro' 
-                      : 'Entrega con Saldo S/. 0'}
+                  <span className={`text-[10px] font-black ${
+                    currentData.usbCapacity === 'NO_USB' || currentData.usbCapacity === 'No se entregará USB' || currentData.usbCapacity === 'NO' || currentData.usbCapacity === 'No'
+                      ? 'text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200 inline-block mt-0.5'
+                      : 'text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 inline-block mt-0.5'
+                  }`}>
+                    {currentData.usbCapacity === 'NO_USB' || currentData.usbCapacity === 'No se entregará USB' || currentData.usbCapacity === 'NO' || currentData.usbCapacity === 'No'
+                      ? 'El cliente traerá su propio USB' 
+                      : 'CORTESIA GRATIS'}
                   </span>
-                  <p className="text-[9px] text-slate-600 font-medium mt-0.5">
-                    {currentData.usbCapacity === 'NO_USB' || currentData.usbCapacity === 'No se entregará USB' 
-                      ? 'Acceso descargable en la nube para videos y fotos' 
-                      : 'Material final masterizado en alta resolución'}
+                  <p className="text-[9px] text-slate-600 font-medium mt-1">
+                    {currentData.usbCapacity === 'NO_USB' || currentData.usbCapacity === 'No se entregará USB' || currentData.usbCapacity === 'NO' || currentData.usbCapacity === 'No'
+                      ? 'El cliente proporcionará su propia unidad USB para la entrega del material digital.' 
+                      : 'Material final masterizado en alta resolución entregado en memoria USB.'}
                   </p>
                 </div>
 
-                {/* 8. Regalo Sorpresa (Conditional) */}
+                {/* 9. Regalo Sorpresa TCT (Mostrado completo en PDF e impresión) */}
                 {currentData.giftIncluded && (
-                  <div className="p-2 bg-white rounded-lg border border-slate-200 shadow-2xs">
-                    <span className="font-black text-slate-900 block flex items-center gap-1">
+                  <div className="p-2 bg-amber-50/80 rounded-lg border-2 border-amber-300/80 shadow-2xs">
+                    <span className="font-black text-amber-950 block flex items-center gap-1 text-[10px]">
                       🎁 Regalo Sorpresa TCT
                     </span>
-                    <span className="text-[10px] text-amber-800 font-bold">Mismo día de entrega final</span>
-                    <p className="text-[9px] text-slate-600 font-medium mt-0.5">Detalle conmemorativo exclusivo TCT</p>
+                    <span className="text-[10px] text-amber-900 font-black inline-block mt-0.5 bg-amber-200/70 px-1.5 py-0.5 rounded border border-amber-300">
+                      Mismo día de entrega final
+                    </span>
+                    <p className="text-[9px] text-amber-900 font-medium mt-1">
+                      Detalle conmemorativo exclusivo y personalizado entregado por Corporación TCT.
+                    </p>
                   </div>
                 )}
 
@@ -920,8 +911,8 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
                     <label className="font-bold text-slate-700 block">Páginas Fotobook:</label>
                     <input
                       type="number"
-                      value={editedProject.photobookPagesCount || 30}
-                      onChange={(e) => setEditedProject({ ...editedProject, photobookPagesCount: parseInt(e.target.value) || 30 })}
+                      value={editedProject.photobookPagesCount || 20}
+                      onChange={(e) => setEditedProject({ ...editedProject, photobookPagesCount: parseInt(e.target.value) || 20 })}
                       className="w-full p-1 border rounded bg-white text-[9px]"
                     />
                   </div>
@@ -929,8 +920,8 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
                     <label className="font-bold text-slate-700 block">Días Anticipación Flyer:</label>
                     <input
                       type="number"
-                      value={editedProject.flyerAnticipationDays || 15}
-                      onChange={(e) => setEditedProject({ ...editedProject, flyerAnticipationDays: parseInt(e.target.value) || 15 })}
+                      value={editedProject.flyerAnticipationDays || 20}
+                      onChange={(e) => setEditedProject({ ...editedProject, flyerAnticipationDays: parseInt(e.target.value) || 20 })}
                       className="w-full p-1 border rounded bg-white text-[9px]"
                     />
                   </div>
@@ -971,8 +962,8 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
             </h3>
 
             <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 space-y-1.5 text-[10px] leading-relaxed">
-              {/* 5.1 Autorización de Imagen y Exoneración de Responsabilidad */}
-              <div className="p-2 bg-white rounded-lg border border-slate-200 text-slate-800">
+              {/* 5.1 Autorización de Imagen y Exoneración de Responsabilidad (Resaltado en ámbar similar a custodia) */}
+              <div className="p-2 bg-amber-50/90 rounded-lg border border-amber-300 text-amber-950">
                 <p>
                   <strong>5.1. Autorización de Imagen y Exoneración de Responsabilidad:</strong> El Cliente garantiza que ha comunicado a todos los familiares, asistentes y personas presentes en el evento que este será grabado en video y fotografiado. En consecuencia, el Cliente deslinda a Corporación TCT de toda responsabilidad legal, judicial o extrajudicial relativa a reclamos de terceros sobre el uso, captura o difusión de su imagen personal durante el desarrollo del servicio contratado.
                 </p>
@@ -1007,21 +998,21 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
                 </p>
               </div>
 
-              {/* 5.5 Política de Custodia (Ubicada exactamente después de Logística de Campo) */}
-              <div className="p-2 bg-amber-50/90 rounded-lg border border-amber-300 text-amber-950">
-                <p>
-                  <strong>5.5. Política de Custodia:</strong> <strong>{contractDesign.headerTitle || 'CORPORACIÓN TCT'}</strong> conservará los archivos <strong>MASTER</strong> y brutos, hasta un plazo de <strong>0{currentData.rawCustodyDays || 3} días posteriores</strong> a la fecha programada de entrega del material. De no recoger el Cliente en la fecha de entrega pactada sólo se conservará el archivo <strong>MASTER</strong> final.
-                </p>
-              </div>
-
-              {/* 5.6 Política de Revisiones (Opcional - solo visible si includeRevisionsPolicy es true) */}
+              {/* 5.5 Política de Revisiones (Ubicada ANTES de Política de Custodia) */}
               {currentData.includeRevisionsPolicy && (
                 <div className="p-2 bg-white rounded-lg border border-slate-200 text-slate-800">
                   <p>
-                    <strong>5.6. Política de Revisiones:</strong> EL CLIENTE tiene derecho a <strong>{currentData.revisionRounds || 2} rondas de revisiones</strong> menores de edición sin costo dentro de un plazo máximo de <strong>{currentData.revisionDaysLimit || 5} días hábiles</strong> posteriores a la entrega del primer borrador digital.
+                    <strong>5.5. Política de Revisiones:</strong> EL CLIENTE tiene derecho a <strong>{currentData.revisionRounds || 2} rondas de revisiones</strong> menores de edición sin costo dentro de un plazo máximo de <strong>{currentData.revisionDaysLimit || 5} días hábiles</strong> posteriores a la entrega del primer borrador digital.
                   </p>
                 </div>
               )}
+
+              {/* 5.6 Política de Custodia (Ubicada DESPUÉS de Política de Revisiones) */}
+              <div className="p-2 bg-amber-50/90 rounded-lg border border-amber-300 text-amber-950">
+                <p>
+                  <strong>{currentData.includeRevisionsPolicy ? '5.6.' : '5.5.'} Política de Custodia:</strong> <strong>{contractDesign.headerTitle || 'CORPORACIÓN TCT'}</strong> conservará los archivos <strong>MASTER</strong> y brutos, hasta un plazo de <strong>0{currentData.rawCustodyDays || 3} días posteriores</strong> a la fecha programada de entrega del material. De no recoger el Cliente en la fecha de entrega pactada sólo se conservará el archivo <strong>MASTER</strong> final.
+                </p>
+              </div>
 
               {/* 5.7 Cláusula Adicional Especial (Opcional - solo si existe o en edición) */}
               {(hasSpecialClause || isEditing) && (
@@ -1051,30 +1042,40 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
             </div>
           </div>
 
-          {/* Official Signatures: Asesor Comercial & EL CLIENTE */}
+          {/* Official Signatures: Asesor Comercial & EL CLIENTE (Visibles y nítidas) */}
           <div className="pt-6 border-t-2 border-slate-950 grid grid-cols-2 gap-8 text-center text-[10px] page-break-inside-avoid">
-            <div className="space-y-3">
-              <div className="h-24 sm:h-28 border-b-2 border-dashed border-slate-400 w-52 mx-auto bg-slate-50/40 rounded-t-lg"></div>
+            <div className="space-y-2">
+              <div className="h-20 border-b-2 border-slate-900 w-56 mx-auto bg-slate-50/60 rounded-t-lg flex flex-col items-center justify-end pb-2">
+                <span className="font-mono text-[9px] text-slate-600 font-bold uppercase tracking-wider">
+                  Firma y Sello Autorizado
+                </span>
+                <span className="text-[8px] text-amber-800 font-black">CORPORACIÓN TCT</span>
+              </div>
               <div className="space-y-0.5">
                 <p className="font-black text-slate-900 uppercase text-[10px]">{contractDesign.headerTitle || 'CORPORACIÓN TCT S.A.C.'}</p>
-                <p className="text-[9.5px] text-slate-700 font-bold uppercase">
+                <p className="text-[9px] text-slate-600 font-medium uppercase">
                   {contractDesign.signerAdvisorRole || 'Director de Producción / Asesor Comercial'}
                 </p>
                 <p className="text-[10px] text-slate-900 font-black">
                   {advisorName}
                 </p>
-                <p className="text-[9.5px] text-slate-800 font-bold">
+                <p className="text-[9.5px] text-slate-900 font-black font-mono">
                   DNI: {advisorDni}
                 </p>
               </div>
             </div>
 
-            <div className="space-y-3">
-              <div className="h-24 sm:h-28 border-b-2 border-dashed border-slate-400 w-52 mx-auto bg-slate-50/40 rounded-t-lg"></div>
+            <div className="space-y-2">
+              <div className="h-20 border-b-2 border-slate-900 w-56 mx-auto bg-slate-50/60 rounded-t-lg flex flex-col items-center justify-end pb-2">
+                <span className="font-mono text-[9px] text-slate-600 font-bold uppercase tracking-wider">
+                  Firma del Cliente Contratante
+                </span>
+                <span className="text-[8px] text-slate-500 font-bold">Conforme</span>
+              </div>
               <div className="space-y-0.5">
                 <p className="font-black text-slate-900 uppercase text-[10px]">{currentData.clientName}</p>
-                <p className="text-[9.5px] text-slate-800 font-bold">DNI / RUC: {currentData.clientDniRuc || currentData.clientDni || '__________________'}</p>
-                <p className="text-[9.5px] font-black text-slate-700 uppercase tracking-wider">EL CLIENTE</p>
+                <p className="text-[9.5px] text-slate-900 font-black font-mono">DNI / RUC: {currentData.clientDniRuc || currentData.clientDni || '__________________'}</p>
+                <p className="text-[9px] font-black text-slate-600 uppercase tracking-wider">EL CLIENTE</p>
               </div>
             </div>
           </div>
