@@ -1,7 +1,13 @@
 import React, { useState } from 'react';
 import { ProductionProject, UserRole, TCTContractDesign } from '../types';
 import { TCTLogo } from './TCTLogo';
-import { printElement, exportElementToPdf } from '../utils/printHelper';
+import { 
+  printElement, 
+  exportElementToPdf, 
+  sendToWhatsAppPeru, 
+  buildReportWhatsAppText, 
+  buildContractWhatsAppText 
+} from '../utils/printHelper';
 import { finalizeContractExportStep3 } from '../utils/stepSequenceHelper';
 import { getStoredUsers } from '../utils/authStorage';
 import { getStoredRules, INITIAL_CONTRACT_DESIGN } from '../utils/rulesStorage';
@@ -14,7 +20,11 @@ import {
   ChevronLeft,
   ChevronRight,
   Download,
-  Loader2
+  Loader2,
+  Send,
+  Lock,
+  AlertCircle,
+  CheckCircle2
 } from 'lucide-react';
 
 interface ContractExportModalProps {
@@ -35,6 +45,13 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [editedProject, setEditedProject] = useState<ProductionProject>({ ...project });
 
+  const currentData = isEditing ? editedProject : project;
+
+  // Determine if Step 3 (Firma de Contrato) is completed with uploaded attachment
+  const step3 = currentData.phases?.[0]?.steps?.find(s => s.stepNumber === 3);
+  const hasStep3Attachment = Boolean(step3?.attachments && step3.attachments.length > 0) || Boolean(currentData.contractExported && !currentData.contractPendingAttachment);
+  const isStep3Completed = Boolean(step3?.status === 'completed' && hasStep3Attachment);
+
   const handleFinalizeAndRegisterExport = () => {
     if (onUpdateProject) {
       const finalized = finalizeContractExportStep3(
@@ -48,6 +65,10 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
   };
 
   const handleExportPdf = async () => {
+    if (!isStep3Completed) {
+      alert('🔒 Exportación bloqueada: Requiere culminar el Paso 3 (Firma de Contrato) y adjuntar el documento de sustento escaneado/digital.');
+      return;
+    }
     handleFinalizeAndRegisterExport();
     setIsGeneratingPdf(true);
     try {
@@ -59,18 +80,35 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
   };
 
   const handlePrint = () => {
-    handleFinalizeAndRegisterExport();
     printElement('tct-contract-document', `Contrato-${currentData.contractNumber || currentData.uniqueCode}`);
   };
 
+  const handleSendReportWhatsApp = () => {
+    const text = buildReportWhatsAppText(currentData);
+    sendToWhatsAppPeru('990010020', text);
+  };
+
+  const handleSendContractWhatsApp = async () => {
+    if (!isStep3Completed) {
+      alert('🔒 Envío de contrato bloqueado: Requiere firmar el contrato y registrar el archivo adjunto en el Paso 3.');
+      return;
+    }
+    // Generate the official PDF so the user has the file ready to attach, then trigger WhatsApp
+    await exportElementToPdf('tct-contract-document', `Contrato-${currentData.contractNumber || currentData.uniqueCode}`);
+    const text = buildContractWhatsAppText(currentData);
+    sendToWhatsAppPeru('990010020', text);
+  };
+
   const handleSaveEdits = () => {
+    if (!isStep3Completed) {
+      alert('🔒 Guardado bloqueado: El contrato preliminar requiere formalización y firma en el Paso 3 para fijar cambios.');
+      return;
+    }
     if (onUpdateProject) {
       onUpdateProject(editedProject);
     }
     setIsEditing(false);
   };
-
-  const currentData = isEditing ? editedProject : project;
 
   const systemUsers = getStoredUsers();
   const matchedUser = systemUsers.find(u => 
@@ -144,8 +182,13 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
               isEditing ? (
                 <button
                   onClick={handleSaveEdits}
-                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-md flex items-center gap-1.5 transition-all cursor-pointer"
-                  title="Guardar Cambios del Contrato"
+                  disabled={!isStep3Completed}
+                  className={`px-3 py-1.5 font-bold text-xs rounded-xl shadow-md flex items-center gap-1.5 transition-all cursor-pointer ${
+                    isStep3Completed
+                      ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                      : 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
+                  }`}
+                  title={isStep3Completed ? "Guardar Cambios del Contrato" : "Guardado bloqueado: Requiere Paso 3 culminado"}
                 >
                   <Save className="w-4 h-4" />
                   <span>Guardar Cambios</span>
@@ -162,26 +205,60 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
               )
             )}
 
-            {/* Guardar / Exportar a PDF Button */}
+            {/* Enviar Reporte a WhatsApp Perú 990010020 */}
+            <button
+              onClick={handleSendReportWhatsApp}
+              type="button"
+              className="px-3 py-1.5 sm:py-2 bg-emerald-700 hover:bg-emerald-600 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all cursor-pointer shadow-md"
+              title="Enviar Informe / Reporte del flujo secuencial de 12 pasos al WhatsApp 990010020"
+            >
+              <Send className="w-3.5 h-3.5" />
+              <span>Reporte a WhatsApp</span>
+            </button>
+
+            {/* Enviar Contrato a WhatsApp Perú 990010020 (Habilitado tras Paso 3) */}
+            <button
+              onClick={handleSendContractWhatsApp}
+              disabled={!isStep3Completed}
+              type="button"
+              className={`px-3 py-1.5 sm:py-2 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all cursor-pointer shadow-md ${
+                isStep3Completed
+                  ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                  : 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed opacity-60'
+              }`}
+              title={isStep3Completed ? "Enviar Contrato Oficial al WhatsApp 990010020" : "Bloqueado: Requiere firma y adjunto en Paso 3"}
+            >
+              {!isStep3Completed ? <Lock className="w-3.5 h-3.5 text-slate-500" /> : <Send className="w-3.5 h-3.5" />}
+              <span>Contrato a WhatsApp</span>
+            </button>
+
+            {/* Guardar / Exportar a PDF Button (Habilitado tras Paso 3) */}
             <button
               onClick={handleExportPdf}
-              disabled={isGeneratingPdf}
-              className="px-3.5 sm:px-5 py-1.5 sm:py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-black text-xs rounded-xl shadow-lg hover:shadow-amber-500/20 flex items-center gap-2 transition-all cursor-pointer disabled:opacity-50"
-              title="Descargar y Exportar Contrato Oficial en formato PDF"
+              disabled={isGeneratingPdf || !isStep3Completed}
+              className={`px-3.5 sm:px-4 py-1.5 sm:py-2 font-black text-xs rounded-xl shadow-lg flex items-center gap-2 transition-all cursor-pointer ${
+                isStep3Completed
+                  ? 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 hover:shadow-amber-500/20'
+                  : 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed opacity-60'
+              }`}
+              title={isStep3Completed ? "Descargar y Exportar Contrato Oficial en formato PDF" : "Bloqueado: Requiere completar y adjuntar firma en el Paso 3"}
             >
               {isGeneratingPdf ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
+              ) : !isStep3Completed ? (
+                <Lock className="w-4 h-4 text-slate-500" />
               ) : (
                 <Download className="w-4 h-4" />
               )}
               <span>{isGeneratingPdf ? 'Generando PDF...' : 'Exportar a PDF'}</span>
             </button>
 
-            {/* Imprimir Button */}
+            {/* Imprimir Button (Permitido siempre) */}
             <button
               onClick={handlePrint}
+              type="button"
               className="px-3 sm:px-4 py-1.5 sm:py-2 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all cursor-pointer"
-              title="Abrir cuadro de diálogo de impresión"
+              title="Abrir cuadro de diálogo de impresión en computadora o dispositivo"
             >
               <Printer className="w-4 h-4 text-amber-400" />
               <span>Imprimir</span>
@@ -200,17 +277,6 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
 
             <button
               type="button"
-              onClick={handleExportPdf}
-              disabled={isGeneratingPdf}
-              className="px-2.5 py-1.5 sm:py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 hover:border-amber-400/50 text-xs font-bold flex items-center gap-1 transition-all cursor-pointer shadow-xs"
-              title="Adelante / Exportar PDF"
-            >
-              <span className="hidden sm:inline">Adelante</span>
-              <ChevronRight className="w-4 h-4" />
-            </button>
-
-            <button
-              type="button"
               onClick={onClose}
               className="p-1.5 sm:px-3 sm:py-2 rounded-xl bg-slate-800 hover:bg-red-950/60 hover:text-red-300 text-slate-300 border border-slate-700 hover:border-red-500/50 transition-colors cursor-pointer flex items-center gap-1 font-bold text-xs"
               title="Salir / Cerrar ventana"
@@ -220,6 +286,33 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
             </button>
           </div>
         </div>
+
+        {/* Informative Status Banner about Step 3 */}
+        {!isStep3Completed ? (
+          <div className="bg-amber-500/10 border-b border-amber-500/30 px-4 py-2 text-xs flex items-center justify-between gap-3 text-amber-950">
+            <div className="flex items-center gap-2 font-medium">
+              <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+              <span>
+                <strong>Contrato Preliminar:</strong> La exportación a PDF, guardado y envío de contrato están bloqueados hasta adjuntar el contrato firmado en el <strong>Paso 3</strong>. Sí puede <strong>Imprimir</strong> o <strong>Enviar Reporte a WhatsApp (990010020)</strong>.
+              </span>
+            </div>
+            <span className="text-[10px] bg-amber-200 text-amber-900 font-bold px-2 py-0.5 rounded-full shrink-0">
+              Paso 3 Pendiente
+            </span>
+          </div>
+        ) : (
+          <div className="bg-emerald-500/10 border-b border-emerald-500/30 px-4 py-2 text-xs flex items-center justify-between gap-3 text-emerald-950">
+            <div className="flex items-center gap-2 font-medium">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>
+                <strong>Contrato Formalizado y Firmado:</strong> Habilitada la exportación a PDF oficial, guardado definitivo y envío a WhatsApp.
+              </span>
+            </div>
+            <span className="text-[10px] bg-emerald-200 text-emerald-900 font-bold px-2 py-0.5 rounded-full shrink-0">
+              ✓ Paso 3 Culminado
+            </span>
+          </div>
+        )}
 
         {/* Printable Contract Document Container (Strictly sized for 1-page A4 vertical) */}
         <div id="tct-contract-document" className={`relative p-5 sm:p-7 overflow-y-auto space-y-3 flex-1 bg-white text-slate-900 ${getFontClass()} print:p-2 print:space-y-2`}>
@@ -780,13 +873,23 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
                   </div>
                 )}
 
-                {/* 7. Memoria USB (Always present) */}
+                {/* 7. Memoria USB */}
                 <div className="p-2 bg-white rounded-lg border border-slate-200 shadow-2xs">
                   <span className="font-black text-slate-900 block flex items-center gap-1">
-                    💾 Memoria USB 3.2 ({currentData.usbCapacity || currentData.usbSpecification || '128GB'})
+                    💾 {currentData.usbCapacity === 'NO_USB' || currentData.usbCapacity === 'No se entregará USB' 
+                        ? 'Memoria USB: No se entregará USB' 
+                        : `Memoria USB 3.2 (${currentData.usbCapacity || currentData.usbSpecification || '128GB'})`}
                   </span>
-                  <span className="text-[10px] text-emerald-700 font-bold">Entrega con Saldo S/. 0</span>
-                  <p className="text-[9px] text-slate-600 font-medium mt-0.5">Material final masterizado en alta resolución</p>
+                  <span className="text-[10px] text-emerald-700 font-bold">
+                    {currentData.usbCapacity === 'NO_USB' || currentData.usbCapacity === 'No se entregará USB' 
+                      ? 'Entrega mediante enlace digital seguro' 
+                      : 'Entrega con Saldo S/. 0'}
+                  </span>
+                  <p className="text-[9px] text-slate-600 font-medium mt-0.5">
+                    {currentData.usbCapacity === 'NO_USB' || currentData.usbCapacity === 'No se entregará USB' 
+                      ? 'Acceso descargable en la nube para videos y fotos' 
+                      : 'Material final masterizado en alta resolución'}
+                  </p>
                 </div>
 
                 {/* 8. Regalo Sorpresa (Conditional) */}
@@ -800,16 +903,6 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
                   </div>
                 )}
 
-              </div>
-
-              {/* Preservation rule for master and raw files con título Política de Custodia */}
-              <div className="bg-amber-50/90 p-3 rounded-xl border border-amber-300 text-amber-950 font-medium text-[10px] leading-relaxed shadow-2xs space-y-0.5">
-                <span className="font-black text-amber-950 block text-[9.5px] uppercase tracking-wide">
-                  Política de Custodia:
-                </span>
-                <p>
-                  * <strong>{contractDesign.headerTitle || 'CORPORACIÓN TCT'}</strong> conservará los archivos <strong>MASTER</strong> y brutos, hasta un plazo de <strong>0{currentData.rawCustodyDays || 3} días posteriores</strong> a la fecha programada de entrega del material. De no recoger el Cliente en la fecha de entrega pactada sólo se conservará el archivo <strong>MASTER</strong> final.
-                </p>
               </div>
 
               {isEditing && (
@@ -855,13 +948,13 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
             </div>
           </div>
 
-          {/* Clause 5: Política de Revisiones, Propiedad Intelectual y Difusión, Postergación y Condiciones Generes */}
+          {/* Clause 5: Condiciones Legales, Imagen, Propiedad Intelectual, Logística, Custodia y Generales */}
           <div className="space-y-1 page-break-inside-avoid">
             <h3 className="font-black text-slate-900 uppercase tracking-wide flex items-center justify-between text-[11px]">
               <div className="flex items-center gap-1">
                 <span className="w-3.5 h-3.5 rounded-full bg-slate-900 text-amber-400 text-[9px] flex items-center justify-center font-bold">5</span>
                 <span>
-                  CLÁUSULA QUINTA: {currentData.includeRevisionsPolicy ? 'POLÍTICA DE REVISIONES, ' : ''}PROPIEDAD INTELECTUAL Y DIFUSIÓN, POSTERGACIÓN Y CONDICIONES GENERALES
+                  CLÁUSULA QUINTA: AUTORIZACIÓN DE IMAGEN, PROPIEDAD INTELECTUAL, LOGÍSTICA, CUSTODIA Y CONDICIONES GENERALES
                 </span>
               </div>
               {isEditing && (
@@ -878,16 +971,14 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
             </h3>
 
             <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 space-y-1.5 text-[10px] leading-relaxed">
-              {/* 5.1 Política de Revisiones (Opcional - solo visible si includeRevisionsPolicy es true) */}
-              {currentData.includeRevisionsPolicy && (
-                <div className="p-2 bg-white rounded-lg border border-slate-200 text-slate-800">
-                  <p>
-                    <strong>5.1. Política de Revisiones:</strong> EL CLIENTE tiene derecho a <strong>{currentData.revisionRounds || 2} rondas de revisiones</strong> menores de edición sin costo dentro de un plazo máximo de <strong>{currentData.revisionDaysLimit || 5} días hábiles</strong> posteriores a la entrega del primer borrador digital.
-                  </p>
-                </div>
-              )}
+              {/* 5.1 Autorización de Imagen y Exoneración de Responsabilidad */}
+              <div className="p-2 bg-white rounded-lg border border-slate-200 text-slate-800">
+                <p>
+                  <strong>5.1. Autorización de Imagen y Exoneración de Responsabilidad:</strong> El Cliente garantiza que ha comunicado a todos los familiares, asistentes y personas presentes en el evento que este será grabado en video y fotografiado. En consecuencia, el Cliente deslinda a Corporación TCT de toda responsabilidad legal, judicial o extrajudicial relativa a reclamos de terceros sobre el uso, captura o difusión de su imagen personal durante el desarrollo del servicio contratado.
+                </p>
+              </div>
 
-              {/* 5.2 (o 5.1) Propiedad Intelectual y Difusión */}
+              {/* 5.2 Propiedad Intelectual y Difusión */}
               <div className="p-2 bg-white rounded-lg border border-slate-200">
                 <p className="text-slate-800">
                   {currentData.authorizeInternetPublishing ? (
@@ -916,11 +1007,27 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
                 </p>
               </div>
 
-              {/* 5.5 Cláusula Adicional Especial (Opcional - solo si existe o en edición) */}
+              {/* 5.5 Política de Custodia (Ubicada exactamente después de Logística de Campo) */}
+              <div className="p-2 bg-amber-50/90 rounded-lg border border-amber-300 text-amber-950">
+                <p>
+                  <strong>5.5. Política de Custodia:</strong> <strong>{contractDesign.headerTitle || 'CORPORACIÓN TCT'}</strong> conservará los archivos <strong>MASTER</strong> y brutos, hasta un plazo de <strong>0{currentData.rawCustodyDays || 3} días posteriores</strong> a la fecha programada de entrega del material. De no recoger el Cliente en la fecha de entrega pactada sólo se conservará el archivo <strong>MASTER</strong> final.
+                </p>
+              </div>
+
+              {/* 5.6 Política de Revisiones (Opcional - solo visible si includeRevisionsPolicy es true) */}
+              {currentData.includeRevisionsPolicy && (
+                <div className="p-2 bg-white rounded-lg border border-slate-200 text-slate-800">
+                  <p>
+                    <strong>5.6. Política de Revisiones:</strong> EL CLIENTE tiene derecho a <strong>{currentData.revisionRounds || 2} rondas de revisiones</strong> menores de edición sin costo dentro de un plazo máximo de <strong>{currentData.revisionDaysLimit || 5} días hábiles</strong> posteriores a la entrega del primer borrador digital.
+                  </p>
+                </div>
+              )}
+
+              {/* 5.7 Cláusula Adicional Especial (Opcional - solo si existe o en edición) */}
               {(hasSpecialClause || isEditing) && (
                 <div className="p-2 bg-amber-50/60 rounded-lg border border-amber-200 space-y-1">
                   <span className="font-black text-amber-950 block text-[9.5px]">
-                    5.5. Acuerdos Especiales Adicionales:
+                    {currentData.includeRevisionsPolicy ? '5.7.' : '5.6.'} Acuerdos Especiales Adicionales:
                   </span>
                   {isEditing ? (
                     <textarea
@@ -955,6 +1062,9 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
                 </p>
                 <p className="text-[10px] text-slate-900 font-black">
                   {advisorName}
+                </p>
+                <p className="text-[9.5px] text-slate-800 font-bold">
+                  DNI: {advisorDni}
                 </p>
               </div>
             </div>

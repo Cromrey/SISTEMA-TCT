@@ -597,7 +597,7 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                   <span>Flujo Secuencial Corporación TCT (12 Pasos)</span>
                 </h3>
                 <span className="text-[11px] text-slate-500 italic hidden sm:inline">
-                  * El paso activo en seguimiento resalta con parpadeo y borde dorado
+                  * Haga clic en los hitos habilitados para abrir formularios y adjuntos
                 </span>
               </div>
               <PhaseSequenceBar
@@ -606,149 +606,7 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
               />
             </div>
 
-              {/* Operational Detail Cards for the 6 Phases and 12 Steps */}
-              <div className="space-y-3 pt-2">
-                <div className="flex items-center justify-between border-b border-slate-200 pb-2 flex-wrap gap-2">
-                  <div>
-                    <h3 className="text-xs sm:text-sm font-black text-slate-900 uppercase tracking-wide flex items-center gap-1.5">
-                      <CheckSquare className="w-4 h-4 text-emerald-600" />
-                      <span>Detalle Operativo y Formularios por Fases</span>
-                    </h3>
-                    <span className="text-[11px] text-slate-500">
-                      Haga clic en cualquier paso para abrir su formulario de evidencias técnicas, checklists y archivos adjuntos.
-                    </span>
-                  </div>
-                  <span className="px-2.5 py-1 rounded-xl bg-slate-900 text-amber-400 text-xs font-mono font-bold">
-                    Completados: {completedSteps} / {totalSteps}
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 sm:gap-4">
-                  {project.phases.map((phase, pIdx) => (
-                    <div key={`phase-${phase.phaseNumber || pIdx}`} className="bg-white rounded-3xl p-3.5 sm:p-4 border border-slate-200 shadow-xs space-y-3">
-                      <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                        <div className="flex items-center space-x-2">
-                          <span 
-                            className="w-7 h-7 rounded-xl text-white font-extrabold text-xs flex items-center justify-center shadow-xs shrink-0"
-                            style={{ backgroundColor: phase.color }}
-                          >
-                            {phase.phaseNumber}
-                          </span>
-                          <h4 className="text-xs sm:text-sm font-black text-slate-900 truncate">
-                            {phase.name}
-                          </h4>
-                        </div>
-                      </div>
-
-                      <p className="text-[11px] text-slate-500 line-clamp-1">
-                        {phase.description}
-                      </p>
-
-                      <div className="space-y-2">
-                        {phase.steps.map((step, sIdx) => {
-                          const globalIdx = allSteps.findIndex(item => item.step.stepNumber === step.stepNumber);
-                          const isFirstStep = globalIdx === 0;
-                          const prevStep = !isFirstStep ? allSteps[globalIdx - 1] : null;
-                          const isLocked = !isFirstStep && prevStep && prevStep.step.status !== 'completed';
-
-                          const isComplete = step.status === 'completed';
-                          const isActive = step.stepNumber === activeStepNumber && !isComplete;
-                          const isStep3 = step.stepNumber === 3;
-                          const hasAttachments = step.attachments && step.attachments.length > 0;
-
-                          return (
-                            <div
-                              key={step.id || `step-${step.stepNumber || sIdx}-${sIdx}`}
-                              onClick={() => setSelectedStepCoord({ phaseIndex: pIdx, stepIndex: sIdx })}
-                              className={`p-3 rounded-2xl border transition-all cursor-pointer relative ${
-                                isComplete
-                                  ? 'bg-emerald-50/70 border-emerald-200 hover:border-emerald-400'
-                                  : isActive
-                                  ? 'bg-amber-100/90 border-2 border-amber-500 shadow-md ring-2 ring-amber-400 animate-pulse'
-                                  : isLocked
-                                  ? 'bg-slate-50 border-slate-200 opacity-70'
-                                  : 'bg-white border-slate-200 hover:border-slate-300'
-                              }`}
-                            >
-                              {isActive && isStep3 && (
-                                <span className="absolute -top-2.5 right-3 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 text-[9px] font-black px-2 py-0.5 rounded-full shadow-md animate-bounce border border-amber-300">
-                                  ★ FIRMA DE CONTRATO
-                                </span>
-                              )}
-
-                              <div className="flex items-start justify-between gap-2">
-                                <div className="flex items-start space-x-2.5">
-                                  <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-black shrink-0 mt-0.5 ${
-                                    isComplete
-                                      ? 'bg-emerald-600 text-white'
-                                      : isActive
-                                      ? 'bg-amber-500 text-slate-950 ring-2 ring-amber-300 font-black'
-                                      : 'bg-slate-200 text-slate-700'
-                                  }`}>
-                                    {isComplete ? <Check className="w-3.5 h-3.5" /> : step.stepNumber}
-                                  </div>
-
-                                  <div>
-                                    <div className="flex items-center gap-1.5 flex-wrap">
-                                      <span className="text-xs font-black text-slate-900">
-                                        {step.title}
-                                      </span>
-                                      {isComplete && (
-                                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.2 rounded">
-                                          ✓ Completado
-                                        </span>
-                                      )}
-                                      {isActive && isStep3 && (
-                                        <span className="text-[10px] font-black text-amber-950 bg-amber-300 px-1.5 py-0.2 rounded border border-amber-500">
-                                          ★ Hito Clave (25%)
-                                        </span>
-                                      )}
-                                      {isActive && !isStep3 && (
-                                        <span className="text-[10px] font-black text-amber-900 bg-amber-200 px-1.5 py-0.2 rounded animate-pulse">
-                                          ⚡ En curso
-                                        </span>
-                                      )}
-                                      {hasAttachments && (
-                                        <span className="text-[10px] font-bold text-blue-700 bg-blue-100 px-1.5 py-0.2 rounded flex items-center gap-0.5">
-                                          <Paperclip className="w-2.5 h-2.5" />
-                                          {step.attachments!.length} adjunto(s)
-                                        </span>
-                                      )}
-                                    </div>
-                                    <p className="text-[11px] text-slate-500 line-clamp-1 mt-0.5">
-                                      {step.description}
-                                    </p>
-                                  </div>
-                                </div>
-
-                                <ChevronRight className="w-4 h-4 text-slate-400 shrink-0 mt-1" />
-                              </div>
-
-                              {/* Ingest or field payment indicators */}
-                              {step.ingestData && (
-                                <div className="mt-2 bg-yellow-100/70 p-1.5 rounded-lg text-[10px] font-bold text-yellow-900 flex justify-between">
-                                  <span>Ingest: {step.ingestData.sdCardsCount} Tarjetas ({step.ingestData.totalGigabytes} GB)</span>
-                                  <span>{step.ingestData.backupVerified ? '✅ RAID OK' : '⏳ Pendiente'}</span>
-                                </div>
-                              )}
-
-                              {step.fieldPaymentData && (
-                                <div className="mt-2 bg-red-100/70 p-1.5 rounded-lg text-[10px] font-bold text-red-900 flex justify-between">
-                                  <span>Cobro 7PM: {step.fieldPaymentData.paymentStatus === 'paid' ? `Cancelado (S/. ${step.fieldPaymentData.amountCollected.toLocaleString()})` : 'Pendiente'}</span>
-                                  <span>{step.fieldPaymentData.paymentMethod}</span>
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* TECHNICAL STAFF & EQUIPMENT (Directly accessible at the bottom) */}
+            {/* TECHNICAL STAFF & EQUIPMENT (Directly accessible at the bottom) */}
               <div className="pt-2 space-y-4">
               
               {/* Permission Banner for Non-Admins */}

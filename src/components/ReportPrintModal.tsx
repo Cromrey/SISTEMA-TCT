@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ProductionProject } from '../types';
 import { TCTLogo } from './TCTLogo';
-import { printElement, exportElementToPdf } from '../utils/printHelper';
+import { printElement, exportElementToPdf, sendToWhatsAppPeru, buildReportWhatsAppText } from '../utils/printHelper';
 import { 
   Printer, 
   X, 
@@ -21,7 +21,8 @@ import {
   FileText,
   ChevronLeft,
   ChevronRight,
-  Loader2
+  Loader2,
+  Send
 } from 'lucide-react';
 
 interface ReportPrintModalProps {
@@ -50,6 +51,11 @@ export const ReportPrintModal: React.FC<ReportPrintModalProps> = ({
 
   const handlePrint = () => {
     printElement('tct-printable-document', `Informe-${project.uniqueCode}`);
+  };
+
+  const handleSendReportWhatsApp = () => {
+    const text = buildReportWhatsAppText(project);
+    sendToWhatsAppPeru('990010020', text);
   };
 
   // Compute total steps and completed
@@ -82,6 +88,17 @@ export const ReportPrintModal: React.FC<ReportPrintModalProps> = ({
           </div>
 
           <div className="flex items-center space-x-1.5 sm:space-x-2 flex-wrap gap-1">
+            {/* Enviar Reporte a WhatsApp Perú 990010020 */}
+            <button
+              onClick={handleSendReportWhatsApp}
+              type="button"
+              className="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-md flex items-center gap-1.5 transition-all cursor-pointer"
+              title="Enviar Reporte Oficial al WhatsApp Perú 990010020"
+            >
+              <Send className="w-3.5 h-3.5" />
+              <span>WhatsApp (990010020)</span>
+            </button>
+
             <button
               onClick={handleExportPdf}
               disabled={isGeneratingPdf}
@@ -114,17 +131,6 @@ export const ReportPrintModal: React.FC<ReportPrintModalProps> = ({
             >
               <ChevronLeft className="w-4 h-4" />
               <span className="hidden sm:inline">Atrás</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={handleExportPdf}
-              disabled={isGeneratingPdf}
-              className="px-2.5 py-1.5 sm:py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 hover:border-amber-400/50 text-xs font-bold flex items-center gap-1 transition-all cursor-pointer shadow-xs"
-              title="Adelante / Exportar PDF"
-            >
-              <span className="hidden sm:inline">Adelante</span>
-              <ChevronRight className="w-4 h-4" />
             </button>
 
             <button
@@ -285,7 +291,25 @@ export const ReportPrintModal: React.FC<ReportPrintModalProps> = ({
                             </span>
                           </td>
                           <td className="p-1.5 text-slate-700 text-[9px]">
-                            {step.completedBy ? `${step.completedBy} (${step.completedAt || 'Auditado'})` : 'En espera'}
+                            {(() => {
+                              const latestAtt = step.attachments && step.attachments.length > 0 ? step.attachments[step.attachments.length - 1] : null;
+                              const respName = latestAtt?.uploadedBy || step.completedBy || (isCompleted ? (project.contractHolder ? project.contractHolder.split(' - ')[0] : 'Corporación TCT') : null);
+                              const respDateTime = latestAtt?.uploadedAt || step.completedAt || (isCompleted ? project.createdAt : null);
+
+                              if (respName) {
+                                return (
+                                  <div className="leading-tight">
+                                    <span className="font-bold text-slate-900">{respName}</span>
+                                    {respDateTime && (
+                                      <span className="text-[8px] text-slate-500 block">
+                                        📅 {respDateTime}
+                                      </span>
+                                    )}
+                                  </div>
+                                );
+                              }
+                              return <span className="text-slate-400 italic text-[8.5px]">En espera</span>;
+                            })()}
                           </td>
                           <td className="p-1.5 text-right text-[9px] text-slate-600 font-mono">
                             {step.attachments?.length || 0} adj.

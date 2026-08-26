@@ -215,10 +215,10 @@ export const PhaseSequenceBar: React.FC<PhaseSequenceBarProps> = ({
                             ? 'bg-amber-100 text-amber-950 border-2 border-amber-500 font-black shadow-md ring-2 ring-amber-400 animate-pulse scale-[1.02]'
                             : isDone
                             ? 'bg-emerald-50/80 text-emerald-950 border-emerald-200 hover:bg-emerald-100'
+                            : isLocked
+                            ? 'bg-slate-100 text-slate-400 border-slate-200 opacity-60 cursor-not-allowed hover:bg-slate-100'
                             : isSpecialRule
                             ? 'bg-red-50 text-red-950 border-red-200 hover:bg-red-100 font-bold'
-                            : isLocked
-                            ? 'bg-slate-50 text-slate-400 border-slate-200 hover:bg-slate-100'
                             : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
                         }`}
                       >
@@ -235,16 +235,18 @@ export const PhaseSequenceBar: React.FC<PhaseSequenceBarProps> = ({
                             isDone 
                               ? 'bg-emerald-600 text-white' 
                               : isActive
-                              ? 'bg-amber-500 text-slate-950 ring-2 ring-amber-300 font-black'
+                              ? 'bg-amber-500 text-slate-950 ring-2 ring-amber-300 font-black animate-pulse'
+                              : isLocked
+                              ? 'bg-slate-300 text-slate-500'
                               : isSpecialRule
                               ? 'bg-red-600 text-white'
-                              : isLocked
-                              ? 'bg-slate-200 text-slate-500'
                               : 'bg-slate-200 text-slate-700'
                           }`}>
                             {isLocked ? <Lock className="w-2.5 h-2.5" /> : step.stepNumber}
                           </div>
-                          <span className="truncate text-[11px] font-bold leading-tight" title={step.title}>
+                          <span className={`truncate text-[11px] font-bold leading-tight ${
+                            isLocked ? 'line-through decoration-slate-400 text-slate-400' : ''
+                          }`} title={step.title}>
                             {step.title}
                           </span>
                         </div>
@@ -256,11 +258,13 @@ export const PhaseSequenceBar: React.FC<PhaseSequenceBarProps> = ({
                               ? 'bg-emerald-200/60 text-emerald-900'
                               : isActive 
                               ? 'bg-amber-400 text-slate-950 font-black' 
+                              : isLocked
+                              ? 'bg-slate-200/80 text-slate-500 line-through'
                               : isSpecialRule
                               ? 'bg-red-200/60 text-red-900 font-bold'
                               : 'bg-slate-100 text-slate-600'
                           }`}>
-                            {isDone ? '✓ Listo' : isActive ? '⚡ EN CURSO' : step.badgeText}
+                            {isDone ? '✓ Listo' : isActive ? '⚡ EN CURSO' : isLocked ? '🔒 Bloqueado' : step.badgeText}
                           </span>
 
                           {hasAttachments && (

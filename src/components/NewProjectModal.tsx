@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ProductionProject, EventType, AuthUser } from '../types';
-import { createDefaultPhases } from '../data/templateWorkflow';
+import { createDefaultPhases, createNewProjectPhases } from '../data/templateWorkflow';
 import { generateUniqueTCTCode, generateContractNumber } from '../utils/storage';
 import { getStoredRules } from '../utils/rulesStorage';
 import { getStoredUsers } from '../utils/authStorage';
@@ -327,7 +327,7 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
       .join(' | ');
 
     const estimatedDelivery = new Date(new Date(primaryEventDate).getTime() + 15 * 86400000).toISOString().split('T')[0];
-    const initialPhases = createDefaultPhases(primaryEventDate, includesPhotobook);
+    const initialPhases = createNewProjectPhases(primaryEventDate, includesPhotobook);
 
     const matchedAdvisor = systemUsers.find(u =>
       contractHolder.includes(u.fullName) || (currentUser && u.id === currentUser.id)
@@ -404,14 +404,8 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
       rescheduleNoticeMonths: Number(rescheduleNoticeMonths) || 1,
       additionalCustomClauseTitle: additionalCustomClauseTitle.trim(),
       additionalCustomClause: additionalCustomClause.trim(),
-      assignedStaff: [
-        { id: `st-${Date.now()}-1`, name: 'Carlos Mendoza', role: 'Director de Cámara', phone: '+51 912 345 678', confirmed: true },
-        { id: `st-${Date.now()}-2`, name: 'Valeria Castro', role: 'Fotógrafo Principal', phone: '+51 923 456 789', confirmed: true }
-      ],
-      equipmentList: [
-        { id: `eq-${Date.now()}-1`, name: 'Sony FX3 Cinema 4K', category: 'Cámara', checkedOut: true },
-        { id: `eq-${Date.now()}-2`, name: 'Kit Micrófonos Inalámbricos DJI', category: 'Audio', checkedOut: true }
-      ],
+      assignedStaff: [],
+      equipmentList: [],
       phases: initialPhases,
       createdAt: new Date().toISOString().split('T')[0],
       updatedAt: new Date().toISOString()
@@ -955,14 +949,14 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
             </div>
           </div>
 
-          {/* Section 4: Discounts, Hours & Financials in Soles (S/.) */}
+          {/* Section 4: Financial Breakdown, IGV & Deliverables in Soles (S/.) */}
           <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4">
             <label className="block text-xs font-black text-slate-900 uppercase tracking-wide flex items-center gap-1.5">
               <Coins className="w-4 h-4 text-emerald-600" />
               4. Desglose Financiero, Descuentos & Adelanto (S/.)
             </label>
 
-            {/* List Price, Discount, Extra Hours Grid */}
+            {/* Row 1: List Price, Discount, Extra Hours Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
               <div className="p-3 bg-slate-100 rounded-xl border border-slate-300">
                 <label className="block text-slate-700 font-bold mb-1 flex items-center justify-between">
@@ -1022,7 +1016,7 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
                     value={extraHoursCountStr}
                     onChange={handleNumericInput(setExtraHoursCountStr)}
                     placeholder="0"
-                    className="w-1/2 p-2 text-sm font-bold border border-purple-300 rounded-lg bg-white text-purple-900"
+                    className="w-1/2 p-2 text-sm font-bold border border-purple-300 rounded-lg bg-white text-purple-900 font-mono"
                   />
                   <div className="w-1/2 text-right self-center text-xs font-mono font-black text-purple-900">
                     + S/. {extraHoursTotal.toFixed(2)}
@@ -1031,174 +1025,36 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
               </div>
             </div>
 
-            {/* Extra Production Services: Spot de Audio/Video y Transmisión en Vivo */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs pt-1">
-              {/* 01 Spot Publicitario de Audio y Video */}
-              <div className={`p-3 rounded-2xl border transition-all ${
-                includesAudioVideoSpot 
-                  ? 'bg-rose-50/70 border-rose-300 ring-1 ring-rose-300' 
-                  : 'bg-slate-50 border-slate-200'
-              }`}>
-                <div className="flex items-center justify-between gap-2 mb-2">
-                  <label className="flex items-center space-x-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={includesAudioVideoSpot}
-                      onChange={(e) => setIncludesAudioVideoSpot(e.target.checked)}
-                      className="w-4 h-4 text-rose-600 rounded cursor-pointer"
-                    />
-                    <div>
-                      <span className="font-black text-rose-950 text-xs block">
-                        🎬 Producir 01 Spot de Audio y Video
-                      </span>
-                      <span className="text-[10px] text-slate-500">
-                        Edición comercial dinámica para pantallas y redes
-                      </span>
-                    </div>
-                  </label>
-                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
-                    includesAudioVideoSpot ? 'bg-rose-600 text-white' : 'bg-slate-200 text-slate-600'
-                  }`}>
-                    {includesAudioVideoSpot ? 'SÍ' : 'NO'}
-                  </span>
-                </div>
-
-                {includesAudioVideoSpot && (
-                  <div className="grid grid-cols-2 gap-2 pt-1 border-t border-rose-200/70">
-                    <div>
-                      <label className="block text-[10px] text-rose-900 font-bold mb-0.5">
-                        Duración del Spot:
-                      </label>
-                      <input
-                        type="text"
-                        value={spotDuration}
-                        onChange={(e) => setSpotDuration(e.target.value)}
-                        placeholder="Ej. 30 seg, 60 seg"
-                        className="w-full p-1.5 text-xs font-bold border border-rose-300 rounded-lg bg-white text-rose-950"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] text-rose-900 font-bold mb-0.5">
-                        Precio Creación (S/.):
-                      </label>
-                      <input
-                        type="text"
-                        inputMode="decimal"
-                        value={spotPriceStr}
-                        onChange={handleNumericInput(setSpotPriceStr)}
-                        placeholder="0.00"
-                        className="w-full p-1.5 text-xs font-bold font-mono border border-rose-300 rounded-lg bg-white text-rose-950"
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Transmisión en Vivo por Internet (Live Streaming HD) */}
-              <div className={`p-3 rounded-2xl border transition-all ${
-                includesLiveStreaming 
-                  ? 'bg-sky-50/70 border-sky-300 ring-1 ring-sky-300' 
-                  : 'bg-slate-50 border-slate-200'
-              }`}>
-                <div className="flex items-center justify-between gap-2 mb-2">
-                  <label className="flex items-center space-x-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={includesLiveStreaming}
-                      onChange={(e) => setIncludesLiveStreaming(e.target.checked)}
-                      className="w-4 h-4 text-sky-600 rounded cursor-pointer"
-                    />
-                    <div>
-                      <span className="font-black text-sky-950 text-xs block">
-                        📡 Transmisión en Vivo por Internet (Streaming HD)
-                      </span>
-                      <span className="text-[10px] text-slate-500">
-                        Difusión en tiempo real en redes o canal privado
-                      </span>
-                    </div>
-                  </label>
-                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
-                    includesLiveStreaming ? 'bg-sky-600 text-white' : 'bg-slate-200 text-slate-600'
-                  }`}>
-                    {includesLiveStreaming ? 'SÍ' : 'NO'}
-                  </span>
-                </div>
-
-                {includesLiveStreaming && (
-                  <div className="flex items-center justify-between gap-2 pt-1 border-t border-sky-200/70">
-                    <div className="flex-1">
-                      <label className="block text-[10px] text-sky-900 font-bold mb-0.5">
-                        Precio Streaming (S/.) [0 = CORTESÍA]:
-                      </label>
-                      <input
-                        type="text"
-                        inputMode="decimal"
-                        value={liveStreamPriceStr}
-                        onChange={handleNumericInput(setLiveStreamPriceStr)}
-                        placeholder="0.00"
-                        className="w-full p-1.5 text-xs font-bold font-mono border border-sky-300 rounded-lg bg-white text-sky-950"
-                      />
-                    </div>
-                    <div className="shrink-0 self-end pb-1">
-                      {(parseFloat(liveStreamPriceStr || '0') === 0) ? (
-                        <span className="inline-block px-2.5 py-1 rounded-lg bg-emerald-600 text-white font-black text-[10px] shadow-xs">
-                          🎁 CORTESÍA (S/. 0.00)
-                        </span>
-                      ) : (
-                        <span className="inline-block px-2.5 py-1 rounded-lg bg-sky-900 text-sky-200 font-mono font-bold text-[10px]">
-                          + S/. {(parseFloat(liveStreamPriceStr || '0')).toFixed(2)}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Checkbox: Aplica IGV (18%) */}
-            <div className="p-3 rounded-xl bg-amber-50/70 border border-amber-300/80 flex items-center justify-between">
-              <label className="flex items-center space-x-2.5 cursor-pointer">
+            {/* Row 2: Aplica IGV (18%) - Highlighted in Red Box */}
+            <div className="p-3.5 rounded-2xl bg-red-50/90 border-2 border-red-300 flex items-center justify-between shadow-2xs">
+              <label className="flex items-center space-x-3 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={appliesIgv}
                   onChange={(e) => setAppliesIgv(e.target.checked)}
-                  className="w-4 h-4 text-amber-600 rounded cursor-pointer"
+                  className="w-5 h-5 text-red-600 rounded border-red-300 focus:ring-red-500 cursor-pointer"
                 />
                 <div>
-                  <span className="font-black text-amber-950 text-xs block">
-                    Aplica IGV (18%)
+                  <span className="font-black text-red-950 text-xs sm:text-sm block">
+                    🔴 Aplica IGV (18% Impuesto General a las Ventas)
                   </span>
-                  <span className="text-[10px] text-amber-800">
-                    Se calculará el 18% sobre (Precio Base - Descuento + Horas Extra) y se sumará al presupuesto total pactado.
+                  <span className="text-[10px] text-red-800 font-medium">
+                    Se calculará el 18% sobre (Subtotal Base) y se sumará formalmente al Presupuesto Total Pactado.
                   </span>
                 </div>
               </label>
               {appliesIgv && (
-                <div className="text-right shrink-0">
-                  <span className="text-[10px] text-slate-500 font-bold block">Monto IGV (18%):</span>
-                  <span className="text-xs font-black font-mono text-amber-900">+ S/. {igvAmount.toFixed(2)}</span>
+                <div className="text-right shrink-0 bg-white px-3 py-1.5 rounded-xl border border-red-200 shadow-2xs">
+                  <span className="text-[9px] text-slate-500 font-bold block uppercase">Monto IGV (18%):</span>
+                  <span className="text-xs font-black font-mono text-red-600">+ S/. {igvAmount.toFixed(2)}</span>
                 </div>
               )}
             </div>
 
-            {/* Additional equipment / services field */}
-            <div className="text-xs">
-              <label className="block text-slate-700 font-bold mb-1">
-                Equipos Adicionales / Cláusulas Especiales
-              </label>
-              <input
-                type="text"
-                value={additionalEquipmentNotes}
-                onChange={(e) => setAdditionalEquipmentNotes(e.target.value)}
-                placeholder="Ej. 1 Dron adicional, trípodes heavy duty, 2 pantallas de retorno..."
-                className="w-full p-2 border border-slate-300 rounded-xl bg-white"
-              />
-            </div>
-
-            {/* Summary Totals & Deposit Box */}
+            {/* Row 3: Presupuesto Total, Adelanto Inicial & Saldo Pendiente 7:00 PM */}
             <div className="bg-slate-900 text-white p-4 rounded-2xl grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
               <div>
-                <span className="text-slate-400 text-[11px] block font-bold">
+                <span className="text-slate-400 text-[11px] block font-bold uppercase tracking-wider">
                   PRESUPUESTO TOTAL (S/.) {appliesIgv ? '(Inc. IGV)' : ''}
                 </span>
                 <span className="text-xl font-black text-amber-400 font-mono">
@@ -1206,13 +1062,13 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
                 </span>
                 {appliesIgv && (
                   <span className="text-[9.5px] text-slate-400 block mt-0.5">
-                    Subtotal: S/. {baseSubtotal.toFixed(2)} | IGV: S/. {igvAmount.toFixed(2)}
+                    Subtotal: S/. {baseSubtotal.toFixed(2)} | IGV (18%): S/. {igvAmount.toFixed(2)}
                   </span>
                 )}
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-slate-400 text-[11px] font-bold flex items-center justify-between">
+                <label className="text-slate-400 text-[11px] font-bold flex items-center justify-between uppercase tracking-wider">
                   <span>ADELANTO INICIAL (S/.) *</span>
                   {nextRequiredField === 'deposit' && (
                     <span className="text-[10px] text-amber-300 bg-amber-500/30 border border-amber-400 px-1.5 py-0.2 rounded font-black animate-pulse">
@@ -1273,7 +1129,7 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
               </div>
 
               <div>
-                <span className="text-slate-400 text-[11px] block font-bold">SALDO PENDIENTE 7:00 PM</span>
+                <span className="text-slate-400 text-[11px] block font-bold uppercase tracking-wider">SALDO PENDIENTE 7:00 PM</span>
                 <span className="text-xl font-black text-emerald-400 font-mono">
                   S/. {finalBalance.toFixed(2)}
                 </span>
@@ -1283,131 +1139,258 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
               </div>
             </div>
 
-            {/* Deliverable Checkboxes with updated requested options */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 pt-1 text-xs">
-              {/* Fotobook con páginas editables */}
-              <div className={`p-3 rounded-xl border transition-all ${
-                includesPhotobook ? 'bg-pink-50 border-pink-300 ring-1 ring-pink-300' : 'bg-slate-50 border-slate-200'
-              }`}>
-                <label className="flex items-center space-x-2.5 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={includesPhotobook}
-                    onChange={(e) => setIncludesPhotobook(e.target.checked)}
-                    className="w-4 h-4 text-pink-600 rounded"
-                  />
-                  <span className="font-bold text-pink-950 text-xs">
-                    Incluye Fotobook (plazo 30 Días)
-                  </span>
-                </label>
-                {includesPhotobook && (
-                  <div className="mt-2 pt-2 border-t border-pink-200/70 flex items-center justify-between gap-2">
-                    <span className="text-[11px] font-bold text-pink-900">Número de Páginas:</span>
-                    <div className="flex items-center gap-1">
-                      <input
-                        type="number"
-                        min={10}
-                        max={120}
-                        value={photobookPagesCount}
-                        onChange={(e) => setPhotobookPagesCount(parseInt(e.target.value) || 30)}
-                        className="w-16 p-1 text-xs font-black text-center border border-pink-300 rounded-lg bg-white text-pink-950"
-                      />
-                      <span className="text-[10px] text-pink-700 font-bold">págs</span>
+            {/* Row 4: Deliverables & Extra Production Services in Exact Requested Sequence */}
+            <div className="space-y-2 pt-1">
+              <span className="text-slate-700 font-bold text-xs uppercase tracking-wider block">
+                Servicios Audiovisuales, Entregables & Cobertura:
+              </span>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 text-xs">
+                {/* 1. Flyer Digital de Invitación (Moved before Spot Audio/Video) */}
+                <div className={`p-3 rounded-xl border transition-all ${
+                  includesFlyerDesign ? 'bg-indigo-50 border-indigo-300 ring-1 ring-indigo-300' : 'bg-slate-50 border-slate-200'
+                }`}>
+                  <label className="flex items-center space-x-2.5 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={includesFlyerDesign}
+                      onChange={(e) => setIncludesFlyerDesign(e.target.checked)}
+                      className="w-4 h-4 text-indigo-600 rounded"
+                    />
+                    <span className="font-bold text-indigo-950 text-xs">
+                      🎨 Diseño 01 Flyer Digital Invitación
+                    </span>
+                  </label>
+                  {includesFlyerDesign && (
+                    <div className="mt-2 pt-2 border-t border-indigo-200/70 flex items-center justify-between gap-2">
+                      <span className="text-[11px] font-bold text-indigo-900">Anticipación Entrega:</span>
+                      <div className="flex items-center gap-1">
+                        <input
+                          type="number"
+                          min={1}
+                          max={60}
+                          value={flyerAnticipationDays}
+                          onChange={(e) => setFlyerAnticipationDays(parseInt(e.target.value) || 15)}
+                          className="w-16 p-1 text-xs font-black text-center border border-indigo-300 rounded-lg bg-white text-indigo-950"
+                        />
+                        <span className="text-[10px] text-indigo-700 font-bold">días</span>
+                      </div>
                     </div>
-                  </div>
-                )}
-              </div>
+                  )}
+                </div>
 
-              {/* Flyer Digital de Invitación */}
-              <div className={`p-3 rounded-xl border transition-all ${
-                includesFlyerDesign ? 'bg-indigo-50 border-indigo-300 ring-1 ring-indigo-300' : 'bg-slate-50 border-slate-200'
-              }`}>
-                <label className="flex items-center space-x-2.5 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={includesFlyerDesign}
-                    onChange={(e) => setIncludesFlyerDesign(e.target.checked)}
-                    className="w-4 h-4 text-indigo-600 rounded"
-                  />
-                  <span className="font-bold text-indigo-950 text-xs">
-                    Diseño 01 Flyer Digital Invitación
-                  </span>
-                </label>
-                {includesFlyerDesign && (
-                  <div className="mt-2 pt-2 border-t border-indigo-200/70 flex items-center justify-between gap-2">
-                    <span className="text-[11px] font-bold text-indigo-900">Anticipación Entrega:</span>
-                    <div className="flex items-center gap-1">
+                {/* 2. Spot Publicitario de Audio y Video */}
+                <div className={`p-3 rounded-xl border transition-all ${
+                  includesAudioVideoSpot 
+                    ? 'bg-rose-50/70 border-rose-300 ring-1 ring-rose-300' 
+                    : 'bg-slate-50 border-slate-200'
+                }`}>
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <label className="flex items-center space-x-2 cursor-pointer">
                       <input
-                        type="number"
-                        min={1}
-                        max={60}
-                        value={flyerAnticipationDays}
-                        onChange={(e) => setFlyerAnticipationDays(parseInt(e.target.value) || 15)}
-                        className="w-16 p-1 text-xs font-black text-center border border-indigo-300 rounded-lg bg-white text-indigo-950"
+                        type="checkbox"
+                        checked={includesAudioVideoSpot}
+                        onChange={(e) => setIncludesAudioVideoSpot(e.target.checked)}
+                        className="w-4 h-4 text-rose-600 rounded cursor-pointer"
                       />
-                      <span className="text-[10px] text-indigo-700 font-bold">días</span>
-                    </div>
+                      <div>
+                        <span className="font-black text-rose-950 text-xs block">
+                          🎬 Producir 01 Spot de Audio y Video
+                        </span>
+                        <span className="text-[10px] text-slate-500">
+                          Edición comercial dinámica para pantallas y redes
+                        </span>
+                      </div>
+                    </label>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                      includesAudioVideoSpot ? 'bg-rose-600 text-white' : 'bg-slate-200 text-slate-600'
+                    }`}>
+                      {includesAudioVideoSpot ? 'SÍ' : 'NO'}
+                    </span>
                   </div>
-                )}
-              </div>
 
-              {/* Sesión Fotográfica */}
-              <div className={`p-3 rounded-xl border transition-all ${
-                includesPhotoshoot ? 'bg-purple-50 border-purple-300' : 'bg-slate-50 border-slate-200'
-              }`}>
-                <label className="flex items-center space-x-2.5 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={includesPhotoshoot}
-                    onChange={(e) => setIncludesPhotoshoot(e.target.checked)}
-                    className="w-4 h-4 text-purple-600 rounded"
-                  />
-                  <span className="font-bold text-purple-950 text-xs">
-                    Incluye sesión fotográfica (1 camara de foto, plazo 15 días )
-                  </span>
-                </label>
-              </div>
+                  {includesAudioVideoSpot && (
+                    <div className="grid grid-cols-2 gap-2 pt-1 border-t border-rose-200/70">
+                      <div>
+                        <label className="block text-[10px] text-rose-900 font-bold mb-0.5">
+                          Duración del Spot:
+                        </label>
+                        <input
+                          type="text"
+                          value={spotDuration}
+                          onChange={(e) => setSpotDuration(e.target.value)}
+                          placeholder="Ej. 30 seg, 60 seg"
+                          className="w-full p-1.5 text-xs font-bold border border-rose-300 rounded-lg bg-white text-rose-950"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] text-rose-900 font-bold mb-0.5">
+                          Precio Creación (S/.):
+                        </label>
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          value={spotPriceStr}
+                          onChange={handleNumericInput(setSpotPriceStr)}
+                          placeholder="0.00"
+                          className="w-full p-1.5 text-xs font-bold font-mono border border-rose-300 rounded-lg bg-white text-rose-950"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
 
-              {/* Dron 4K */}
-              <div className={`p-3 rounded-xl border transition-all ${
-                includesDrone ? 'bg-sky-50 border-sky-300' : 'bg-slate-50 border-slate-200'
-              }`}>
-                <label className="flex items-center space-x-2.5 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={includesDrone}
-                    onChange={(e) => setIncludesDrone(e.target.checked)}
-                    className="w-4 h-4 text-sky-600 rounded"
-                  />
-                  <span className="font-bold text-sky-950 text-xs">
-                    Incluye Cobertura Dron 4K
-                  </span>
-                </label>
-              </div>
+                {/* 3. Transmisión en Vivo por Internet (Streaming HD) */}
+                <div className={`p-3 rounded-xl border transition-all ${
+                  includesLiveStreaming 
+                    ? 'bg-sky-50/70 border-sky-300 ring-1 ring-sky-300' 
+                    : 'bg-slate-50 border-slate-200'
+                }`}>
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <label className="flex items-center space-x-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={includesLiveStreaming}
+                        onChange={(e) => setIncludesLiveStreaming(e.target.checked)}
+                        className="w-4 h-4 text-sky-600 rounded cursor-pointer"
+                      />
+                      <div>
+                        <span className="font-black text-sky-950 text-xs block">
+                          📡 Transmisión en Vivo por Internet (Streaming HD)
+                        </span>
+                        <span className="text-[10px] text-slate-500">
+                          Difusión en tiempo real en redes o canal privado
+                        </span>
+                      </div>
+                    </label>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                      includesLiveStreaming ? 'bg-sky-600 text-white' : 'bg-slate-200 text-slate-600'
+                    }`}>
+                      {includesLiveStreaming ? 'SÍ' : 'NO'}
+                    </span>
+                  </div>
 
-              {/* Regalo Sorpresa TCT */}
-              <div className={`p-3 rounded-xl border transition-all ${
-                giftIncluded ? 'bg-amber-50 border-amber-300' : 'bg-slate-50 border-slate-200'
-              }`}>
-                <label className="flex items-center space-x-2.5 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={giftIncluded}
-                    onChange={(e) => setGiftIncluded(e.target.checked)}
-                    className="w-4 h-4 text-amber-600 rounded"
-                  />
-                  <span className="font-bold text-amber-950 text-xs">
-                    Incluye Regalo Sorpresa TCT (día de entrega)
-                  </span>
-                </label>
+                  {includesLiveStreaming && (
+                    <div className="flex items-center justify-between gap-2 pt-1 border-t border-sky-200/70">
+                      <div className="flex-1">
+                        <label className="block text-[10px] text-sky-900 font-bold mb-0.5">
+                          Precio Streaming (S/.) [0 = CORTESÍA]:
+                        </label>
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          value={liveStreamPriceStr}
+                          onChange={handleNumericInput(setLiveStreamPriceStr)}
+                          placeholder="0.00"
+                          className="w-full p-1.5 text-xs font-bold font-mono border border-sky-300 rounded-lg bg-white text-sky-950"
+                        />
+                      </div>
+                      <div className="shrink-0 self-end pb-1">
+                        {(parseFloat(liveStreamPriceStr || '0') === 0) ? (
+                          <span className="inline-block px-2.5 py-1 rounded-lg bg-emerald-600 text-white font-black text-[10px] shadow-xs">
+                            🎁 CORTESÍA (S/. 0.00)
+                          </span>
+                        ) : (
+                          <span className="inline-block px-2.5 py-1 rounded-lg bg-sky-900 text-sky-200 font-mono font-bold text-[10px]">
+                            + S/. {(parseFloat(liveStreamPriceStr || '0')).toFixed(2)}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* 4. Sesión Fotográfica */}
+                <div className={`p-3 rounded-xl border transition-all ${
+                  includesPhotoshoot ? 'bg-purple-50 border-purple-300 ring-1 ring-purple-300' : 'bg-slate-50 border-slate-200'
+                }`}>
+                  <label className="flex items-center space-x-2.5 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={includesPhotoshoot}
+                      onChange={(e) => setIncludesPhotoshoot(e.target.checked)}
+                      className="w-4 h-4 text-purple-600 rounded"
+                    />
+                    <span className="font-bold text-purple-950 text-xs">
+                      📸 Incluye sesión fotográfica (1 camara de foto, plazo 15 días)
+                    </span>
+                  </label>
+                </div>
+
+                {/* 5. Fotobook con páginas editables */}
+                <div className={`p-3 rounded-xl border transition-all ${
+                  includesPhotobook ? 'bg-pink-50 border-pink-300 ring-1 ring-pink-300' : 'bg-slate-50 border-slate-200'
+                }`}>
+                  <label className="flex items-center space-x-2.5 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={includesPhotobook}
+                      onChange={(e) => setIncludesPhotobook(e.target.checked)}
+                      className="w-4 h-4 text-pink-600 rounded"
+                    />
+                    <span className="font-bold text-pink-950 text-xs">
+                      📖 Incluye Fotobook (plazo 30 Días)
+                    </span>
+                  </label>
+                  {includesPhotobook && (
+                    <div className="mt-2 pt-2 border-t border-pink-200/70 flex items-center justify-between gap-2">
+                      <span className="text-[11px] font-bold text-pink-900">Número de Páginas:</span>
+                      <div className="flex items-center gap-1">
+                        <input
+                          type="number"
+                          min={10}
+                          max={120}
+                          value={photobookPagesCount}
+                          onChange={(e) => setPhotobookPagesCount(parseInt(e.target.value) || 30)}
+                          className="w-16 p-1 text-xs font-black text-center border border-pink-300 rounded-lg bg-white text-pink-950"
+                        />
+                        <span className="text-[10px] text-pink-700 font-bold">págs</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* 6. Cobertura Dron 4K */}
+                <div className={`p-3 rounded-xl border transition-all ${
+                  includesDrone ? 'bg-sky-50 border-sky-300 ring-1 ring-sky-300' : 'bg-slate-50 border-slate-200'
+                }`}>
+                  <label className="flex items-center space-x-2.5 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={includesDrone}
+                      onChange={(e) => setIncludesDrone(e.target.checked)}
+                      className="w-4 h-4 text-sky-600 rounded"
+                    />
+                    <span className="font-bold text-sky-950 text-xs">
+                      🚁 Incluye Cobertura Dron 4K
+                    </span>
+                  </label>
+                </div>
+
+                {/* 7. Regalo Sorpresa TCT (día de entrega) */}
+                <div className={`p-3 rounded-xl border transition-all ${
+                  giftIncluded ? 'bg-amber-50 border-amber-300 ring-1 ring-amber-300' : 'bg-slate-50 border-slate-200'
+                }`}>
+                  <label className="flex items-center space-x-2.5 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={giftIncluded}
+                      onChange={(e) => setGiftIncluded(e.target.checked)}
+                      className="w-4 h-4 text-amber-600 rounded"
+                    />
+                    <span className="font-bold text-amber-950 text-xs">
+                      🎁 Incluye Regalo Sorpresa TCT (día de entrega)
+                    </span>
+                  </label>
+                </div>
               </div>
             </div>
 
-            {/* Section: Technical Crew & USB Delivery Configuration */}
+            {/* Section: Technical Crew, Additional Equipment, USB Delivery Configuration & Policies */}
             <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3">
               <label className="block text-xs font-black text-slate-900 uppercase tracking-wide flex items-center gap-1.5">
                 <ShieldCheck className="w-4 h-4 text-amber-600" />
-                Despliegue Técnico, Capacidad USB y Políticas de Custodia & Revisiones
+                Despliegue Técnico, Equipos Adicionales & Políticas de Custodia y Revisiones
               </label>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
@@ -1428,7 +1411,7 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
                   </span>
                 </div>
 
-                {/* Capacidad de USB */}
+                {/* Capacidad de USB (Including No se entregará USB option) */}
                 <div>
                   <label className="block text-slate-700 font-bold mb-1">
                     Capacidad de Memoria USB 3.2 a Entregar
@@ -1439,6 +1422,7 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
                       onChange={(e) => setUsbCapacity(e.target.value)}
                       className="w-1/2 p-2 text-xs font-bold border border-slate-300 rounded-xl bg-white"
                     >
+                      <option value="No se entregará USB">No se entregará USB (Solo Digital)</option>
                       <option value="32GB">USB 32GB</option>
                       <option value="64GB">USB 64GB</option>
                       <option value="128GB">USB 128GB (Estándar)</option>
@@ -1456,21 +1440,35 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
                 </div>
               </div>
 
-              {/* Políticas de Revisiones, Custodia y Reprogramación */}
-              <div className="p-3 bg-white rounded-xl border border-slate-200 space-y-2.5">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100">
+              {/* Equipos Adicionales / Cláusulas Especiales (Moved inside Despliegue Técnico section) */}
+              <div className="text-xs">
+                <label className="block text-slate-700 font-bold mb-1">
+                  Equipos Adicionales / Requerimientos Técnicos Especiales
+                </label>
+                <input
+                  type="text"
+                  value={additionalEquipmentNotes}
+                  onChange={(e) => setAdditionalEquipmentNotes(e.target.value)}
+                  placeholder="Ej. 1 Dron adicional, trípodes heavy duty, 2 pantallas de retorno, grúa..."
+                  className="w-full p-2 border border-slate-300 rounded-xl bg-white text-xs"
+                />
+              </div>
+
+              {/* Políticas de Revisiones en Distinct Colored Box */}
+              <div className="p-3.5 bg-indigo-50/90 rounded-2xl border-2 border-indigo-200 space-y-2.5 shadow-2xs">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-indigo-200">
                   <div>
-                    <span className="font-bold text-xs text-slate-800 block">¿Incluir Política de Revisiones en el Contrato?</span>
-                    <span className="text-[10px] text-slate-500">Si se desmarca, la cláusula de revisiones no figurará en el contrato.</span>
+                    <span className="font-black text-xs text-indigo-950 block">¿Incluir Política de Revisiones en el Contrato?</span>
+                    <span className="text-[10px] text-indigo-700">Si se desmarca, la cláusula de revisiones no figurará en el contrato emitido.</span>
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0">
                     <button
                       type="button"
                       onClick={() => setIncludeRevisionsPolicy(true)}
-                      className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
+                      className={`px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
                         includeRevisionsPolicy 
-                          ? 'bg-amber-600 text-white shadow-sm' 
-                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                          ? 'bg-indigo-600 text-white shadow-sm' 
+                          : 'bg-white text-slate-600 hover:bg-indigo-100 border border-indigo-200'
                       }`}
                     >
                       ✓ SÍ
@@ -1478,10 +1476,10 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
                     <button
                       type="button"
                       onClick={() => setIncludeRevisionsPolicy(false)}
-                      className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
+                      className={`px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
                         !includeRevisionsPolicy 
                           ? 'bg-slate-800 text-white shadow-sm' 
-                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                          : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
                       }`}
                     >
                       ✗ NO
@@ -1490,8 +1488,8 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5 text-xs">
-                  <div className={`p-2.5 rounded-xl border transition-all ${includeRevisionsPolicy ? 'bg-white border-slate-200' : 'bg-slate-50 border-slate-200 opacity-50'}`}>
-                    <label className="block text-[10px] text-slate-600 font-bold mb-1">
+                  <div className={`p-2.5 rounded-xl border transition-all ${includeRevisionsPolicy ? 'bg-white border-indigo-200' : 'bg-slate-50 border-slate-200 opacity-50'}`}>
+                    <label className="block text-[10px] text-indigo-900 font-bold mb-1">
                       Rondas de Revisiones
                     </label>
                     <div className="flex items-center gap-1">
@@ -1502,14 +1500,14 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
                         disabled={!includeRevisionsPolicy}
                         value={revisionRounds}
                         onChange={(e) => setRevisionRounds(parseInt(e.target.value) || 0)}
-                        className="w-full p-1.5 text-xs font-black border border-slate-300 rounded-lg text-center"
+                        className="w-full p-1.5 text-xs font-black border border-indigo-200 rounded-lg text-center"
                       />
-                      <span className="text-[10px] text-slate-500 font-bold shrink-0">rondas</span>
+                      <span className="text-[10px] text-indigo-700 font-bold shrink-0">rondas</span>
                     </div>
                   </div>
 
-                  <div className={`p-2.5 rounded-xl border transition-all ${includeRevisionsPolicy ? 'bg-white border-slate-200' : 'bg-slate-50 border-slate-200 opacity-50'}`}>
-                    <label className="block text-[10px] text-slate-600 font-bold mb-1">
+                  <div className={`p-2.5 rounded-xl border transition-all ${includeRevisionsPolicy ? 'bg-white border-indigo-200' : 'bg-slate-50 border-slate-200 opacity-50'}`}>
+                    <label className="block text-[10px] text-indigo-900 font-bold mb-1">
                       Plazo Solicitud Revisiones
                     </label>
                     <div className="flex items-center gap-1">
@@ -1520,14 +1518,14 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
                         disabled={!includeRevisionsPolicy}
                         value={revisionDaysLimit}
                         onChange={(e) => setRevisionDaysLimit(parseInt(e.target.value) || 5)}
-                        className="w-full p-1.5 text-xs font-black border border-slate-300 rounded-lg text-center"
+                        className="w-full p-1.5 text-xs font-black border border-indigo-200 rounded-lg text-center"
                       />
-                      <span className="text-[10px] text-slate-500 font-bold shrink-0">días hab.</span>
+                      <span className="text-[10px] text-indigo-700 font-bold shrink-0">días hab.</span>
                     </div>
                   </div>
 
-                  <div className="p-2.5 bg-white rounded-xl border border-slate-200">
-                    <label className="block text-[10px] text-slate-600 font-bold mb-1">
+                  <div className="p-2.5 bg-white rounded-xl border border-indigo-200">
+                    <label className="block text-[10px] text-slate-700 font-bold mb-1">
                       Custodia Archivos Brutos/Master
                     </label>
                     <div className="flex items-center gap-1">
@@ -1543,8 +1541,8 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
                     </div>
                   </div>
 
-                  <div className="p-2.5 bg-white rounded-xl border border-slate-200">
-                    <label className="block text-[10px] text-slate-600 font-bold mb-1">
+                  <div className="p-2.5 bg-white rounded-xl border border-indigo-200">
+                    <label className="block text-[10px] text-slate-700 font-bold mb-1">
                       Anticipación Reprogramación
                     </label>
                     <div className="flex items-center gap-1">
@@ -1562,12 +1560,15 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
                 </div>
               </div>
 
-              {/* Automatic Legal & Operating Clauses Preview Banner */}
+              {/* Automatic Legal & Operating Clauses Preview Banner: Custodia placed after Logística de Campo */}
               <div className="bg-amber-50/70 p-3 rounded-xl border border-amber-200/80 space-y-1.5 text-[11px] text-amber-950">
                 <span className="font-black text-amber-900 block uppercase text-[10px] flex items-center gap-1">
                   ✓ Cláusulas Habilitadas en el Contrato:
                 </span>
                 <ul className="space-y-1 text-[10px] leading-relaxed">
+                  <li>
+                    <strong>• Autorización de Imagen y Exoneración de Responsabilidad:</strong> El Cliente garantiza que ha comunicado a los asistentes que el evento será grabado y fotografiado, deslindando a Corporación TCT de toda responsabilidad legal o extrajudicial de terceros.
+                  </li>
                   <li>
                     <strong>• {authorizeInternetPublishing ? 'Propiedad Intelectual y Difusión' : 'Propiedad Intelectual'}:</strong> {authorizeInternetPublishing 
                       ? 'Los derechos patrimoniales sobre el material audiovisual producido corresponden a Corporación TCT, otorgando al Cliente la autorización para su libre uso, reproducción y difusión según lo pactado.'

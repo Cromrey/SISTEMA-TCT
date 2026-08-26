@@ -9,6 +9,7 @@ import {
 import { createAuditEntry, appendAuditLog } from '../utils/auditLogger';
 import { compressImageFile } from '../utils/imageCompressor';
 import { checkStepSequenceStatus, validateStepCompletion, finalizeContractExportStep3 } from '../utils/stepSequenceHelper';
+import { getActiveSession } from '../utils/authStorage';
 import confetti from 'canvas-confetti';
 import { 
   X, 
@@ -245,6 +246,10 @@ export const StepExecutionModal: React.FC<StepExecutionModalProps> = ({
 
     setIsUploading(true);
     const newAttachmentsList: StepAttachment[] = [];
+    const activeSession = getActiveSession();
+    const currentUploader = activeSession?.fullName || (currentRole === 'admin' ? 'Michael Romero (Administrador TCT)' : 'Técnico de Producción TCT');
+    const now = new Date();
+    const formattedDateTime = now.toLocaleDateString('es-PE') + ' ' + now.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
@@ -257,8 +262,8 @@ export const StepExecutionModal: React.FC<StepExecutionModalProps> = ({
             type: file.type.includes('image') ? 'image' : file.type.includes('pdf') ? 'pdf' : 'document',
             size: sizeFormatted,
             dataUrl: dataUrl,
-            uploadedAt: new Date().toLocaleDateString() + ' ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            uploadedBy: 'Técnico TCT'
+            uploadedAt: formattedDateTime,
+            uploadedBy: currentUploader
           });
         }
       } catch (err) {
@@ -1213,35 +1218,47 @@ FECHA: ${acceptanceDate}
 
           {/* Checklist Section */}
           {stepData.checklist && stepData.checklist.length > 0 && (
-            <div className="space-y-2">
-              <h4 className="text-xs font-black text-slate-900 uppercase tracking-wide flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                Checklist Oficial del Paso {stepData.stepNumber}
-              </h4>
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <h4 className="text-xs font-black text-slate-900 uppercase tracking-wide flex items-center gap-1.5">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  Checklist Obligatorio del Paso {stepData.stepNumber}
+                </h4>
+                <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-slate-800 text-amber-400 border border-slate-700">
+                  {stepData.checklist.filter(c => c.completed).length} de {stepData.checklist.length} verificados ({Math.round((stepData.checklist.filter(c => c.completed).length / stepData.checklist.length) * 100)}%)
+                </span>
+              </div>
               <div className="space-y-2">
                 {stepData.checklist.map((item, idx) => (
                   <label
                     key={item.id || `chk-${stepData.stepNumber}-${idx}`}
                     className={`flex items-start space-x-3 p-3 rounded-xl border transition-all ${
                       item.completed 
-                        ? 'bg-emerald-50/80 border-emerald-200 text-emerald-950' 
+                        ? 'bg-emerald-50/80 border-emerald-200 text-emerald-950 shadow-xs' 
                         : 'bg-white border-slate-200 text-slate-800 hover:bg-slate-50'
                     } ${isLocked ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
                   >
-                    <input
-                      type="checkbox"
-                      disabled={isLocked}
-                      checked={item.completed}
-                      onChange={() => handleToggleChecklist(item.id)}
-                      className="mt-0.5 w-5 h-5 text-emerald-600 rounded-md border-slate-300 focus:ring-emerald-500 cursor-pointer"
-                    />
+                    <div className="flex items-center gap-2 mt-0.5 shrink-0">
+                      <span className={`w-5 h-5 rounded-full text-[10px] font-black flex items-center justify-center ${
+                        item.completed ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-700'
+                      }`}>
+                        {idx + 1}
+                      </span>
+                      <input
+                        type="checkbox"
+                        disabled={isLocked}
+                        checked={item.completed}
+                        onChange={() => handleToggleChecklist(item.id)}
+                        className="w-4 h-4 text-emerald-600 rounded-md border-slate-300 focus:ring-emerald-500 cursor-pointer"
+                      />
+                    </div>
                     <div className="flex-1 text-xs">
-                      <span className={`font-semibold ${item.completed ? 'line-through text-slate-500' : 'text-slate-900'}`}>
+                      <span className={`font-semibold block ${item.completed ? 'line-through text-slate-500' : 'text-slate-900'}`}>
                         {item.text}
                       </span>
-                      {item.completed && item.completedAt && (
+                      {item.completed && (
                         <span className="block text-[10px] text-emerald-700 font-medium mt-0.5">
-                          ✓ Completado a las {item.completedAt}
+                          ✓ Verificado {item.completedAt ? `a las ${item.completedAt}` : ''}
                         </span>
                       )}
                     </div>

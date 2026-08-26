@@ -1,9 +1,11 @@
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { ProductionProject } from '../types';
 
 /**
- * High-reliability PDF & Editable Document Handler for Corporación TCT
- * Works seamlessly in desktop browsers, mobile devices, and inside sandboxed iframes.
+ * High-reliability PDF & Printable Document Handler for Corporación TCT
+ * Works seamlessly in desktop browsers (PC/Mac), mobile devices, and inside sandboxed environments.
+ * Strictly includes "TCT" watermark across all generated documents.
  */
 
 export async function exportElementToPdf(
@@ -18,29 +20,38 @@ export async function exportElementToPdf(
   }
 
   try {
+    // Ensure element scroll position doesn't clip content on desktop
+    const prevScrollTop = targetEl.scrollTop;
+    targetEl.scrollTop = 0;
+
     // Render the DOM node to canvas using high-DPI scaling
     const canvas = await html2canvas(targetEl, {
       scale: 2,
       useCORS: true,
+      allowTaint: true,
       logging: false,
       backgroundColor: '#ffffff',
-      windowWidth: targetEl.scrollWidth || 800
+      scrollX: 0,
+      scrollY: 0,
+      windowWidth: Math.max(targetEl.scrollWidth, 900)
     });
+
+    targetEl.scrollTop = prevScrollTop;
 
     const imgData = canvas.toDataURL('image/jpeg', 0.98);
     const pdf = new jsPDF('p', 'mm', 'a4');
     const pdfWidth = pdf.internal.pageSize.getWidth(); // 210mm
     const pdfHeight = pdf.internal.pageSize.getHeight(); // 297mm
 
-    const marginX = 8;
-    const marginY = 8;
+    const marginX = 6;
+    const marginY = 6;
     const contentWidth = pdfWidth - (marginX * 2);
     const contentHeight = (canvas.height * contentWidth) / canvas.width;
 
     let heightLeft = contentHeight;
     let position = marginY;
 
-    // First page
+    // Add first page content
     pdf.addImage(imgData, 'JPEG', marginX, position, contentWidth, contentHeight);
     heightLeft -= (pdfHeight - (marginY * 2));
 
@@ -54,14 +65,27 @@ export async function exportElementToPdf(
 
     const safeFilename = filename.toLowerCase().endsWith('.pdf') ? filename : `${filename}.pdf`;
     
-    // Add page numbers on exported PDF (autonumerado 1/n páginas)
+    // Inject "TCT" Watermark and Page Numbers across all pages (autonumerado 1/n páginas)
     const totalPages = pdf.getNumberOfPages();
     for (let i = 1; i <= totalPages; i++) {
       pdf.setPage(i);
+
+      // Watermark "TCT" centered and rotated in subtle tone
+      pdf.saveGraphicsState();
+      pdf.setTextColor(220, 226, 235);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(85);
+      pdf.text('TCT', pdfWidth / 2, pdfHeight / 2 + 10, {
+        align: 'center',
+        angle: 45
+      });
+      pdf.restoreGraphicsState();
+
+      // Footer numbering (1/n páginas)
       pdf.setFontSize(8);
       pdf.setTextColor(100, 116, 139);
       pdf.text(
-        `Corporación TCT • Contrato de Servicios Audiovisuales • (${i}/${totalPages} páginas)`,
+        `Corporación TCT • Lima, Perú • Documento Oficial (${i}/${totalPages} páginas)`,
         pdfWidth / 2,
         pdfHeight - 4,
         { align: 'center' }
@@ -81,7 +105,7 @@ export function printElement(elementId: string, docTitle: string = 'Documento Co
   try {
     const targetEl = document.getElementById(elementId);
     
-    // Add temporary print-focus class and style
+    // Inject optimized media print stylesheet with TCT watermark
     const printStyleId = 'tct-dynamic-print-style';
     let styleTag = document.getElementById(printStyleId) as HTMLStyleElement;
     if (!styleTag) {
@@ -108,12 +132,24 @@ export function printElement(elementId: string, docTitle: string = 'Documento Co
           top: 0 !important;
           width: 100% !important;
           margin: 0 !important;
-          padding: 10px !important;
+          padding: 8px !important;
           background: white !important;
           color: #0f172a !important;
           display: block !important;
           -webkit-print-color-adjust: exact !important;
           print-color-adjust: exact !important;
+        }
+        #${elementId}::before {
+          content: "TCT";
+          position: fixed;
+          top: 40%;
+          left: 30%;
+          font-size: 110px;
+          font-weight: 900;
+          color: rgba(200, 210, 225, 0.12);
+          transform: rotate(-35deg);
+          pointer-events: none;
+          z-index: 0;
         }
         .print\\:hidden, button, .no-print {
           display: none !important;
@@ -125,7 +161,7 @@ export function printElement(elementId: string, docTitle: string = 'Documento Co
       }
     `;
 
-    // Strategy 1: Attempt direct window.print with custom media print styles
+    // Attempt direct window.print()
     try {
       window.print();
       return;
@@ -133,7 +169,7 @@ export function printElement(elementId: string, docTitle: string = 'Documento Co
       console.warn('Direct window.print failed, attempting iframe print...', directPrintErr);
     }
 
-    // Strategy 2: Create a hidden iframe with full styles and print
+    // Fallback: hidden iframe print
     const printFrame = document.createElement('iframe');
     printFrame.style.position = 'fixed';
     printFrame.style.right = '0';
@@ -146,12 +182,10 @@ export function printElement(elementId: string, docTitle: string = 'Documento Co
 
     const frameDoc = printFrame.contentWindow?.document || printFrame.contentDocument;
     if (!frameDoc) {
-      // Fallback: download directly as printable file
       downloadPrintableHtml(elementId, `${docTitle}.html`, docTitle);
       return;
     }
 
-    // Collect all stylesheets and tailwind styles from parent
     const styles = Array.from(document.querySelectorAll('link[rel="stylesheet"], style'))
       .map(node => node.outerHTML)
       .join('\n');
@@ -183,6 +217,19 @@ export function printElement(elementId: string, docTitle: string = 'Documento Co
             print-color-adjust: exact !important;
             font-size: 11px;
             line-height: 1.35;
+            position: relative;
+          }
+          body::before {
+            content: "TCT";
+            position: fixed;
+            top: 40%;
+            left: 30%;
+            font-size: 110px;
+            font-weight: 900;
+            color: rgba(200, 210, 225, 0.12);
+            transform: rotate(-35deg);
+            pointer-events: none;
+            z-index: 0;
           }
           .print\\:hidden, button, .no-print {
             display: none !important;
@@ -221,6 +268,96 @@ export function printElement(elementId: string, docTitle: string = 'Documento Co
     console.warn('Print helper error, downloading file fallback...', e);
     downloadPrintableHtml(elementId, `${docTitle}.html`, docTitle);
   }
+}
+
+/**
+ * Sends a structured WhatsApp message to Peru phone 990010020
+ */
+export function sendToWhatsAppPeru(phoneNumber: string = '990010020', message: string): void {
+  const cleanPhone = phoneNumber.replace(/\D/g, '');
+  const internationalPhone = cleanPhone.startsWith('51') ? cleanPhone : `51${cleanPhone}`;
+  const encodedText = encodeURIComponent(message);
+  const waUrl = `https://wa.me/${internationalPhone}?text=${encodedText}`;
+  window.open(waUrl, '_blank');
+}
+
+/**
+ * Builds the standard Report WhatsApp text from the 12-step flow
+ */
+export function buildReportWhatsAppText(project: ProductionProject): string {
+  let completedCount = 0;
+  let totalCount = 0;
+  const stepSummary: string[] = [];
+
+  project.phases.forEach(ph => {
+    ph.steps.forEach(st => {
+      totalCount++;
+      const isDone = st.status === 'completed';
+      if (isDone) completedCount++;
+      const statusIcon = isDone ? '✅' : st.status === 'in_progress' ? '⚡' : '⏳';
+      const attInfo = st.attachments && st.attachments.length > 0 ? ` (${st.attachments.length} adjunto/s)` : '';
+      const auditInfo = st.completedBy ? ` - Resp: ${st.completedBy} [${st.completedAt || 'Auditado'}]` : '';
+      stepSummary.push(`${statusIcon} Paso ${st.stepNumber}. ${st.title}${attInfo}${auditInfo}`);
+    });
+  });
+
+  const percent = Math.round((completedCount / (totalCount || 12)) * 100);
+
+  return `*CORPORACIÓN TCT - INFORME OFICIAL DE AUDITORÍA & ESTADO DE PRODUCCIÓN* 🎬
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+📄 *Expediente:* ${project.uniqueCode}
+📋 *Contrato:* ${project.contractNumber}
+👤 *Cliente:* ${project.clientName} (DNI/RUC: ${project.clientDniRuc || 'N/D'})
+🎉 *Evento:* ${project.eventType} - ${project.title}
+📅 *Fecha:* ${project.eventDate} | ⏰ *Hora:* ${project.eventTime}
+📍 *Locación:* ${project.eventLocation}
+👤 *Asesor/Responsable:* ${project.contractHolder || 'Corporación TCT'}
+
+💰 *INFORMACIÓN ECONÓMICA (PEN S/.)*
+• Presupuesto Total: S/. ${project.totalBudget?.toLocaleString()}
+• Adelanto Inicial: S/. ${project.initialDeposit?.toLocaleString()}
+• Saldo Pendiente: S/. ${project.finalBalance?.toLocaleString()}
+
+📊 *SEGUIMIENTO DE 12 PASOS (${completedCount}/${totalCount} - ${percent}%)*
+${stepSummary.join('\n')}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+🏢 *Corporación TCT S.A.C.* - Calidad Cinematográfica & Control de Entregables.`;
+}
+
+/**
+ * Builds the official Contract WhatsApp text
+ */
+export function buildContractWhatsAppText(project: ProductionProject): string {
+  return `*CORPORACIÓN TCT - CONTRATO OFICIAL DE PRESTACIÓN DE SERVICIOS AUDIOVISUALES* 📜
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+📋 *N° de Contrato:* ${project.contractNumber}
+📄 *Cotización Vinculada:* ${project.quotationCode || 'COT-OFICIAL'}
+👤 *Contratante:* ${project.clientName}
+🆔 *DNI / RUC:* ${project.clientDniRuc || 'N/D'}
+📞 *Teléfono:* ${project.clientPhone || 'N/D'}
+🏠 *Dirección:* ${project.clientAddress || 'N/D'}
+
+🎉 *DETALLES DEL EVENTO*
+• Tipo: ${project.eventType} - ${project.title}
+• Fecha Programada: ${project.eventDate}
+• Horario: ${project.eventTime}
+• Locación: ${project.eventLocation}
+
+💵 *CONDICIONES ECONÓMICAS (S/.)*
+• Paquete: ${project.selectedPackageName || 'Servicio Profesional TCT'}
+• Presupuesto Total Pactado: S/. ${project.totalBudget?.toLocaleString()}
+• Adelanto Inicial (50%): S/. ${project.initialDeposit?.toLocaleString()}
+• Cobro en Campo (Límite 7PM): S/. ${project.fieldPayment?.toLocaleString() || '0.00'}
+• Saldo al Cierre: S/. ${project.finalBalance?.toLocaleString()}
+
+📁 *ENTREGABLES & PLAZOS OFICIALES*
+• Video Master 4K & USB Corporativo: 15 días hábiles
+• Fotolibro Impreso de Lujo: 30 días hábiles (tras aprobación)
+• Resguardo de Archivos RAW: 30 días calendario tras entrega
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔒 *Firma y Validez:* Contrato formalmente suscrito con Corporación TCT S.A.C.`;
 }
 
 /**
