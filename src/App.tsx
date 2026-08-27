@@ -39,8 +39,8 @@ const INITIAL_FALLBACK_STAFF: StaffMember[] = [
   { id: 'usr-emp-pedro', name: 'Pedro Alva', role: 'Editor & Ingest', phone: '+51 945 678 901', confirmed: true }
 ];
 
-// Inactivity timeout: 3 minutes = 180,000 milliseconds
-const INACTIVITY_TIMEOUT_MS = 3 * 60 * 1000;
+// Inactivity timeout: 60 minutes = 3,600,000 milliseconds (Safe background threshold)
+const INACTIVITY_TIMEOUT_MS = 60 * 60 * 1000;
 
 export default function App() {
   // Authentication state
@@ -161,10 +161,11 @@ export default function App() {
     showToast('→ Avanzar al siguiente elemento');
   };
 
+  // Explicitly disable swipe gestures on touch devices to avoid accidental window/modal navigation
   useSwipeGesture({
     onSwipeLeft: handleGoBack,
     onSwipeRight: handleGoForward,
-    enabled: !!currentUser
+    enabled: false
   });
 
   // Trigger auto-logout on inactivity
@@ -178,7 +179,7 @@ export default function App() {
     setIsAnalyticsModalOpen(false);
     setIsRulesModalOpen(false);
     setIsUsersModalOpen(false);
-    showToast('⏱️ Sesión cerrada automáticamente por inactividad de 3 minutos.');
+    showToast('⏱️ Sesión cerrada por tiempo prolongado de inactividad.');
   };
 
   // Trigger logout when account is accessed from another device/window
@@ -382,6 +383,7 @@ export default function App() {
 
   // Handle Login Success
   const handleLoginSuccess = (user: AuthUser, remember: boolean) => {
+    lastActiveTimestampRef.current = Date.now();
     setActiveSession(user, remember);
     setCurrentUser(user);
     setCurrentRole(user.role);

@@ -14,86 +14,8 @@ export const DEFAULT_AUTH_USERS: AuthUser[] = [
     fullName: 'Michael Romero (Administrador TCT)',
     dni: '45892314',
     jobTitle: 'Administrador General',
-    phone: '+51 990030200',
+    phone: '+51 990010020',
     email: 'admin@corporaciontct.pe',
-    isActive: true,
-    createdAt: '2026-01-01T00:00:00.000Z'
-  },
-  {
-    id: 'usr-emp-elim',
-    username: 'Elim',
-    password: 'TCT2',
-    role: 'employee',
-    fullName: 'Elim Cristóbal Bernabé',
-    dni: '71234567',
-    jobTitle: 'Editor y productor',
-    phone: '990050010',
-    email: 'elim@corporaciontct.pe',
-    isActive: true,
-    createdAt: '2026-01-01T00:00:00.000Z'
-  },
-  {
-    id: 'usr-emp-arcilla',
-    username: 'Arcilla',
-    password: 'TCT1',
-    role: 'employee',
-    fullName: 'Clay Romero Reyes',
-    dni: '46781234',
-    jobTitle: 'Coordinador de Producción',
-    phone: '990010010',
-    email: 'clay@corporaciontct.pe',
-    isActive: true,
-    createdAt: '2026-01-01T00:00:00.000Z'
-  },
-  {
-    id: 'usr-emp-henry',
-    username: 'Henry',
-    password: 'TCT3',
-    role: 'employee',
-    fullName: 'Henry Romero Reyes',
-    dni: '47890123',
-    jobTitle: 'Fotógrafo Principal',
-    phone: '990010020',
-    email: 'henry@corporaciontct.pe',
-    isActive: true,
-    createdAt: '2026-01-01T00:00:00.000Z'
-  },
-  {
-    id: 'usr-emp-luz',
-    username: 'Luz',
-    password: 'TCT4',
-    role: 'employee',
-    fullName: 'Luz Reyes Riveros',
-    dni: '20054321',
-    jobTitle: 'Director de Cámara',
-    phone: '980050010',
-    email: 'luz@corporaciontct.pe',
-    isActive: true,
-    createdAt: '2026-01-01T00:00:00.000Z'
-  },
-  {
-    id: 'usr-emp-ely',
-    username: 'Ely',
-    password: 'TCT5',
-    role: 'employee',
-    fullName: 'Elizabeth Matamoros Fuentes',
-    dni: '48901234',
-    jobTitle: 'Técnico de Audio & Luces',
-    phone: '990010054',
-    email: 'ely@corporaciontct.pe',
-    isActive: true,
-    createdAt: '2026-01-01T00:00:00.000Z'
-  },
-  {
-    id: 'usr-emp-carlos',
-    username: 'carlos',
-    password: '123',
-    role: 'employee',
-    fullName: 'Carlos Mendoza',
-    dni: '70123456',
-    jobTitle: 'Director de Cámara',
-    phone: '+51 912 345 678',
-    email: 'carlos.mendoza@corporaciontct.pe',
     isActive: true,
     createdAt: '2026-01-01T00:00:00.000Z'
   }
@@ -183,6 +105,9 @@ export function setActiveSession(user: AuthUser | null, remember: boolean = true
       } else {
         sessionStorage.setItem(ACTIVE_SESSION_STORAGE_KEY, dataStr);
       }
+      if (user.currentSessionToken) {
+        setDeviceSessionToken(user.currentSessionToken);
+      }
     }
   } catch (err) {
     console.error('Error setting active session:', err);
@@ -196,10 +121,10 @@ export function isSessionSuperceded(user: AuthUser): boolean {
     
     const users = getStoredUsers();
     const storedUser = users.find(u => u.id === user.id);
-    if (!storedUser) return false;
+    if (!storedUser || !storedUser.currentSessionToken) return false;
 
-    // If another device/window logged in, storedUser.currentSessionToken has been updated to a newer token
-    if (storedUser.currentSessionToken && storedUser.currentSessionToken !== currentDeviceToken) {
+    // Only if a strictly different valid token was registered by a newer login from another window/device
+    if (storedUser.currentSessionToken !== currentDeviceToken) {
       return true;
     }
     return false;

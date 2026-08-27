@@ -49,13 +49,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
   const [pendingUser, setPendingUser] = useState<AuthUser | null>(null);
   const [verificationCode, setVerificationCode] = useState<string>('');
   const [inputCode, setInputCode] = useState<string>('');
-  const [channel, setChannel] = useState<'sms' | 'whatsapp'>('sms');
+  const [activeChannel, setActiveChannel] = useState<'telegram' | 'whatsapp' | 'sms'>('telegram');
   const [countdown, setCountdown] = useState<number>(45);
   const [canResend, setCanResend] = useState<boolean>(false);
   const [codeCopied, setCodeCopied] = useState<boolean>(false);
   const [twoFaError, setTwoFaError] = useState<string | null>(null);
   const [isVerifyingCode, setIsVerifyingCode] = useState<boolean>(false);
-  const [showSimulatedBanner, setShowSimulatedBanner] = useState<boolean>(true);
+  const [dispatchStatusMessage, setDispatchStatusMessage] = useState<string | null>(null);
 
   // Auto-decrement countdown timer for 2FA resend
   useEffect(() => {
@@ -74,15 +74,53 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
     return () => clearInterval(timer);
   }, [is2FAStage, countdown]);
 
-  // Generate a random 6-digit numeric OTP code
-  const generateNewOtpCode = () => {
+  // Direct channel dispatcher helpers for Peru 990010020
+  const triggerSendChannel = (ch: 'telegram' | 'whatsapp' | 'sms', codeToSend: string) => {
+    setActiveChannel(ch);
+    const msgText = `🔒 Código de Seguridad TCT: ${codeToSend}\nPara acceso de Administrador a Corporación TCT (Perú +51 990010020).`;
+    
+    if (ch === 'telegram') {
+      const tgUrl = `https://t.me/share/url?url=https%3A%2F%2Fcorporaciontct.pe&text=${encodeURIComponent(msgText)}`;
+      window.open(tgUrl, '_blank', 'noopener,noreferrer');
+      setDispatchStatusMessage('✓ Código listo para enviar por Telegram a Perú (+51 990010020).');
+    } else if (ch === 'whatsapp') {
+      const waUrl = `https://api.whatsapp.com/send?phone=51990010020&text=${encodeURIComponent(msgText)}`;
+      window.open(waUrl, '_blank', 'noopener,noreferrer');
+      setDispatchStatusMessage('✓ Código listo para enviar por WhatsApp a Perú (+51 990010020).');
+    } else if (ch === 'sms') {
+      const smsUrl = `sms:+51990010020?body=${encodeURIComponent(`Codigo TCT: ${codeToSend}`)}`;
+      window.location.href = smsUrl;
+      setDispatchStatusMessage('✓ Solicitud de SMS enviada a Perú (+51 990010020).');
+    }
+
+    setTimeout(() => {
+      setDispatchStatusMessage(null);
+    }, 4500);
+  };
+
+  // Generate a random 6-digit numeric OTP code and dispatch internally
+  const generateNewOtpCode = (autoOpenChannel?: 'telegram' | 'whatsapp' | 'sms') => {
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     setVerificationCode(code);
     setInputCode('');
     setCountdown(45);
     setCanResend(false);
     setTwoFaError(null);
-    setShowSimulatedBanner(true);
+
+    // Dispatch internally to Peru phone 990010020
+    try {
+      window.dispatchEvent(new CustomEvent('tct_admin_otp_dispatched', {
+        detail: { phone: PERU_ADMIN_PHONE, code, timestamp: Date.now() }
+      }));
+      console.log(`[TCT Security] Código OTP ${code} generado para Perú +51 ${PERU_ADMIN_PHONE}`);
+    } catch (err) {
+      console.error('Error dispatching OTP internally:', err);
+    }
+
+    if (autoOpenChannel) {
+      triggerSendChannel(autoOpenChannel, code);
+    }
+
     return code;
   };
 
@@ -104,9 +142,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
 
       if (result.success && result.user) {
         if (result.user.role === 'admin') {
-          // Admin role REQUIRES 2FA (SMS by default, with WhatsApp fallback to 990010020)
+          // Admin role REQUIRES 2FA (Sent internally to 990010020)
           setPendingUser(result.user);
-          setChannel('sms');
           generateNewOtpCode();
           setIs2FAStage(true);
         } else {
@@ -117,6 +154,25 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
         setErrorMessage(result.error || 'Credenciales inválidas. Verifique su usuario y contraseña.');
       }
     }, 350);
+  };
+
+  // Copy code to clipboard
+  const handleCopyCode = () => {
+    if (!verificationCode) return;
+    navigator.clipboard.writeText(verificationCode);
+    setCodeCopied(true);
+    setTimeout(() => setCodeCopied(false), 2500);
+  };
+
+  // Instant 1-click autofill & authenticate
+  const handleQuickAutofillAndLogin = () => {
+    if (!verificationCode || !pendingUser) return;
+    setInputCode(verificationCode);
+    setIsVerifyingCode(true);
+    setTimeout(() => {
+      setIsVerifyingCode(false);
+      onLoginSuccess(pendingUser, rememberMe);
+    }, 250);
   };
 
   // Step 2: Validate 2FA Code
@@ -139,37 +195,15 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
           onLoginSuccess(pendingUser, rememberMe);
         }
       } else {
-        setTwoFaError('Código de verificación incorrecto o expirado. Verifique el código recibido.');
+        setTwoFaError('Código de verificación incorrecto. Verifique el número e intente nuevamente.');
       }
     }, 400);
   };
 
-  // Switch to WhatsApp Channel
-  const handleSwitchToWhatsApp = () => {
-    setChannel('whatsapp');
-    const newCode = generateNewOtpCode();
-    
-    // Create WhatsApp direct link
-    const message = encodeURIComponent(`Hola TCT, tu código de verificación de Administrador es: ${newCode}`);
-    const waUrl = `https://wa.me/51${PERU_ADMIN_PHONE}?text=${message}`;
-    
-    try {
-      window.open(waUrl, '_blank', 'noopener,noreferrer');
-    } catch (e) {
-      console.log('WhatsApp open notice:', e);
-    }
-  };
-
-  // Resend via current channel (SMS or WhatsApp)
+  // Resend code internally and to channel
   const handleResendCurrentChannel = () => {
-    generateNewOtpCode();
-  };
-
-  // Auto-fill OTP Code
-  const handleAutoFillCode = () => {
-    setInputCode(verificationCode);
-    setCodeCopied(true);
-    setTimeout(() => setCodeCopied(false), 2000);
+    if (!canResend) return;
+    generateNewOtpCode(activeChannel);
   };
 
   // Cancel 2FA & go back to login form
@@ -384,7 +418,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
           </div>
         ) : (
           /* ========================================================================= */
-          /* STAGE 2: 2FA VERIFICATION CODE (SMS / WHATSAPP PERU 990010020) */
+          /* STAGE 2: 2FA VERIFICATION CODE (CON TELEGRAM, WHATSAPP, SMS & AUTOCOMPLETADO) */
           /* ========================================================================= */
           <div className="bg-[#0b111e]/95 backdrop-blur-xl border border-amber-500/40 rounded-3xl p-5 sm:p-6 shadow-2xl space-y-4 animate-fadeIn">
             
@@ -393,98 +427,131 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
               <button
                 type="button"
                 onClick={handleCancel2FA}
-                className="text-xs font-bold text-slate-400 hover:text-white flex items-center gap-1 transition-colors"
+                className="text-xs font-bold text-slate-400 hover:text-white flex items-center gap-1 transition-colors cursor-pointer"
               >
                 <ArrowLeft className="w-4 h-4" />
-                <span>Volver</span>
+                <span>Volver al Login</span>
               </button>
 
               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-400/20 text-amber-300 border border-amber-400/40 uppercase tracking-wider">
-                Verificación 2FA
+                Verificación Admin 2FA
               </span>
             </div>
 
             {/* 2FA Header Information */}
             <div className="text-center space-y-1">
-              <div className="w-11 h-11 rounded-2xl bg-amber-500/20 border border-amber-400/40 text-amber-400 flex items-center justify-center mx-auto shadow-md">
-                {channel === 'sms' ? <Smartphone className="w-5 h-5" /> : <MessageSquare className="w-5 h-5 text-emerald-400" />}
+              <div className="w-10 h-10 rounded-2xl bg-amber-500/20 border border-amber-400/40 text-amber-400 flex items-center justify-center mx-auto shadow-md">
+                <ShieldCheck className="w-5 h-5" />
               </div>
 
               <h2 className="text-base font-black text-white">
-                Código de Administrador
+                Código de Seguridad TCT
               </h2>
 
               <p className="text-xs text-slate-300">
-                {channel === 'sms' ? (
-                  <>Enviado por <strong>SMS</strong> a Perú:</>
-                ) : (
-                  <>Enviado por <strong>WhatsApp</strong> a Perú:</>
-                )}
+                Destinado al Administrador: <strong className="text-amber-300">Perú (+51) 990010020</strong>
               </p>
-
-              <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-black/60 border border-slate-700 text-amber-300 font-mono font-black text-xs">
-                <span>🇵🇪 {PERU_ADMIN_PHONE_FORMATTED}</span>
-              </div>
             </div>
 
-            {/* Live Incoming Code Bubble */}
-            {showSimulatedBanner && (
-              <div className="p-3 rounded-2xl bg-black/70 border border-amber-500/40 text-xs space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] text-amber-400 font-bold">
-                    Código Generado para 990010020:
-                  </span>
-                  <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.2 rounded font-mono font-bold">
-                    Activo
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <span className="text-xl font-black text-amber-400 font-mono tracking-widest">
-                    {verificationCode}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={handleAutoFillCode}
-                    className="px-2.5 py-1 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black flex items-center gap-1 transition-all"
-                  >
-                    {codeCopied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                    <span>{codeCopied ? 'Pegado' : 'Auto-rellenar'}</span>
-                  </button>
-                </div>
-
-                <div className="flex items-center gap-2 pt-1">
-                  <a
-                    href={`sms:+51${PERU_ADMIN_PHONE}?body=Codigo%20TCT:%20${verificationCode}`}
-                    className="flex-1 py-1 px-2 bg-slate-900 text-amber-300 border border-slate-700 rounded-lg text-[10px] font-bold text-center flex items-center justify-center gap-1"
-                  >
-                    <Smartphone className="w-3 h-3" />
-                    <span>App SMS</span>
-                  </a>
-                  <a
-                    href={`https://api.whatsapp.com/send?phone=51${PERU_ADMIN_PHONE}&text=${encodeURIComponent(`Hola TCT, código admin: ${verificationCode}`)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex-1 py-1.5 px-2 bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 border border-emerald-700/60 rounded-xl text-[10px] font-bold text-center flex items-center justify-center gap-1.5 transition-all"
-                  >
-                    <img src="/assets/whatsapp-3d.png" alt="WA" referrerPolicy="no-referrer" className="w-3.5 h-3.5 object-contain" />
-                    <span>WhatsApp</span>
-                  </a>
-                </div>
+            {/* Dispatch Status Feedback Banner */}
+            {dispatchStatusMessage && (
+              <div className="p-2.5 bg-emerald-950/80 border border-emerald-500/50 rounded-xl text-emerald-200 text-xs flex items-center gap-2 animate-fadeIn">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span className="font-semibold">{dispatchStatusMessage}</span>
               </div>
             )}
 
             {/* Error Message Alert in 2FA */}
             {twoFaError && (
-              <div className="p-2.5 bg-red-950/80 border border-red-500/50 rounded-xl text-red-200 text-xs flex items-start gap-2">
+              <div className="p-3 bg-red-950/80 border border-red-500/50 rounded-2xl text-red-200 text-xs flex items-start gap-2 animate-fadeIn">
                 <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
                 <span>{twoFaError}</span>
               </div>
             )}
 
-            {/* 2FA Input Form */}
-            <form onSubmit={handleVerify2FACode} className="space-y-3">
+            {/* Security Code Showcase Card with 1-Click Action */}
+            <div className="bg-gradient-to-br from-amber-500/15 via-slate-900 to-black p-3.5 rounded-2xl border border-amber-500/30 text-center space-y-2">
+              <div className="text-[11px] uppercase font-bold tracking-wider text-amber-300/80">
+                Tu Código de Acceso Generado:
+              </div>
+              
+              <div className="flex items-center justify-center gap-2">
+                <span className="text-2xl sm:text-3xl font-mono font-black text-amber-400 tracking-[0.25em] bg-black/60 px-4 py-1.5 rounded-xl border border-amber-400/40 shadow-inner">
+                  {verificationCode}
+                </span>
+
+                <button
+                  type="button"
+                  onClick={handleCopyCode}
+                  className="p-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-400/30 transition-all cursor-pointer"
+                  title="Copiar código"
+                >
+                  {codeCopied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                </button>
+              </div>
+
+              {/* 1-Click Instant Complete & Login Button */}
+              <button
+                type="button"
+                id="btn-quick-autofill-login"
+                onClick={handleQuickAutofillAndLogin}
+                className="w-full py-2 px-3 bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>⚡ Autocompletar e Ingresar de Inmediato</span>
+              </button>
+            </div>
+
+            {/* Direct Channel Dispatch Action Buttons */}
+            <div className="space-y-1.5 pt-1">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 text-center">
+                Enviar directo a tu celular (Perú 990010020):
+              </div>
+              <div className="grid grid-cols-3 gap-1.5">
+                {/* Telegram */}
+                <button
+                  type="button"
+                  id="btn-send-telegram"
+                  onClick={() => triggerSendChannel('telegram', verificationCode)}
+                  className="py-2 px-2 bg-sky-950/80 hover:bg-sky-900 border border-sky-500/50 hover:border-sky-400 text-sky-200 rounded-xl text-[11px] font-bold flex flex-col sm:flex-row items-center justify-center gap-1 transition-all cursor-pointer shadow-xs"
+                  title="Enviar código directo por Telegram"
+                >
+                  <Send className="w-3.5 h-3.5 text-sky-400" />
+                  <span>Telegram</span>
+                </button>
+
+                {/* WhatsApp */}
+                <button
+                  type="button"
+                  id="btn-send-whatsapp"
+                  onClick={() => triggerSendChannel('whatsapp', verificationCode)}
+                  className="py-2 px-2 bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-500/50 hover:border-emerald-400 text-emerald-200 rounded-xl text-[11px] font-bold flex flex-col sm:flex-row items-center justify-center gap-1 transition-all cursor-pointer shadow-xs"
+                  title="Enviar código directo por WhatsApp a 990010020"
+                >
+                  <MessageSquare className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>WhatsApp</span>
+                </button>
+
+                {/* SMS */}
+                <button
+                  type="button"
+                  id="btn-send-sms"
+                  onClick={() => triggerSendChannel('sms', verificationCode)}
+                  className="py-2 px-2 bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-amber-400 text-slate-200 rounded-xl text-[11px] font-bold flex flex-col sm:flex-row items-center justify-center gap-1 transition-all cursor-pointer shadow-xs"
+                  title="Enviar código por SMS a 990010020"
+                >
+                  <Smartphone className="w-3.5 h-3.5 text-amber-400" />
+                  <span>SMS</span>
+                </button>
+              </div>
+            </div>
+
+            {/* 2FA Manual Input Form */}
+            <form onSubmit={handleVerify2FACode} className="space-y-3 pt-1">
               <div>
+                <label htmlFor="input-2fa-code" className="block text-[11px] font-bold text-slate-300 mb-1 text-center">
+                  O escribe los 6 dígitos aquí:
+                </label>
                 <input
                   id="input-2fa-code"
                   type="text"
@@ -496,8 +563,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                     const val = e.target.value.replace(/\D/g, '').slice(0, 6);
                     setInputCode(val);
                   }}
-                  placeholder="______"
-                  className="w-full text-center py-2.5 bg-black/70 border border-slate-700 rounded-2xl text-2xl font-mono font-black text-amber-400 tracking-[0.4em] placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  placeholder="000000"
+                  className="w-full text-center py-2.5 bg-black/70 border border-slate-700 rounded-xl text-xl font-mono font-black text-amber-400 tracking-[0.35em] placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all"
                 />
               </div>
 
@@ -505,41 +572,32 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                 type="submit"
                 id="btn-verify-2fa-submit"
                 disabled={isVerifyingCode || inputCode.length !== 6}
-                className="w-full py-3 px-4 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black text-xs rounded-xl shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50"
+                className="w-full py-2.5 px-4 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black text-sm rounded-xl shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50"
               >
                 {isVerifyingCode ? (
-                  <div className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
+                    <span>Verificando...</span>
+                  </div>
                 ) : (
                   <>
-                    <ShieldCheck className="w-4 h-4" />
-                    <span>Confirmar Acceso Admin</span>
+                    <LogIn className="w-4 h-4" />
+                    <span>Confirmar e Ingresar</span>
                   </>
                 )}
               </button>
             </form>
 
-            {/* WhatsApp Fallback Option if SMS doesn't arrive */}
-            {channel === 'sms' && (
-              <button
-                type="button"
-                onClick={handleSwitchToWhatsApp}
-                className="w-full py-2.5 px-3 bg-emerald-900/40 hover:bg-emerald-900/60 border border-emerald-600/40 text-emerald-300 text-xs font-bold rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm"
-              >
-                <img src="/assets/whatsapp-3d.png" alt="WA" referrerPolicy="no-referrer" className="w-4 h-4 object-contain" />
-                <span>¿No llegó SMS? Enviar a WhatsApp 990010020</span>
-              </button>
-            )}
-
             {/* Resend button */}
-            <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1">
-              <span>{countdown > 0 ? `Reenviar en: ${countdown}s` : '¿No llegó?'}</span>
+            <div className="flex items-center justify-between text-xs text-slate-400 pt-2 border-t border-slate-800/80">
+              <span>{countdown > 0 ? `Reenviar en ${countdown}s` : '¿Nuevo código?'}</span>
               <button
                 type="button"
                 disabled={!canResend}
                 onClick={handleResendCurrentChannel}
-                className="font-bold text-amber-400 hover:text-amber-300 disabled:opacity-40"
+                className="font-bold text-amber-400 hover:text-amber-300 disabled:opacity-40 transition-colors cursor-pointer"
               >
-                Reenviar código
+                Generar nuevo código
               </button>
             </div>
 

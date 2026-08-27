@@ -101,6 +101,8 @@ import {
   Film,
   Palette,
   Type,
+  LayoutGrid,
+  ArrowLeft,
   Image as ImageIcon
 } from 'lucide-react';
 
@@ -148,8 +150,12 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
 }) => {
   const [rules, setRules] = useState<TCTMasterRules>(getStoredRules());
   const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab);
+  const [showButtonsMenu, setShowButtonsMenu] = useState<boolean>(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  // Logo change state
+  const logoFileInputRef = useRef<HTMLInputElement>(null);
 
   // --- Company Information State ---
   const [companyInfo, setCompanyInfo] = useState<TCTCompanyInfo>(rules.companyInfo || INITIAL_COMPANY_INFO);
@@ -312,6 +318,50 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
       if (onRulesUpdated) onRulesUpdated();
       notifySuccess('🔄 Datos de Corporación TCT restablecidos a los valores oficiales de fábrica');
     }
+  };
+
+  const handleUpdateLogo = (newLogoUrl: string) => {
+    const updatedCompany: TCTCompanyInfo = {
+      ...companyInfo,
+      logoUrl: newLogoUrl
+    };
+    const updatedContractDesign: TCTContractDesign = {
+      ...contractDesign,
+      customLogoUrl: newLogoUrl
+    };
+    setCompanyInfo(updatedCompany);
+    setContractDesign(updatedContractDesign);
+
+    const updatedRules: TCTMasterRules = {
+      ...rules,
+      companyInfo: updatedCompany,
+      contractDesign: updatedContractDesign
+    };
+    saveMasterRules(updatedRules);
+    setRules(updatedRules);
+    if (onRulesUpdated) onRulesUpdated();
+    notifySuccess('✓ Logo institucional de Corporación TCT actualizado');
+  };
+
+  const handleLogoFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 3 * 1024 * 1024) {
+      alert('El archivo seleccionado supera los 3MB. Por favor suba una imagen más liviana.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (uploadEvent) => {
+      const base64 = uploadEvent.target?.result as string;
+      if (base64) {
+        handleUpdateLogo(base64);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleResetLogo = () => {
+    handleUpdateLogo('/assets/tct-logo.png');
   };
 
   const handleAddBankAccount = () => {
@@ -1029,35 +1079,175 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
     }
   };
 
+  const RULES_OPTIONS: {
+    id: SettingsTab;
+    title: string;
+    description: string;
+    icon: React.ComponentType<{ className?: string }>;
+    badge?: string | number;
+    color: string;
+    bgHover: string;
+    border: string;
+  }[] = [
+    {
+      id: 'company',
+      title: '1. Empresa TCT',
+      description: 'Logo oficial, RUC, cuentas bancarias, representante y lema',
+      icon: Building2,
+      badge: 'Oficial',
+      color: 'text-amber-800 bg-amber-100',
+      bgHover: 'hover:border-amber-400 hover:bg-amber-50/70',
+      border: 'border-amber-200'
+    },
+    {
+      id: 'contract_design',
+      title: '2. Diseño Contrato',
+      description: 'Personalización de encabezados, logos, firmas y cláusulas',
+      icon: Palette,
+      badge: 'Visual',
+      color: 'text-amber-900 bg-amber-200/80',
+      bgHover: 'hover:border-amber-500 hover:bg-amber-100/60',
+      border: 'border-amber-300'
+    },
+    {
+      id: 'staff_assignment',
+      title: '3. Asignación Personal',
+      description: 'Camarógrafos, editores y técnicos asignados por contrato',
+      icon: UserCheck,
+      badge: `${projectsList.length} Proyectos`,
+      color: 'text-indigo-700 bg-indigo-100',
+      bgHover: 'hover:border-indigo-400 hover:bg-indigo-50/70',
+      border: 'border-indigo-200'
+    },
+    {
+      id: 'checklists',
+      title: '4. Checklists',
+      description: '12 fases de preproducción, rodaje, postproducción y entrega',
+      icon: ListChecks,
+      badge: '12 Pasos',
+      color: 'text-emerald-700 bg-emerald-100',
+      bgHover: 'hover:border-emerald-400 hover:bg-emerald-50/70',
+      border: 'border-emerald-200'
+    },
+    {
+      id: 'equipment',
+      title: '5. Inventario',
+      description: 'Cámaras, lentes, audio, drones, iluminación y accesorios',
+      icon: Camera,
+      badge: `${rules.equipmentCatalog.length} Equipos`,
+      color: 'text-slate-800 bg-slate-200',
+      bgHover: 'hover:border-slate-400 hover:bg-slate-100',
+      border: 'border-slate-300'
+    },
+    {
+      id: 'packages',
+      title: '6. Proformas',
+      description: 'Paquetes, bodas, quinceañeros, eventos y cotizaciones',
+      icon: Package,
+      badge: `${rules.packages.length} Paquetes`,
+      color: 'text-purple-700 bg-purple-100',
+      bgHover: 'hover:border-purple-400 hover:bg-purple-50/70',
+      border: 'border-purple-200'
+    },
+    {
+      id: 'services',
+      title: '7. Tarifas & Asesores',
+      description: 'Horas extra, comisiones, penalidades y recargos',
+      icon: Coins,
+      badge: 'Tarifario',
+      color: 'text-amber-700 bg-amber-100',
+      bgHover: 'hover:border-amber-400 hover:bg-amber-50/70',
+      border: 'border-amber-200'
+    },
+    {
+      id: 'formats',
+      title: '8. Formatos',
+      description: 'Plantillas de actas de conformidad y acuerdos legales',
+      icon: FileText,
+      badge: `${rules.formatsTemplates?.length || 5} Docs`,
+      color: 'text-cyan-700 bg-cyan-100',
+      bgHover: 'hover:border-cyan-400 hover:bg-cyan-50/70',
+      border: 'border-cyan-200'
+    },
+    {
+      id: 'users',
+      title: '9. Usuarios & Cargos',
+      description: 'Crear y administrar empleados, roles y accesos seguros',
+      icon: Users,
+      badge: `${usersList.length} Usuarios`,
+      color: 'text-blue-700 bg-blue-100',
+      bgHover: 'hover:border-blue-400 hover:bg-blue-50/70',
+      border: 'border-blue-200'
+    },
+    {
+      id: 'shortcuts',
+      title: '10. Atajos',
+      description: 'Teclas rápidas de teclado para navegación y emisión rápida',
+      icon: Keyboard,
+      badge: `${shortcutsList.length} Atajos`,
+      color: 'text-orange-700 bg-orange-100',
+      bgHover: 'hover:border-orange-400 hover:bg-orange-50/70',
+      border: 'border-orange-200'
+    },
+    {
+      id: 'system',
+      title: '11. Base de Datos',
+      description: 'Copias de seguridad, exportar / importar y mantenimiento',
+      icon: Database,
+      badge: 'Sistema',
+      color: 'text-rose-700 bg-rose-100',
+      bgHover: 'hover:border-rose-400 hover:bg-rose-50/70',
+      border: 'border-rose-200'
+    }
+  ];
+
+  const handleSelectOption = (tabId: SettingsTab) => {
+    setActiveTab(tabId);
+    setShowButtonsMenu(false);
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-md overflow-hidden animate-in fade-in">
       <div className="bg-white text-slate-900 rounded-3xl max-w-5xl w-full h-[92vh] flex flex-col shadow-2xl overflow-hidden border border-slate-700">
         
         {/* Header Bar */}
-        <div className="px-6 py-4 bg-slate-950 text-white flex items-center justify-between border-b border-slate-800 shrink-0">
+        <div className="px-5 py-3.5 bg-slate-950 text-white flex items-center justify-between border-b border-slate-800 shrink-0">
           <div className="flex items-center space-x-3">
             <TCTLogo size="sm" variant="icon-only" />
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-base sm:text-lg font-black tracking-wide flex items-center gap-2">
-                  <Sliders className="w-5 h-5 text-amber-400" />
-                  <span>Reglas Maestras & Configuración Institucional</span>
+                <h3 className="text-base font-black tracking-wide flex items-center gap-2">
+                  <Sliders className="w-4 h-4 text-amber-400" />
+                  <span>REGLAS</span>
                 </h3>
                 <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[10px] font-black border border-amber-500/40">
-                  Oficial TCT
+                  TCT
                 </span>
               </div>
               <p className="text-xs text-slate-400">
-                Gestión de Checklists, Inventario, Proformas, Tarifas, Formatos, Usuarios y Autoguardado
+                {showButtonsMenu 
+                  ? 'Seleccione una opción para ver y configurar' 
+                  : (RULES_OPTIONS.find(o => o.id === activeTab)?.title || 'Configuración')}
               </p>
             </div>
           </div>
 
           <div className="flex items-center space-x-2">
+            {!showButtonsMenu && (
+              <button
+                onClick={() => setShowButtonsMenu(true)}
+                className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-amber-400 rounded-xl text-xs font-bold border border-slate-800 flex items-center gap-1.5 transition-all cursor-pointer"
+                title="Volver a los botones de Reglas"
+              >
+                <LayoutGrid className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Menú de Botones</span>
+              </button>
+            )}
             <SyncStatusIndicator />
             <button
               onClick={onClose}
-              className="p-2 rounded-full bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
+              className="p-2 rounded-full bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white transition-colors cursor-pointer"
+              title="Cerrar ventana"
             >
               <X className="w-5 h-5" />
             </button>
@@ -1074,183 +1264,106 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
           </div>
         )}
 
-        {/* Tab Navigation */}
-        <div className="bg-slate-100 px-3 sm:px-6 py-2 border-b border-slate-200 flex items-center space-x-1.5 sm:space-x-2 overflow-x-auto shrink-0 scrollbar-none">
-          
-          {/* TAB 0: DATOS EMPRESA CORPORACIÓN TCT */}
-          <button
-            onClick={() => setActiveTab('company')}
-            className={`px-3 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
-              activeTab === 'company'
-                ? 'bg-amber-500 text-slate-950 shadow-md ring-2 ring-amber-400'
-                : 'text-amber-900 bg-amber-100/60 hover:bg-amber-200/80'
-            }`}
-            title="Datos Oficiales de Corporación TCT (RUC, Cuentas, Representante, Locación)"
-          >
-            <Building2 className="w-4 h-4 text-amber-900" />
-            <span className="hidden sm:inline">1. Empresa TCT</span>
-            <span className="sm:hidden">Empresa</span>
-          </button>
+        {/* Navigation Bar when inside a section */}
+        {!showButtonsMenu && (
+          <div className="bg-slate-100 px-3 sm:px-5 py-2 border-b border-slate-200 flex items-center justify-between overflow-x-auto shrink-0 gap-2">
+            <button
+              onClick={() => setShowButtonsMenu(true)}
+              className="px-3 py-1.5 bg-white hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-black border border-slate-300 flex items-center gap-1.5 shadow-xs transition-all cursor-pointer shrink-0"
+              title="Volver al panel de botones de Reglas"
+            >
+              <ArrowLeft className="w-3.5 h-3.5 text-amber-600" />
+              <span>← REGLAS</span>
+            </button>
 
-          {/* TAB 0.05: DISEÑO Y ENCABEZADO DE CONTRATO */}
-          <button
-            onClick={() => setActiveTab('contract_design')}
-            className={`px-3 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
-              activeTab === 'contract_design'
-                ? 'bg-amber-600 text-white shadow-md ring-2 ring-amber-400'
-                : 'text-amber-950 bg-amber-200/60 hover:bg-amber-200'
-            }`}
-            title="Diseño visual de contrato, logos, fuentes, colores, encabezado y cláusulas de difusión"
-          >
-            <Palette className="w-4 h-4 text-amber-900" />
-            <span className="hidden sm:inline">2. Diseño Contrato</span>
-            <span className="sm:hidden">Contrato</span>
-          </button>
-
-          {/* TAB 0.1: ASIGNACIÓN DE PERSONAL & EQUIPOS */}
-          <button
-            onClick={() => setActiveTab('staff_assignment')}
-            className={`px-3 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
-              activeTab === 'staff_assignment'
-                ? 'bg-indigo-600 text-white shadow-md'
-                : 'text-indigo-900 bg-indigo-50 hover:bg-indigo-100'
-            }`}
-            title="Asignación de Personal Técnico y Equipos por Contrato"
-          >
-            <UserCheck className="w-4 h-4" />
-            <span className="hidden sm:inline">3. Asignación Personal</span>
-            <span className="sm:hidden">Personal</span>
-          </button>
-
-          {/* TAB 1: CHECKLISTS */}
-          <button
-            onClick={() => setActiveTab('checklists')}
-            className={`px-3 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
-              activeTab === 'checklists'
-                ? 'bg-slate-900 text-amber-400 shadow-sm'
-                : 'text-slate-600 hover:bg-slate-200'
-            }`}
-          >
-            <ListChecks className="w-4 h-4" />
-            <span className="hidden sm:inline">4. Checklists (12 Pasos)</span>
-            <span className="sm:hidden">Checklists</span>
-          </button>
-
-          {/* TAB 2: INVENTARIO */}
-          <button
-            onClick={() => setActiveTab('equipment')}
-            className={`px-3 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
-              activeTab === 'equipment'
-                ? 'bg-slate-900 text-amber-400 shadow-sm'
-                : 'text-slate-600 hover:bg-slate-200'
-            }`}
-          >
-            <Camera className="w-4 h-4" />
-            <span className="hidden sm:inline">4. Inventario</span>
-            <span className="sm:hidden">Equipos</span>
-            <span className="px-1.5 py-0.2 rounded-full bg-slate-800 text-[10px] text-amber-300">
-              {rules.equipmentCatalog.length}
-            </span>
-          </button>
-
-          {/* TAB 3: PROFORMAS */}
-          <button
-            onClick={() => setActiveTab('packages')}
-            className={`px-3 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
-              activeTab === 'packages'
-                ? 'bg-slate-900 text-amber-400 shadow-sm'
-                : 'text-slate-600 hover:bg-slate-200'
-            }`}
-          >
-            <Package className="w-4 h-4" />
-            <span className="hidden sm:inline">5. Proformas</span>
-            <span className="sm:hidden">Paquetes</span>
-            <span className="px-1.5 py-0.2 rounded-full bg-slate-800 text-[10px] text-amber-300">
-              {rules.packages.length}
-            </span>
-          </button>
-
-          {/* TAB 4: TARIFAS */}
-          <button
-            onClick={() => setActiveTab('services')}
-            className={`px-3 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
-              activeTab === 'services'
-                ? 'bg-slate-900 text-amber-400 shadow-sm'
-                : 'text-slate-600 hover:bg-slate-200'
-            }`}
-          >
-            <Coins className="w-4 h-4" />
-            <span className="hidden sm:inline">6. Tarifas & Asesores</span>
-            <span className="sm:hidden">Tarifas</span>
-          </button>
-
-          {/* TAB 5: FORMATOS */}
-          <button
-            onClick={() => setActiveTab('formats')}
-            className={`px-3 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
-              activeTab === 'formats'
-                ? 'bg-slate-900 text-amber-400 shadow-sm'
-                : 'text-slate-600 hover:bg-slate-200'
-            }`}
-          >
-            <FileText className="w-4 h-4" />
-            <span className="hidden sm:inline">7. Formatos</span>
-            <span className="sm:hidden">Formatos</span>
-          </button>
-
-          {/* TAB 6: USUARIOS */}
-          <button
-            onClick={() => setActiveTab('users')}
-            className={`px-3 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
-              activeTab === 'users'
-                ? 'bg-blue-600 text-white shadow-sm'
-                : 'text-blue-700 bg-blue-50 hover:bg-blue-100'
-            }`}
-          >
-            <Users className="w-4 h-4" />
-            <span className="hidden sm:inline">8. Usuarios & Cargos</span>
-            <span className="sm:hidden">Usuarios</span>
-            <span className="px-1.5 py-0.2 rounded-full bg-blue-900 text-[10px] text-blue-200">
-              {usersList.length}
-            </span>
-          </button>
-
-          {/* TAB 7: ATAJOS DE TECLADO */}
-          <button
-            onClick={() => setActiveTab('shortcuts')}
-            className={`px-3 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
-              activeTab === 'shortcuts'
-                ? 'bg-amber-600 text-white shadow-sm'
-                : 'text-amber-800 bg-amber-50 hover:bg-amber-100'
-            }`}
-          >
-            <Keyboard className="w-4 h-4" />
-            <span className="hidden sm:inline">9. Atajos</span>
-            <span className="sm:hidden">Atajos</span>
-          </button>
-
-          {/* TAB 8: SISTEMA */}
-          <button
-            onClick={() => setActiveTab('system')}
-            className={`px-3 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
-              activeTab === 'system'
-                ? 'bg-emerald-700 text-white shadow-sm'
-                : 'text-emerald-800 bg-emerald-50 hover:bg-emerald-100'
-            }`}
-          >
-            <Database className="w-4 h-4" />
-            <span className="hidden sm:inline">10. Base de Datos</span>
-            <span className="sm:hidden">Datos</span>
-          </button>
-        </div>
+            {/* Quick jump tab pill buttons */}
+            <div className="flex items-center space-x-1.5 overflow-x-auto scrollbar-none py-0.5">
+              {RULES_OPTIONS.map((opt) => {
+                const Icon = opt.icon;
+                const isActive = activeTab === opt.id;
+                return (
+                  <button
+                    key={opt.id}
+                    onClick={() => setActiveTab(opt.id)}
+                    className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all flex items-center gap-1 whitespace-nowrap cursor-pointer ${
+                      isActive
+                        ? 'bg-slate-900 text-amber-400 shadow-sm'
+                        : 'text-slate-600 hover:bg-slate-200 bg-white/70'
+                    }`}
+                    title={opt.description}
+                  >
+                    <Icon className="w-3.5 h-3.5" />
+                    <span>{opt.title.split('. ')[1] || opt.title}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Main Content Area */}
         <div className="flex-1 p-4 sm:p-6 overflow-y-auto bg-slate-50 space-y-6">
 
           {/* ========================================================= */}
-          {/* TAB 0: DATOS OFICIALES CORPORACIÓN TCT */}
+          {/* MENU VIEW: GRID OF 11 INTERACTIVE OPTION BUTTONS          */}
           {/* ========================================================= */}
-          {activeTab === 'company' && (
+          {showButtonsMenu && (
+            <div className="space-y-6 animate-in fade-in">
+              <div className="text-center max-w-xl mx-auto space-y-1.5">
+                <h4 className="text-lg font-black text-slate-900 flex items-center justify-center gap-2">
+                  <Sliders className="w-5 h-5 text-amber-500" />
+                  <span>Panel de Opciones y Reglas Maestras</span>
+                </h4>
+                <p className="text-xs text-slate-500">
+                  Seleccione cualquiera de los 11 módulos para ver y gestionar sus configuraciones de forma instantánea.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4">
+                {RULES_OPTIONS.map((opt) => {
+                  const Icon = opt.icon;
+                  return (
+                    <button
+                      key={opt.id}
+                      onClick={() => handleSelectOption(opt.id)}
+                      className={`p-4 sm:p-5 rounded-2xl bg-white border ${opt.border} shadow-xs ${opt.bgHover} transition-all duration-200 text-left flex flex-col justify-between group cursor-pointer relative hover:shadow-md hover:-translate-y-0.5 active:translate-y-0`}
+                    >
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className={`w-10 h-10 rounded-2xl ${opt.color} flex items-center justify-center shadow-xs group-hover:scale-110 transition-transform`}>
+                            <Icon className="w-5 h-5" />
+                          </div>
+                          {opt.badge && (
+                            <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[10px] font-black border border-slate-200">
+                              {opt.badge}
+                            </span>
+                          )}
+                        </div>
+                        <div>
+                          <h5 className="font-black text-slate-900 text-sm group-hover:text-amber-600 transition-colors">
+                            {opt.title}
+                          </h5>
+                          <p className="text-xs text-slate-500 line-clamp-2 mt-1 leading-relaxed">
+                            {opt.description}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-slate-400 group-hover:text-amber-600 mt-2">
+                        <span>Ingresar a configuración</span>
+                        <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* ========================================================= */}
+          {/* TAB 0: DATOS OFICIALES CORPORACIÓN TCT (WITH LOGO CHANGER)*/}
+          {/* ========================================================= */}
+          {!showButtonsMenu && activeTab === 'company' && (
             <div className="space-y-6 animate-in fade-in">
               <div className="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200 shadow-xs space-y-5">
                 <div className="flex items-center justify-between flex-wrap gap-2 pb-4 border-b border-slate-100">
@@ -1263,7 +1376,7 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
                         Datos Institucionales de Corporación TCT
                       </h4>
                       <p className="text-xs text-slate-500">
-                        Estos datos se aplican automáticamente en los Contratos Oficiales, Proformas, Actas de Conformidad y Documentos Legales emitidos.
+                        Estos datos y el Logo Oficial se aplican automáticamente en Contratos, Proformas y Actas.
                       </p>
                     </div>
                   </div>
@@ -1272,6 +1385,7 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
                     <button
                       onClick={handleResetCompanyInfo}
                       className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer"
+                      title="Restaurar a los valores originales de fábrica"
                     >
                       <RotateCcw className="w-3.5 h-3.5" />
                       <span>Restaurar Fábrica</span>
@@ -1279,10 +1393,128 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
                     <button
                       onClick={handleSaveCompanyInfo}
                       className="px-4 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-black rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+                      title="Guardar datos de la empresa"
                     >
                       <Save className="w-4 h-4" />
                       <span>Guardar Empresa</span>
                     </button>
+                  </div>
+                </div>
+
+                {/* --------------------------------------------------- */}
+                {/* LOGO CORPORATIVO INSTITUCIONAL - GESTOR & CAMBIO    */}
+                {/* --------------------------------------------------- */}
+                <div className="bg-gradient-to-br from-slate-900 to-slate-950 text-white p-5 rounded-2xl border border-slate-800 space-y-4">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <div className="flex items-center space-x-2.5">
+                      <div className="p-2 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                        <ImageIcon className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h5 className="font-black text-white text-sm flex items-center gap-2">
+                          <span>Logo Institucional de Corporación TCT</span>
+                          <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-black border border-emerald-500/30">
+                            Activo
+                          </span>
+                        </h5>
+                        <p className="text-xs text-slate-400">
+                          Cambie el logotipo para que se refleje de inmediato en la cabecera del sistema, impresiones y contratos.
+                        </p>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={handleResetLogo}
+                      className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer"
+                      title="Restablecer al Isotipo Oficial Predeterminado"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Logo Original</span>
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+                    {/* Visual Preview */}
+                    <div className="flex flex-col items-center justify-center p-4 bg-slate-950 rounded-xl border border-slate-800 text-center">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">
+                        Vista Previa Oficial
+                      </span>
+                      <div className="w-24 h-24 bg-slate-900/80 rounded-2xl flex items-center justify-center p-2 border border-slate-700 shadow-inner">
+                        {companyInfo.logoUrl ? (
+                          <img
+                            src={companyInfo.logoUrl}
+                            alt="Logo Corporativo TCT"
+                            className="max-w-full max-h-full object-contain drop-shadow-md"
+                          />
+                        ) : (
+                          <TCTLogo size="lg" variant="icon-only" />
+                        )}
+                      </div>
+                      <span className="text-[10px] text-amber-400 font-bold mt-2 truncate max-w-full">
+                        {companyInfo.commercialName || 'Corporación TCT'}
+                      </span>
+                    </div>
+
+                    {/* File Upload and Presets */}
+                    <div className="md:col-span-2 space-y-3">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-300 mb-1.5">
+                          Subir Nuevo Logo (PNG, JPG, SVG o WebP):
+                        </label>
+                        <input
+                          type="file"
+                          ref={logoFileInputRef}
+                          onChange={handleLogoFileUpload}
+                          accept="image/*"
+                          className="hidden"
+                        />
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => logoFileInputRef.current?.click()}
+                            className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs rounded-xl shadow-md transition-all flex items-center gap-2 cursor-pointer"
+                          >
+                            <Upload className="w-4 h-4" />
+                            <span>Seleccionar Imagen de Dispositivo</span>
+                          </button>
+                          <span className="text-[11px] text-slate-400">Máx. 3MB</span>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-300 mb-1">
+                          O Pegar Enlace / URL de la Imagen:
+                        </label>
+                        <input
+                          type="text"
+                          value={companyInfo.logoUrl || ''}
+                          onChange={(e) => handleUpdateLogo(e.target.value)}
+                          placeholder="https://ejemplo.com/logo-tct.png"
+                          className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-white focus:border-amber-400 focus:outline-none"
+                        />
+                      </div>
+
+                      {/* Quick presets */}
+                      <div className="pt-2">
+                        <span className="text-[11px] font-bold text-slate-400 mr-2">Predeterminados:</span>
+                        <div className="inline-flex gap-2 flex-wrap mt-1">
+                          <button
+                            type="button"
+                            onClick={() => handleUpdateLogo('/assets/tct-logo.png')}
+                            className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-300 rounded-lg transition-all border border-slate-700 cursor-pointer"
+                          >
+                            Isotipo Oficial (Rojo/Dorado)
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleUpdateLogo('/assets/tct-3d-gold.png')}
+                            className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-xs font-bold text-amber-300 rounded-lg transition-all border border-slate-700 cursor-pointer"
+                          >
+                            Dorado 3D Insignia
+                          </button>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
@@ -1517,7 +1749,7 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
           {/* ========================================================= */}
           {/* TAB 0.05: DISEÑO, ENCABEZADO Y CLÁUSULAS DEL CONTRATO */}
           {/* ========================================================= */}
-          {activeTab === 'contract_design' && (
+          {!showButtonsMenu && activeTab === 'contract_design' && (
             <div className="space-y-6 animate-in fade-in">
               <div className="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200 shadow-xs space-y-6">
                 
@@ -1867,7 +2099,7 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
           {/* ========================================================= */}
           {/* TAB 0.1: ASIGNACIÓN DE PERSONAL & EQUIPOS POR CONTRATO */}
           {/* ========================================================= */}
-          {activeTab === 'staff_assignment' && (
+          {!showButtonsMenu && activeTab === 'staff_assignment' && (
             <div className="space-y-6 animate-in fade-in">
               <div className="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200 shadow-xs space-y-5">
                 
@@ -2092,7 +2324,7 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
           {/* ========================================================= */}
           {/* TAB 1: CHECKLISTS DE LOS 12 PASOS */}
           {/* ========================================================= */}
-          {activeTab === 'checklists' && (
+          {!showButtonsMenu && activeTab === 'checklists' && (
             <div className="space-y-6">
               <div className="flex items-center justify-between flex-wrap gap-3 bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
                 <div>
@@ -2229,7 +2461,7 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
           {/* ========================================================= */}
           {/* TAB 2: INVENTARIO DE EQUIPOS */}
           {/* ========================================================= */}
-          {activeTab === 'equipment' && (
+          {!showButtonsMenu && activeTab === 'equipment' && (
             <div className="space-y-5">
               {/* Add form */}
               <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-xs space-y-4">
@@ -2359,7 +2591,7 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
           {/* ========================================================= */}
           {/* TAB 3: PROFORMAS & PAQUETES */}
           {/* ========================================================= */}
-          {activeTab === 'packages' && (
+          {!showButtonsMenu && activeTab === 'packages' && (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* Sidebar list of packages */}
               <div className="space-y-3 bg-white p-4 rounded-3xl border border-slate-200 shadow-xs">
@@ -2611,7 +2843,7 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
           {/* ========================================================= */}
           {/* TAB 4: TARIFAS & PARÁMETROS */}
           {/* ========================================================= */}
-          {activeTab === 'services' && (
+          {!showButtonsMenu && activeTab === 'services' && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Financial rules */}
               <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs space-y-4">
@@ -2686,7 +2918,7 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
           {/* ========================================================= */}
           {/* TAB 5: FORMATOS & ACTAS OFICIALES */}
           {/* ========================================================= */}
-          {activeTab === 'formats' && (
+          {!showButtonsMenu && activeTab === 'formats' && (
             <div className="space-y-5">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {rules.templateFormats.map((fmt) => (
@@ -2724,7 +2956,7 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
           {/* ========================================================= */}
           {/* TAB 6: ADMINISTRAR USUARIOS (MOVIDO A REGLAS) */}
           {/* ========================================================= */}
-          {activeTab === 'users' && (
+          {!showButtonsMenu && activeTab === 'users' && (
             <div className="space-y-6">
               {/* Users Header & Actions */}
               <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-xs flex items-center justify-between flex-wrap gap-4">
@@ -3050,7 +3282,7 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
           {/* ========================================================= */}
           {/* TAB 7: GESTOR DE ATAJOS DE TECLADO PERSONALIZADOS */}
           {/* ========================================================= */}
-          {activeTab === 'shortcuts' && (
+          {!showButtonsMenu && activeTab === 'shortcuts' && (
             <div className="space-y-6">
               
               {/* Header card for shortcuts */}
@@ -3222,7 +3454,7 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
           {/* ========================================================= */}
           {/* TAB 8: SISTEMA, DEMO & AUTOGUARDADO LOCAL */}
           {/* ========================================================= */}
-          {activeTab === 'system' && (
+          {!showButtonsMenu && activeTab === 'system' && (
             <div className="space-y-6">
               
               {/* Storage & Autosave Status Card */}
@@ -3542,26 +3774,53 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
 
         </div>
 
-        {/* Footer */}
-        <div className="px-6 py-3.5 bg-slate-100 border-t border-slate-200 flex items-center justify-between shrink-0">
+        {/* Footer with Icon Buttons & Tooltips */}
+        <div className="px-5 py-3 bg-slate-100 border-t border-slate-200 flex items-center justify-between shrink-0">
           <div className="flex items-center space-x-2 text-xs text-slate-500">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span>Auto-guardado local activo y sincronizado en tiempo real.</span>
+            <span className="hidden sm:inline">Auto-guardado local activo y sincronizado en tiempo real.</span>
+            <span className="sm:hidden font-bold text-emerald-700">Sincronizado</span>
           </div>
 
+          {/* Action icon buttons with hover tooltips */}
           <div className="flex items-center space-x-2">
+            {!showButtonsMenu && (
+              <button
+                onClick={() => setShowButtonsMenu(true)}
+                className="p-2.5 rounded-2xl bg-white hover:bg-slate-200 text-slate-700 border border-slate-300 shadow-xs transition-all flex items-center justify-center cursor-pointer group relative"
+                title="Volver a los botones de Reglas"
+                aria-label="Volver a los botones de Reglas"
+              >
+                <LayoutGrid className="w-4 h-4 text-amber-600 group-hover:scale-110 transition-transform" />
+              </button>
+            )}
+
             <button
-              onClick={onClose}
-              className="px-4 py-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-200 transition-colors"
+              onClick={handleResetToDefaults}
+              className="p-2.5 rounded-2xl bg-white hover:bg-slate-200 text-slate-700 border border-slate-300 shadow-xs transition-all flex items-center justify-center cursor-pointer group relative"
+              title="Restablecer reglas a valores de fábrica"
+              aria-label="Restablecer reglas a valores de fábrica"
             >
-              Cerrar
+              <RotateCcw className="w-4 h-4 text-slate-600 group-hover:rotate-180 transition-transform" />
             </button>
+
             <button
               onClick={handleSaveAll}
-              className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs shadow-md flex items-center gap-1.5 transition-all"
+              className="p-2.5 px-4 rounded-2xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer group relative"
+              title="Guardar todos los cambios en las Reglas Maestras"
+              aria-label="Guardar todos los cambios"
             >
-              <Save className="w-4 h-4" />
-              <span>Guardar Reglas</span>
+              <Save className="w-4 h-4 group-hover:scale-110 transition-transform" />
+              <span className="hidden sm:inline">Guardar</span>
+            </button>
+
+            <button
+              onClick={onClose}
+              className="p-2.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white shadow-xs transition-all flex items-center justify-center cursor-pointer group relative"
+              title="Cerrar ventana de Reglas"
+              aria-label="Cerrar"
+            >
+              <X className="w-4 h-4 group-hover:scale-110 transition-transform" />
             </button>
           </div>
         </div>

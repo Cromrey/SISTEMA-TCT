@@ -124,109 +124,120 @@ export function printElement(elementId: string, docTitle: string = 'Documento Co
   }
 
   try {
-    // 1. Inject or update the global high-compatibility print styles
-    const styleId = 'tct-universal-print-stylesheet';
-    let styleTag = document.getElementById(styleId) as HTMLStyleElement | null;
-    if (!styleTag) {
-      styleTag = document.createElement('style');
-      styleTag.id = styleId;
-      document.head.appendChild(styleTag);
+    // 1. Gather all main document stylesheets and Tailwind links
+    const headElements = Array.from(document.querySelectorAll('link[rel="stylesheet"], style'));
+    let stylesHtml = '';
+    headElements.forEach(el => {
+      stylesHtml += el.outerHTML + '\n';
+    });
+
+    // 2. Build isolated print iframe
+    let printIframe = document.getElementById('tct-isolated-print-iframe') as HTMLIFrameElement | null;
+    if (printIframe) {
+      printIframe.remove();
     }
 
-    styleTag.textContent = `
-      @media print {
-        @page {
-          size: A4 portrait;
-          margin: 8mm 10mm 10mm 10mm;
-        }
-        *, *::before, *::after {
-          -webkit-print-color-adjust: exact !important;
-          print-color-adjust: exact !important;
-          color-adjust: exact !important;
-          box-sizing: border-box !important;
-        }
-        html, body {
-          margin: 0 !important;
-          padding: 0 !important;
-          background: #ffffff !important;
-          color: #0f172a !important;
-          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
-          overflow: visible !important;
-          height: auto !important;
-          min-height: 100% !important;
-        }
-        /* Hide all UI navigation, controls, headers and modal backdrops */
-        .print\\:hidden, button, nav, header, .no-print {
-          display: none !important;
-        }
-        /* Make modal backdrop completely transparent and static during print */
-        .fixed.inset-0 {
-          position: static !important;
-          background: transparent !important;
-          backdrop-filter: none !important;
-          padding: 0 !important;
-          margin: 0 !important;
-          overflow: visible !important;
-          display: block !important;
-          height: auto !important;
-          max-height: none !important;
-          width: 100% !important;
-          max-width: 100% !important;
-          box-shadow: none !important;
-          border: none !important;
-        }
-        .max-h-\\[96vh\\], .max-h-\\[90vh\\] {
-          max-height: none !important;
-          height: auto !important;
-          overflow: visible !important;
-          box-shadow: none !important;
-          border: none !important;
-        }
-        #${elementId} {
-          display: block !important;
-          overflow: visible !important;
-          height: auto !important;
-          max-height: none !important;
-          padding: 0 !important;
-          margin: 0 !important;
-          background: #ffffff !important;
-        }
-        .page-break-after, .break-after-page {
-          page-break-after: always !important;
-          break-after: page !important;
-        }
-        .page-break-before, .break-before-page {
-          page-break-before: always !important;
-          break-before: page !important;
-        }
-        .page-break-inside-avoid, .break-inside-avoid {
-          page-break-inside: avoid !important;
-          break-inside: avoid !important;
-        }
-        svg {
-          shape-rendering: geometricPrecision !important;
-          -webkit-print-color-adjust: exact !important;
-          print-color-adjust: exact !important;
-        }
-      }
-    `;
+    printIframe = document.createElement('iframe');
+    printIframe.id = 'tct-isolated-print-iframe';
+    printIframe.style.position = 'fixed';
+    printIframe.style.right = '0';
+    printIframe.style.bottom = '0';
+    printIframe.style.width = '0';
+    printIframe.style.height = '0';
+    printIframe.style.border = 'none';
+    printIframe.style.visibility = 'hidden';
+    document.body.appendChild(printIframe);
 
-    // 2. Set document title for clean print header/filename
-    const prevTitle = document.title;
-    document.title = docTitle;
-
-    // 3. Trigger native window.print() directly
-    window.focus();
-    setTimeout(() => {
+    const doc = printIframe.contentWindow?.document || printIframe.contentDocument;
+    if (!doc) {
       window.print();
-      // Restore title after print dialog closes
+      return;
+    }
+
+    doc.open();
+    doc.write(`
+      <!DOCTYPE html>
+      <html lang="es">
+        <head>
+          <meta charset="utf-8">
+          <title>${docTitle}</title>
+          ${stylesHtml}
+          <style>
+            @page {
+              size: A4 portrait;
+              margin: 8mm 10mm 10mm 10mm;
+            }
+            *, *::before, *::after {
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+              color-adjust: exact !important;
+              box-sizing: border-box !important;
+            }
+            html, body {
+              margin: 0 !important;
+              padding: 0 !important;
+              background: #ffffff !important;
+              color: #0f172a !important;
+              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+              overflow: visible !important;
+              height: auto !important;
+              min-height: 100% !important;
+            }
+            .print\\:hidden, button, nav, header, .no-print {
+              display: none !important;
+            }
+            .page-break-after, .break-after-page {
+              page-break-after: always !important;
+              break-after: page !important;
+            }
+            .page-break-before, .break-before-page {
+              page-break-before: always !important;
+              break-before: page !important;
+            }
+            .page-break-inside-avoid, .break-inside-avoid {
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+            }
+            img {
+              max-width: 100% !important;
+            }
+          </style>
+        </head>
+        <body class="bg-white text-slate-900">
+          <div class="print-container">
+            ${targetEl.outerHTML}
+          </div>
+        </body>
+      </html>
+    `);
+    doc.close();
+
+    // 3. Trigger printing after contents and images load
+    const triggerIframePrint = () => {
       setTimeout(() => {
-        document.title = prevTitle;
-      }, 1000);
-    }, 50);
+        try {
+          const win = printIframe?.contentWindow;
+          if (win) {
+            win.focus();
+            win.print();
+          } else {
+            window.print();
+          }
+        } catch (e) {
+          console.warn('Iframe print failed, falling back to window.print():', e);
+          window.print();
+        }
+      }, 350);
+    };
+
+    if (doc.readyState === 'complete') {
+      triggerIframePrint();
+    } else {
+      printIframe.onload = triggerIframePrint;
+    }
 
   } catch (err) {
-    console.error('Direct print execution error:', err);
+    console.error('Direct print execution error, fallback to window.print():', err);
     window.print();
   }
 }

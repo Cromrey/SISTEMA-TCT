@@ -4,7 +4,9 @@ import { TCTLogo } from './TCTLogo';
 import { 
   Clapperboard,
   LogOut,
-  Sliders
+  Sliders,
+  ArrowLeft,
+  ArrowRight
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -43,7 +45,9 @@ export const Header: React.FC<HeaderProps> = ({
   onUserSelect,
   onOpenNewProject,
   onOpenRulesModal,
-  onLogout
+  onLogout,
+  onGoBack,
+  onGoForward
 }) => {
   const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -122,7 +126,7 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="w-full max-w-7xl mx-auto px-2 sm:px-4 lg:px-6">
         <div className="flex items-center justify-between min-h-16 py-2 gap-2 sm:gap-4 flex-wrap sm:flex-nowrap">
           
-          {/* Left Block: Official TCT Logo & Calligraphy Slogan Branding */}
+          {/* Left Block: Official TCT Logo, Calligraphy Slogan & Navigation Icons */}
           <div className="flex items-center space-x-2 sm:space-x-3 shrink-0">
             <div className="flex items-center space-x-2">
               <TCTLogo size="md" variant="icon-only" />
@@ -137,9 +141,33 @@ export const Header: React.FC<HeaderProps> = ({
                 </span>
               </div>
             </div>
+
+            {/* Atrás & Adelante Navigation Icon Controls */}
+            <div className="flex items-center space-x-1 bg-slate-950/80 p-1 rounded-xl border border-slate-800 ml-1">
+              <button
+                type="button"
+                id="btn-nav-back"
+                onClick={onGoBack}
+                className="p-1.5 sm:p-2 rounded-lg bg-slate-900 hover:bg-amber-500 hover:text-slate-950 text-slate-300 transition-all cursor-pointer group shadow-xs"
+                title="Atrás (Cerrar modal o volver a la vista principal)"
+                aria-label="Atrás"
+              >
+                <ArrowLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4 group-hover:-translate-x-0.5 transition-transform" />
+              </button>
+              <button
+                type="button"
+                id="btn-nav-forward"
+                onClick={onGoForward}
+                className="p-1.5 sm:p-2 rounded-lg bg-slate-900 hover:bg-amber-500 hover:text-slate-950 text-slate-300 transition-all cursor-pointer group shadow-xs"
+                title="Adelante (Abrir producción activa o siguiente elemento)"
+                aria-label="Adelante"
+              >
+                <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 group-hover:translate-x-0.5 transition-transform" />
+              </button>
+            </div>
           </div>
 
-          {/* Right Controls Panel: User Selector & Nueva Producción CTA */}
+          {/* Right Controls Panel: User Selector, Reglas, Nueva Producción & Salir */}
           <div className="flex items-center space-x-2 sm:space-x-3 ml-auto flex-wrap justify-end gap-y-1.5">
             
             {/* User Switcher Dropdown with Cargo Badge */}
@@ -163,7 +191,7 @@ export const Header: React.FC<HeaderProps> = ({
                         : (currentStaff?.id || allStaff[0]?.id || ''))
                     }
                     onChange={(e) => handleSelectUser(e.target.value)}
-                    className="bg-transparent text-xs font-black text-white focus:outline-none cursor-pointer max-w-[140px] sm:max-w-[200px] truncate pr-1"
+                    className="bg-transparent text-xs font-black text-white focus:outline-none cursor-pointer max-w-[130px] sm:max-w-[180px] truncate pr-1"
                   >
                     {allUsers.length > 0 ? (
                       allUsers.map((usr) => (
@@ -186,7 +214,7 @@ export const Header: React.FC<HeaderProps> = ({
                   </select>
 
                   {/* Role / Cargo Badge right beside user */}
-                  <span className={`px-2 py-0.5 rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-wider whitespace-nowrap shadow-xs ${
+                  <span className={`hidden sm:inline-block px-2 py-0.5 rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-wider whitespace-nowrap shadow-xs ${
                     currentRole === 'admin'
                       ? 'bg-amber-400/20 text-amber-300 border border-amber-400/40'
                       : 'bg-blue-500/20 text-blue-300 border border-blue-400/40'
@@ -221,23 +249,22 @@ export const Header: React.FC<HeaderProps> = ({
             >
               <Clapperboard className="w-4 h-4 text-slate-950 group-hover:scale-110 transition-transform" />
               <span className="hidden sm:inline">Nueva Producción</span>
-              {/* Subtle small badge plus on mobile */}
               <span className="sm:hidden absolute -top-1 -right-1 w-3.5 h-3.5 bg-slate-950 text-amber-400 font-black text-[9px] rounded-full flex items-center justify-center border border-amber-400 shadow-xs">
                 +
               </span>
             </button>
 
-            {/* Salir / Logout Button (Single Click: Logout / Double Click: Salir Completo) */}
+            {/* Salir / Logout Button */}
             <button
               id="btn-header-logout"
               onClick={handleExitClick}
               onDoubleClick={handleDoubleClick}
-              className="p-2 sm:px-3 sm:py-2.5 bg-slate-950/90 hover:bg-red-950/80 active:scale-95 text-slate-300 hover:text-red-300 rounded-xl border border-slate-800 hover:border-red-500/50 shadow-inner transition-all shrink-0 cursor-pointer flex items-center justify-center gap-1.5 font-black text-xs group"
+              className="px-2.5 py-2 sm:px-3.5 sm:py-2.5 bg-red-950/70 hover:bg-red-900 active:scale-95 text-red-200 hover:text-white rounded-xl border border-red-800/80 hover:border-red-500 shadow-md transition-all shrink-0 cursor-pointer flex items-center justify-center gap-1.5 font-black text-xs group"
               title="Salir: 1 Clic para Cerrar Sesión • Doble Clic para Salir del Sistema"
-              aria-label="Salir"
+              aria-label="Salir del sistema"
             >
-              <LogOut className="w-4 h-4 text-red-400 group-hover:text-red-300 group-hover:scale-110 transition-transform shrink-0" />
-              <span className="hidden md:inline font-bold">Salir</span>
+              <LogOut className="w-4 h-4 text-red-400 group-hover:text-white group-hover:scale-110 transition-transform shrink-0" />
+              <span className="font-bold">Salir</span>
             </button>
 
           </div>
