@@ -1,7 +1,13 @@
 import React, { useState } from 'react';
 import { ProductionProject } from '../types';
 import { TCTLogo } from './TCTLogo';
-import { printElement, exportElementToPdf, sendToWhatsAppPeru, buildReportWhatsAppText } from '../utils/printHelper';
+import { 
+  printElement, 
+  exportElementToPdf, 
+  sendToWhatsAppPeru, 
+  buildReportWhatsAppText,
+  exportPdfAndOpenWhatsAppPeru 
+} from '../utils/printHelper';
 import { getStoredUsers } from '../utils/authStorage';
 import { 
   Printer, 
@@ -23,7 +29,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Loader2,
-  Send
+  Send,
+  MessageCircle
 } from 'lucide-react';
 
 interface ReportPrintModalProps {
@@ -70,9 +77,15 @@ export const ReportPrintModal: React.FC<ReportPrintModalProps> = ({
     printElement('tct-printable-document', `Informe-${project.uniqueCode}`);
   };
 
-  const handleSendReportWhatsApp = () => {
-    const text = buildReportWhatsAppText(project);
-    sendToWhatsAppPeru('990010020', text);
+  const handleSendReportWhatsApp = async () => {
+    setIsGeneratingPdf(true);
+    try {
+      const fileName = `Informe-Auditoria-${project.uniqueCode}.pdf`;
+      const headerMsg = buildReportWhatsAppText(project);
+      await exportPdfAndOpenWhatsAppPeru('tct-printable-document', fileName, headerMsg, '51990010020');
+    } finally {
+      setIsGeneratingPdf(false);
+    }
   };
 
   // Compute total steps and completed
@@ -119,6 +132,18 @@ export const ReportPrintModal: React.FC<ReportPrintModalProps> = ({
             >
               <Download className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">PDF</span>
+            </button>
+
+            {/* Direct WhatsApp Peru 990010020 Button */}
+            <button
+              onClick={handleSendReportWhatsApp}
+              disabled={isGeneratingPdf}
+              className="px-2.5 sm:px-3 py-1.5 bg-[#25D366] hover:bg-[#20bd5a] text-white font-black text-xs rounded-xl flex items-center gap-1.5 transition-all cursor-pointer shadow-md"
+              title="Enviar Reporte a WhatsApp (+51 990010020)"
+            >
+              <MessageCircle className="w-3.5 h-3.5 fill-white text-white" />
+              <span className="hidden sm:inline">WhatsApp 990010020</span>
+              <span className="sm:hidden">WhatsApp</span>
             </button>
 
             {/* Navigation Icons (Atrás, Salir) */}
@@ -426,7 +451,6 @@ export const ReportPrintModal: React.FC<ReportPrintModalProps> = ({
             <div className="space-y-2">
               <div className="h-16 border-b-2 border-slate-900 w-48 mx-auto bg-white rounded-t-md" />
               <div className="space-y-0.5">
-                <span className="font-mono text-[9px] text-slate-600 font-bold uppercase tracking-wider block">Firma & Sello Corporativo</span>
                 <p className="font-black text-slate-900 uppercase text-[10px]">CORPORACIÓN TCT S.A.C.</p>
                 <p className="text-[9px] text-slate-600 font-medium">Director de Producción / Asesor Comercial</p>
                 <p className="text-[10px] text-slate-900 font-black">{advisorName}</p>
@@ -438,7 +462,6 @@ export const ReportPrintModal: React.FC<ReportPrintModalProps> = ({
             <div className="space-y-2">
               <div className="h-16 border-b-2 border-slate-900 w-48 mx-auto bg-white rounded-t-md" />
               <div className="space-y-0.5">
-                <span className="font-mono text-[9px] text-slate-600 font-bold uppercase tracking-wider block">Firma del Cliente</span>
                 <p className="font-black text-slate-900 uppercase text-[10px]">{project.clientName}</p>
                 <p className="text-[9.5px] text-slate-900 font-black font-mono">DNI / RUC: {project.clientDniRuc || '73849201'}</p>
                 <p className="text-[9px] font-black text-slate-600 uppercase tracking-wider">El Contratante</p>

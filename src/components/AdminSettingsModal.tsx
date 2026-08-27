@@ -50,6 +50,14 @@ import { formatDateDDMMAA } from '../utils/dateFormatter';
 import { SyncStatusIndicator } from './SyncStatusIndicator';
 import { TCTLogo } from './TCTLogo';
 import { 
+  getStoredLiveSessions, 
+  terminateSessionById, 
+  blockAndExpelUser, 
+  unblockUser, 
+  deleteUserAccountAndPurge, 
+  LiveSession 
+} from '../utils/sessionMonitor';
+import { 
   Sliders, 
   X, 
   CheckCircle2, 
@@ -103,10 +111,17 @@ import {
   Type,
   LayoutGrid,
   ArrowLeft,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Activity,
+  UserX,
+  Laptop,
+  Smartphone,
+  Radio,
+  RefreshCw,
+  Ban
 } from 'lucide-react';
 
-export type SettingsTab = 'company' | 'contract_design' | 'staff_assignment' | 'checklists' | 'equipment' | 'packages' | 'services' | 'formats' | 'users' | 'shortcuts' | 'system';
+export type SettingsTab = 'company' | 'contract_design' | 'staff_assignment' | 'checklists' | 'equipment' | 'packages' | 'services' | 'formats' | 'users' | 'shortcuts' | 'system' | 'live_sessions';
 
 interface AdminSettingsModalProps {
   onClose: () => void;
@@ -227,6 +242,65 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
   const [selectedShortcutAction, setSelectedShortcutAction] = useState<string>(SHORTCUT_ACTIONS[0].actionId);
   const [customShortcutKeys, setCustomShortcutKeys] = useState<string>('ctrl+b');
 
+  // --- Live Sessions Monitor State ---
+  const [liveSessionsList, setLiveSessionsList] = useState<LiveSession[]>(() => getStoredLiveSessions());
+  const [liveSessionsFilter, setLiveSessionsFilter] = useState<'all' | 'online' | 'idle' | 'blocked'>('all');
+  const [liveSessionsSearch, setLiveSessionsSearch] = useState('');
+
+  // Live session auto-sync
+  useEffect(() => {
+    const syncSessions = () => {
+      setLiveSessionsList(getStoredLiveSessions());
+    };
+    window.addEventListener('tct_live_sessions_updated', syncSessions);
+    const interval = setInterval(syncSessions, 2500);
+    return () => {
+      window.removeEventListener('tct_live_sessions_updated', syncSessions);
+      clearInterval(interval);
+    };
+  }, []);
+
+  const handleExpelSession = (session: LiveSession) => {
+    if (window.confirm(`¿Seguro que deseas expulsar y cerrar la sesión activa de ${session.fullName} (${session.username})?`)) {
+      terminateSessionById(session.sessionId);
+      setLiveSessionsList(getStoredLiveSessions());
+      notifySuccess(`✓ Sesión activa de ${session.fullName} expulsada y cerrada en tiempo real.`);
+    }
+  };
+
+  const handleBlockAndExpelUser = (session: LiveSession) => {
+    if (session.username.toUpperCase() === 'TCT') {
+      notifyError('No se puede bloquear la cuenta principal de Administrador "TCT".');
+      return;
+    }
+    if (window.confirm(`⚠️ ¿Bloquear acceso y expulsar inmediatamente a ${session.fullName} (@${session.username})? No podrá volver a ingresar al aplicativo.`)) {
+      blockAndExpelUser(session.userId);
+      setLiveSessionsList(getStoredLiveSessions());
+      setUsersList(getStoredUsers());
+      notifySuccess(`🚫 Usuario ${session.fullName} bloqueado y expulsado.`);
+    }
+  };
+
+  const handleUnblockSessionUser = (userId: string, name: string) => {
+    unblockUser(userId);
+    setLiveSessionsList(getStoredLiveSessions());
+    setUsersList(getStoredUsers());
+    notifySuccess(`✅ Usuario ${name} desbloqueado exitosamente.`);
+  };
+
+  const handleDeleteUserAccount = (userId: string, username: string, name: string) => {
+    if (username.toUpperCase() === 'TCT') {
+      notifyError('No se puede eliminar la cuenta principal de Administrador "TCT".');
+      return;
+    }
+    if (window.confirm(`⚠️ ¿Eliminar definitivamente la cuenta de ${name} (@${username}) y cerrar todas sus sesiones?`)) {
+      deleteUserAccountAndPurge(userId);
+      setLiveSessionsList(getStoredLiveSessions());
+      setUsersList(getStoredUsers());
+      notifySuccess(`🗑️ Cuenta de ${name} eliminada y purgada del sistema.`);
+    }
+  };
+
   // --- Selective Deletion & Data Management State ---
   const [deleteFilterDataType, setDeleteFilterDataType] = useState<'contracts' | 'quotations' | 'employees' | 'by_event_type' | 'archived_only'>('contracts');
   const [deleteFilterEventType, setDeleteFilterEventType] = useState<string>('all');
@@ -238,6 +312,11 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
   const notifySuccess = (msg: string) => {
     setSuccessMessage(msg);
     setTimeout(() => setSuccessMessage(null), 3500);
+  };
+
+  const notifyError = (msg: string) => {
+    setErrorMessage(msg);
+    setTimeout(() => setErrorMessage(null), 4000);
   };
 
   const handleToggleShortcut = (id: string) => {
@@ -1198,6 +1277,16 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
       color: 'text-rose-700 bg-rose-100',
       bgHover: 'hover:border-rose-400 hover:bg-rose-50/70',
       border: 'border-rose-200'
+    },
+    {
+      id: 'live_sessions',
+      title: '12. Monitor en Vivo',
+      description: 'Ver usuarios conectados en este instante, expulsar o bloquear no deseados',
+      icon: Activity,
+      badge: `${liveSessionsList.filter(s => s.status === 'online').length} Conectados`,
+      color: 'text-emerald-700 bg-emerald-100',
+      bgHover: 'hover:border-emerald-400 hover:bg-emerald-50/70',
+      border: 'border-emerald-200'
     }
   ];
 
@@ -3769,6 +3858,304 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
 
                 </div>
               </div>
+            </div>
+          {/* ========================================================= */}
+          {/* TAB 12: MONITOR DE USUARIOS EN VIVO Y CONTROL DE SESIONES  */}
+          {/* ========================================================= */}
+          {!showButtonsMenu && activeTab === 'live_sessions' && (
+            <div className="space-y-6 animate-in fade-in">
+              
+              {/* Header Card with Real-Time Pulse & Stats */}
+              <div className="bg-gradient-to-r from-slate-900 via-slate-950 to-slate-900 text-white p-6 rounded-3xl border border-slate-800 shadow-xl space-y-4">
+                <div className="flex items-center justify-between flex-wrap gap-3">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 relative">
+                      <Activity className="w-6 h-6 animate-pulse" />
+                      <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-emerald-400 rounded-full animate-ping" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h4 className="text-base font-black">
+                          Monitor de Usuarios Conectados en Tiempo Real
+                        </h4>
+                        <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-black border border-emerald-500/40 flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                          EN VIVO
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-400 mt-0.5">
+                        Supervisa quién está usando el aplicativo en este instante. Expulsa sesiones sospechosas o bloquea accesos no autorizados.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Refresh and Metrics */}
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setLiveSessionsList(getStoredLiveSessions());
+                        notifySuccess('✓ Lista de sesiones activas actualizada');
+                      }}
+                      className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold border border-slate-700 flex items-center gap-1.5 transition-colors cursor-pointer"
+                      title="Refrescar sesiones activas"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Refrescar</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Live Stats Pills */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+                  <div className="bg-slate-800/80 p-3 rounded-2xl border border-slate-700/80">
+                    <span className="text-[10px] text-slate-400 font-bold block uppercase tracking-wider">🟢 Conectados Online</span>
+                    <span className="text-xl font-black text-emerald-400">
+                      {liveSessionsList.filter(s => s.status === 'online').length}
+                    </span>
+                  </div>
+
+                  <div className="bg-slate-800/80 p-3 rounded-2xl border border-slate-700/80">
+                    <span className="text-[10px] text-slate-400 font-bold block uppercase tracking-wider">🟡 En Espera (Idle)</span>
+                    <span className="text-xl font-black text-amber-400">
+                      {liveSessionsList.filter(s => s.status === 'idle').length}
+                    </span>
+                  </div>
+
+                  <div className="bg-slate-800/80 p-3 rounded-2xl border border-slate-700/80">
+                    <span className="text-[10px] text-slate-400 font-bold block uppercase tracking-wider">👥 Total Registrados</span>
+                    <span className="text-xl font-black text-blue-400">
+                      {usersList.length}
+                    </span>
+                  </div>
+
+                  <div className="bg-slate-800/80 p-3 rounded-2xl border border-slate-700/80">
+                    <span className="text-[10px] text-slate-400 font-bold block uppercase tracking-wider">🚫 Cuentas Bloqueadas</span>
+                    <span className="text-xl font-black text-red-400">
+                      {usersList.filter(u => !u.isActive).length}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Filters & Search Toolbar */}
+              <div className="bg-white p-4 rounded-3xl border border-slate-200 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div className="flex items-center space-x-1.5 overflow-x-auto w-full sm:w-auto">
+                  {(['all', 'online', 'idle', 'blocked'] as const).map((filterKey) => {
+                    const labels: Record<string, string> = {
+                      all: 'Todos los Accesos',
+                      online: '🟢 En Vivo (Online)',
+                      idle: '🟡 En Espera',
+                      blocked: '🚫 Bloqueados'
+                    };
+                    const isActive = liveSessionsFilter === filterKey;
+                    return (
+                      <button
+                        key={filterKey}
+                        onClick={() => setLiveSessionsFilter(filterKey)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                          isActive 
+                            ? 'bg-slate-900 text-white shadow-xs' 
+                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        }`}
+                      >
+                        {labels[filterKey]}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Search box */}
+                <div className="relative w-full sm:w-64">
+                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-3" />
+                  <input
+                    type="text"
+                    value={liveSessionsSearch}
+                    onChange={(e) => setLiveSessionsSearch(e.target.value)}
+                    placeholder="Buscar usuario o dispositivo..."
+                    className="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:bg-white focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Connected Users List */}
+              <div className="space-y-3">
+                {liveSessionsList
+                  .filter((session) => {
+                    if (liveSessionsFilter === 'online' && session.status !== 'online') return false;
+                    if (liveSessionsFilter === 'idle' && session.status !== 'idle') return false;
+                    if (liveSessionsFilter === 'blocked' && !session.isBlocked) return false;
+                    if (liveSessionsSearch) {
+                      const q = liveSessionsSearch.toLowerCase();
+                      const matchName = (session.fullName || '').toLowerCase().includes(q);
+                      const matchUser = (session.username || '').toLowerCase().includes(q);
+                      const matchDev = (session.device || '').toLowerCase().includes(q);
+                      const matchJob = (session.jobTitle || '').toLowerCase().includes(q);
+                      return matchName || matchUser || matchDev || matchJob;
+                    }
+                    return true;
+                  })
+                  .map((session) => {
+                    const isCurrentUser = currentUser?.id === session.userId;
+                    const isOnline = session.status === 'online';
+                    const isBlocked = session.isBlocked;
+                    const secondsAgo = Math.round((Date.now() - (session.lastHeartbeat || 0)) / 1000);
+
+                    return (
+                      <div
+                        key={session.sessionId}
+                        className={`p-4 sm:p-5 rounded-3xl border transition-all ${
+                          isBlocked
+                            ? 'bg-red-50/70 border-red-200'
+                            : isOnline
+                            ? 'bg-white border-emerald-200 shadow-xs hover:border-emerald-300'
+                            : 'bg-white border-slate-200'
+                        }`}
+                      >
+                        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                          
+                          {/* Left user identity */}
+                          <div className="flex items-start sm:items-center space-x-3.5 min-w-0">
+                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-sm shrink-0 ${
+                              session.role === 'admin'
+                                ? 'bg-amber-500 text-slate-950 shadow-xs'
+                                : 'bg-blue-600 text-white shadow-xs'
+                            }`}>
+                              {session.fullName ? session.fullName.charAt(0).toUpperCase() : 'U'}
+                            </div>
+
+                            <div className="min-w-0 space-y-1">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <h5 className="font-black text-slate-900 text-sm truncate">
+                                  {session.fullName}
+                                </h5>
+                                <span className="font-mono text-xs text-slate-500 font-bold">
+                                  @{session.username}
+                                </span>
+                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
+                                  session.role === 'admin'
+                                    ? 'bg-amber-100 text-amber-900 border border-amber-300'
+                                    : 'bg-blue-100 text-blue-900 border border-blue-300'
+                                }`}>
+                                  {session.role === 'admin' ? 'Administrador' : 'Panel Técnico'}
+                                </span>
+                                {isCurrentUser && (
+                                  <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold border border-emerald-300">
+                                    ★ Esta Sesión (Tú)
+                                  </span>
+                                )}
+                              </div>
+
+                              <div className="flex items-center gap-3 text-xs text-slate-500 flex-wrap">
+                                <span className="flex items-center gap-1 font-semibold">
+                                  <Briefcase className="w-3 h-3 text-slate-400" />
+                                  {session.jobTitle}
+                                </span>
+                                <span className="flex items-center gap-1">
+                                  {session.device?.includes('Móvil') || session.device?.includes('Android') || session.device?.includes('iOS') ? (
+                                    <Smartphone className="w-3 h-3 text-slate-400" />
+                                  ) : (
+                                    <Laptop className="w-3 h-3 text-slate-400" />
+                                  )}
+                                  {session.device} ({session.browser})
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Center Connection Status */}
+                          <div className="flex items-center space-x-3 bg-slate-50 px-3.5 py-2 rounded-2xl border border-slate-100 shrink-0">
+                            {isBlocked ? (
+                              <div className="flex items-center space-x-1.5 text-red-600 font-black text-xs">
+                                <Ban className="w-4 h-4" />
+                                <span>CUENTA BLOQUEADA</span>
+                              </div>
+                            ) : isOnline ? (
+                              <div className="flex items-center space-x-2">
+                                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
+                                <div>
+                                  <span className="font-black text-emerald-700 text-xs block">ACTIVO AHORA</span>
+                                  <span className="text-[10px] text-slate-400">Latido: hace {secondsAgo < 5 ? '1 seg' : `${secondsAgo}s`}</span>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="flex items-center space-x-2">
+                                <span className="w-2.5 h-2.5 rounded-full bg-amber-400" />
+                                <div>
+                                  <span className="font-black text-amber-800 text-xs block">EN ESPERA</span>
+                                  <span className="text-[10px] text-slate-400">Inactivo hace {Math.round(secondsAgo / 60)} min</span>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Right Action Buttons */}
+                          <div className="flex items-center space-x-2 shrink-0 flex-wrap">
+                            {!isCurrentUser && (
+                              <>
+                                {/* Expel Active Session */}
+                                <button
+                                  type="button"
+                                  onClick={() => handleExpelSession(session)}
+                                  className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-amber-400 font-black text-xs rounded-xl shadow-xs flex items-center gap-1 transition-all cursor-pointer"
+                                  title="Cerrar la sesión de este usuario en tiempo real"
+                                >
+                                  <UserX className="w-3.5 h-3.5" />
+                                  <span>Expulsar</span>
+                                </button>
+
+                                {/* Block or Unblock User */}
+                                {isBlocked ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleUnblockSessionUser(session.userId, session.fullName)}
+                                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs rounded-xl shadow-xs flex items-center gap-1 transition-all cursor-pointer"
+                                    title="Desbloquear cuenta para que pueda volver a iniciar sesión"
+                                  >
+                                    <CheckCircle2 className="w-3.5 h-3.5" />
+                                    <span>Desbloquear</span>
+                                  </button>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleBlockAndExpelUser(session)}
+                                    className="px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-800 font-black text-xs rounded-xl border border-red-300 flex items-center gap-1 transition-all cursor-pointer"
+                                    title="Bloquear cuenta y expulsar permanentemente"
+                                  >
+                                    <Ban className="w-3.5 h-3.5" />
+                                    <span>Bloquear</span>
+                                  </button>
+                                )}
+
+                                {/* Delete Account */}
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteUserAccount(session.userId, session.username, session.fullName)}
+                                  className="p-1.5 bg-slate-100 hover:bg-red-600 hover:text-white text-slate-400 rounded-xl transition-colors cursor-pointer"
+                                  title="Eliminar usuario definitivamente"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </>
+                            )}
+                          </div>
+
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                {liveSessionsList.length === 0 && (
+                  <div className="bg-white p-12 text-center rounded-3xl border border-dashed border-slate-300 space-y-3">
+                    <Activity className="w-10 h-10 text-slate-300 mx-auto" />
+                    <h5 className="font-bold text-slate-700 text-sm">No se registran sesiones activas en este momento</h5>
+                    <p className="text-xs text-slate-400 max-w-sm mx-auto">
+                      Las sesiones de los técnicos y administradores aparecerán automáticamente aquí al ingresar.
+                    </p>
+                  </div>
+                )}
+              </div>
+
             </div>
           )}
 

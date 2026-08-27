@@ -6,7 +6,8 @@ import {
   exportElementToPdf, 
   sendToWhatsAppPeru, 
   buildReportWhatsAppText, 
-  buildContractWhatsAppText 
+  buildContractWhatsAppText,
+  exportPdfAndOpenWhatsAppPeru 
 } from '../utils/printHelper';
 import { finalizeContractExportStep3 } from '../utils/stepSequenceHelper';
 import { getStoredUsers } from '../utils/authStorage';
@@ -25,7 +26,8 @@ import {
   Send,
   Lock,
   AlertCircle,
-  CheckCircle2
+  CheckCircle2,
+  MessageCircle
 } from 'lucide-react';
 
 interface ContractExportModalProps {
@@ -96,10 +98,15 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
       alert('🔒 Envío de contrato bloqueado: Requiere validar el segundo check del Paso 2.');
       return;
     }
-    // Generate the official PDF so the user has the file ready to attach, then trigger WhatsApp
-    await exportElementToPdf('tct-contract-document', `Contrato-${currentData.contractNumber || currentData.uniqueCode}`);
-    const text = buildContractWhatsAppText(currentData);
-    sendToWhatsAppPeru('990010020', text);
+    setIsGeneratingPdf(true);
+    try {
+      const fileName = `Contrato-TCT-${currentData.contractNumber || currentData.uniqueCode}.pdf`;
+      const headerMsg = buildContractWhatsAppText(currentData);
+      await exportPdfAndOpenWhatsAppPeru('tct-contract-document', fileName, headerMsg, '51990010020');
+      handleFinalizeAndRegisterExport();
+    } finally {
+      setIsGeneratingPdf(false);
+    }
   };
 
   const handleSaveEdits = () => {
@@ -243,6 +250,23 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
             >
               <Download className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">PDF</span>
+            </button>
+
+            {/* Direct WhatsApp Peru 990010020 Export Button */}
+            <button
+              onClick={handleSendContractWhatsApp}
+              type="button"
+              disabled={!canPrintContract || isGeneratingPdf}
+              className={`px-2.5 sm:px-3 py-1.5 sm:py-2 font-black text-xs rounded-xl flex items-center gap-1.5 transition-all ${
+                canPrintContract
+                  ? 'bg-[#25D366] hover:bg-[#20bd5a] text-white shadow-md cursor-pointer'
+                  : 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed opacity-60'
+              }`}
+              title="Exportar PDF y enviar directamente a WhatsApp (+51 990010020)"
+            >
+              <MessageCircle className="w-3.5 h-3.5 fill-white text-white" />
+              <span className="hidden sm:inline">WhatsApp 990010020</span>
+              <span className="sm:hidden">WhatsApp</span>
             </button>
 
             {/* Navigation Icons (Atrás, Salir) */}
@@ -1082,9 +1106,6 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
                   {/* Signature space strictly in blank with clean bottom line */}
                   <div className="h-20 border-b-2 border-slate-900 w-56 mx-auto bg-white rounded-t-lg" />
                   <div className="space-y-0.5">
-                    <p className="font-mono text-[9px] text-slate-600 font-bold uppercase tracking-wider">
-                      Firma y Sello Autorizado
-                    </p>
                     <p className="font-black text-slate-900 uppercase text-[10px]">{contractDesign.headerTitle || 'CORPORACIÓN TCT S.A.C.'}</p>
                     <p className="text-[9px] text-slate-600 font-medium uppercase italic">
                       {contractDesign.signerAdvisorRole || 'Director de Producción / Asesor Comercial'}
@@ -1102,9 +1123,6 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
                   {/* Signature space strictly in blank with clean bottom line */}
                   <div className="h-20 border-b-2 border-slate-900 w-56 mx-auto bg-white rounded-t-lg" />
                   <div className="space-y-0.5">
-                    <p className="font-mono text-[9px] text-slate-600 font-bold uppercase tracking-wider">
-                      Firma del Cliente Contratante
-                    </p>
                     <p className="font-black text-slate-900 uppercase text-[10px]">{currentData.clientName}</p>
                     <p className="text-[9.5px] text-slate-900 font-black font-mono">DNI / RUC: {currentData.clientDniRuc || currentData.clientDni || '__________________'}</p>
                     <p className="text-[9px] font-black text-slate-600 uppercase tracking-wider italic">EL CLIENTE</p>

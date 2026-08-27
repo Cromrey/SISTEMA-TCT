@@ -1,7 +1,12 @@
 import React, { useState } from 'react';
 import { ProductionProject, StaffMember } from '../types';
 import { TCTLogo } from './TCTLogo';
-import { printElement, downloadPrintableHtml, downloadEditableDoc } from '../utils/printHelper';
+import { 
+  printElement, 
+  downloadPrintableHtml, 
+  downloadEditableDoc,
+  exportPdfAndOpenWhatsAppPeru 
+} from '../utils/printHelper';
 import { 
   Printer, 
   X, 
@@ -16,7 +21,8 @@ import {
   Building,
   ShieldCheck,
   Clock,
-  UserCheck
+  UserCheck,
+  MessageCircle
 } from 'lucide-react';
 
 export type PdfReportType = 
@@ -141,6 +147,21 @@ export const GlobalPdfExportModal: React.FC<GlobalPdfExportModalProps> = ({
             >
               <FileText className="w-3.5 h-3.5 text-white" />
               <span className="hidden sm:inline">Word</span>
+            </button>
+
+            {/* Direct WhatsApp Peru 990010020 Export Button */}
+            <button
+              onClick={async () => {
+                const fileName = `Reporte-General-TCT-${selectedReport}.pdf`;
+                const headerMsg = `📊 *REPORTE GENERAL DE GESTIÓN Y AUDITORÍA*\n• Tipo de Reporte: ${selectedReport}\n• Proyectos Registrados: ${filteredProjects.length}\n• Presupuesto Total: S/. ${totalBudget.toLocaleString()}`;
+                await exportPdfAndOpenWhatsAppPeru('tct-global-report-canvas', fileName, headerMsg, '51990010020');
+              }}
+              className="px-2.5 sm:px-3 py-1.5 bg-[#25D366] hover:bg-[#20bd5a] text-white font-black text-xs rounded-xl shadow-md flex items-center gap-1.5 transition-all cursor-pointer"
+              title="Enviar Reporte a WhatsApp (+51 990010020)"
+            >
+              <MessageCircle className="w-3.5 h-3.5 fill-white text-white" />
+              <span className="hidden sm:inline">WhatsApp 990010020</span>
+              <span className="sm:hidden">WhatsApp</span>
             </button>
 
             {/* Navigation Icons (Atrás, Salir) */}
@@ -598,13 +619,11 @@ export const GlobalPdfExportModal: React.FC<GlobalPdfExportModalProps> = ({
           <div className="mt-10 pt-6 border-t-2 border-slate-900 grid grid-cols-2 gap-8 text-center text-xs page-break-inside-avoid">
             <div>
               <div className="h-16 border-b-2 border-slate-900 mx-auto w-48 mb-2 bg-white" />
-              <span className="font-mono text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Firma y Sello</span>
               <p className="font-black text-slate-900">Ing. Roberto Acuña</p>
               <p className="text-[10px] text-slate-500 uppercase">Director General • Corporación TCT</p>
             </div>
             <div>
               <div className="h-16 border-b-2 border-slate-900 mx-auto w-48 mb-2 bg-white" />
-              <span className="font-mono text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Firma y Sello</span>
               <p className="font-black text-slate-900">Área de Auditoría y Producción</p>
               <p className="text-[10px] text-slate-500 uppercase">Control de Calidad Audiovisual TCT</p>
             </div>

@@ -573,3 +573,37 @@ export function downloadEditableDoc(elementId: string, filename: string = 'TCT-C
   URL.revokeObjectURL(url);
 }
 
+/**
+ * Generates and downloads the PDF and immediately opens native WhatsApp with Peru number (+51 990010020)
+ */
+export async function exportPdfAndOpenWhatsAppPeru(
+  elementId: string, 
+  filename: string, 
+  messageHeader: string,
+  phoneNumber: string = '51990010020'
+): Promise<boolean> {
+  try {
+    // 1. Generate & download the PDF to device
+    await exportElementToPdf(elementId, filename);
+    
+    // 2. Open WhatsApp Web / Native app with the formatted message
+    const formattedPhone = phoneNumber.replace(/[^0-9]/g, '');
+    const cleanPhone = formattedPhone.startsWith('51') ? formattedPhone : `51${formattedPhone}`;
+    const textMsg = encodeURIComponent(
+      `🇵🇪 *CORPORACIÓN TCT S.A.C. - DOCUMENTO OFICIAL*\n` +
+      `━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+      `${messageHeader}\n\n` +
+      `📎 *Nota de Envío:* Se ha descargado el archivo PDF oficial (*${filename}*) en este dispositivo. Por favor adjúntelo a este chat.\n` +
+      `🏢 *Corporación TCT S.A.C.* • Jr. Las Camelias 450, San Isidro, Lima\n` +
+      `📞 Tel: (01) 748-9200 • WhatsApp: +51 990010020`
+    );
+
+    const waUrl = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${textMsg}`;
+    window.open(waUrl, '_blank', 'noopener,noreferrer');
+    return true;
+  } catch (error) {
+    console.error('Error sharing PDF to WhatsApp:', error);
+    return false;
+  }
+}
+
