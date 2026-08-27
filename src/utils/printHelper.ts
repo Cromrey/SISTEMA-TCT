@@ -20,93 +20,157 @@ export async function exportElementToPdf(
   }
 
   try {
-    // Preserve scroll position and make sure content is unclipped
+    // Preserve scroll position
     const prevScrollTop = targetEl.scrollTop;
     targetEl.scrollTop = 0;
-
-    // Render DOM node to high-DPI canvas
-    const canvas = await html2canvas(targetEl, {
-      scale: 2,
-      useCORS: true,
-      allowTaint: true,
-      logging: false,
-      backgroundColor: '#ffffff',
-      scrollX: 0,
-      scrollY: 0,
-      windowWidth: Math.max(targetEl.scrollWidth, 960)
-    });
-
-    targetEl.scrollTop = prevScrollTop;
 
     const pdf = new jsPDF({
       orientation: 'portrait',
       unit: 'mm',
-      format: 'a4'
+      format: 'a4',
+      compress: true
     });
 
     const pdfWidth = 210; // A4 width mm
     const pdfHeight = 297; // A4 height mm
     const marginX = 8;
-    const marginY = 10;
+    const marginY = 8;
     const contentWidthMm = pdfWidth - (marginX * 2); // 194mm
-    const contentHeightMm = pdfHeight - (marginY * 2); // 277mm
+    const contentHeightMm = pdfHeight - (marginY * 2); // 281mm
 
-    // Calculate canvas pixels per page
-    const pxPerMm = canvas.width / contentWidthMm;
-    const pageSlicePx = contentHeightMm * pxPerMm;
-    const totalPages = Math.max(1, Math.ceil(canvas.height / pageSlicePx));
+    // Check if targetEl contains explicit page child containers (e.g., page 1, page 2)
+    const pageNodes = Array.from(targetEl.querySelectorAll<HTMLElement>('#tct-contract-page-1, #tct-contract-page-2, .break-after-page, .page-break-after'));
+    
+    if (pageNodes.length > 0) {
+      // Multi-page discrete rendering
+      const totalPages = pageNodes.length;
+      for (let i = 0; i < totalPages; i++) {
+        if (i > 0) {
+          pdf.addPage('a4', 'portrait');
+        }
+        const pageEl = pageNodes[i];
+        const canvas = await html2canvas(pageEl, {
+          scale: 2.2,
+          useCORS: true,
+          allowTaint: true,
+          logging: false,
+          backgroundColor: '#ffffff',
+          windowWidth: 980
+        });
 
-    for (let page = 0; page < totalPages; page++) {
-      if (page > 0) {
-        pdf.addPage('a4', 'portrait');
-      }
+        const imgData = canvas.toDataURL('image/jpeg', 0.98);
+        const imgHeightMm = Math.min(contentHeightMm, (canvas.height * contentWidthMm) / canvas.width);
+        pdf.addImage(imgData, 'JPEG', marginX, marginY, contentWidthMm, imgHeightMm);
 
-      // Slice the canvas for the current page
-      const pageCanvas = document.createElement('canvas');
-      pageCanvas.width = canvas.width;
-      const currentSliceHeight = Math.min(pageSlicePx, canvas.height - (page * pageSlicePx));
-      pageCanvas.height = currentSliceHeight;
+        // Watermark on background
+        pdf.saveGraphicsState();
+        pdf.setTextColor(240, 243, 248);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(70);
+        pdf.text('TCT', pdfWidth / 2, pdfHeight / 2, {
+          align: 'center',
+          angle: 45
+        });
+        pdf.restoreGraphicsState();
 
-      const ctx = pageCanvas.getContext('2d');
-      if (ctx) {
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
-        ctx.drawImage(
-          canvas,
-          0, page * pageSlicePx, canvas.width, currentSliceHeight,
-          0, 0, canvas.width, currentSliceHeight
+        // Footer Compagination (1/n)
+        pdf.setFontSize(8);
+        pdf.setTextColor(100, 116, 139);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(
+          `Corporación TCT • Lima, Perú • Documento Oficial (Página ${i + 1}/${totalPages})`,
+          pdfWidth / 2,
+          pdfHeight - 4,
+          { align: 'center' }
         );
-
-        const pageImgData = pageCanvas.toDataURL('image/jpeg', 0.98);
-        const sliceHeightMm = (currentSliceHeight * contentWidthMm) / canvas.width;
-        pdf.addImage(pageImgData, 'JPEG', marginX, marginY, contentWidthMm, sliceHeightMm);
       }
-
-      // Background Watermark "TCT" centered and rotated on every page
-      pdf.saveGraphicsState();
-      pdf.setTextColor(230, 235, 243);
-      pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(80);
-      pdf.text('TCT', pdfWidth / 2, pdfHeight / 2 + 5, {
-        align: 'center',
-        angle: 45
+    } else {
+      // Continuous element slicing
+      const canvas = await html2canvas(targetEl, {
+        scale: 2.2,
+        useCORS: true,
+        allowTaint: true,
+        logging: false,
+        backgroundColor: '#ffffff',
+        scrollX: 0,
+        scrollY: 0,
+        windowWidth: Math.max(targetEl.scrollWidth, 980)
       });
-      pdf.restoreGraphicsState();
 
-      // Footer compagination (Página 1/n)
-      pdf.setFontSize(7.5);
-      pdf.setTextColor(100, 116, 139);
-      pdf.setFont('helvetica', 'normal');
-      pdf.text(
-        `Corporación TCT • Lima, Perú • Documento Oficial (Página ${page + 1}/${totalPages})`,
-        pdfWidth / 2,
-        pdfHeight - 4,
-        { align: 'center' }
-      );
+      const pxPerMm = canvas.width / contentWidthMm;
+      const pageSlicePx = contentHeightMm * pxPerMm;
+      const totalPages = Math.max(1, Math.ceil(canvas.height / pageSlicePx));
+
+      for (let page = 0; page < totalPages; page++) {
+        if (page > 0) {
+          pdf.addPage('a4', 'portrait');
+        }
+
+        const pageCanvas = document.createElement('canvas');
+        pageCanvas.width = canvas.width;
+        const currentSliceHeight = Math.min(pageSlicePx, canvas.height - (page * pageSlicePx));
+        pageCanvas.height = currentSliceHeight;
+
+        const ctx = pageCanvas.getContext('2d');
+        if (ctx) {
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+          ctx.drawImage(
+            canvas,
+            0, page * pageSlicePx, canvas.width, currentSliceHeight,
+            0, 0, canvas.width, currentSliceHeight
+          );
+
+          const pageImgData = pageCanvas.toDataURL('image/jpeg', 0.98);
+          const sliceHeightMm = (currentSliceHeight * contentWidthMm) / canvas.width;
+          pdf.addImage(pageImgData, 'JPEG', marginX, marginY, contentWidthMm, sliceHeightMm);
+        }
+
+        // Watermark
+        pdf.saveGraphicsState();
+        pdf.setTextColor(240, 243, 248);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(70);
+        pdf.text('TCT', pdfWidth / 2, pdfHeight / 2, {
+          align: 'center',
+          angle: 45
+        });
+        pdf.restoreGraphicsState();
+
+        // Footer Compagination (1/n)
+        pdf.setFontSize(8);
+        pdf.setTextColor(100, 116, 139);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(
+          `Corporación TCT • Lima, Perú • Documento Oficial (Página ${page + 1}/${totalPages})`,
+          pdfWidth / 2,
+          pdfHeight - 4,
+          { align: 'center' }
+        );
+      }
     }
 
+    targetEl.scrollTop = prevScrollTop;
+
     const safeFilename = filename.toLowerCase().endsWith('.pdf') ? filename : `${filename}.pdf`;
-    pdf.save(safeFilename);
+    
+    // Cross-platform save
+    try {
+      pdf.save(safeFilename);
+    } catch {
+      const blob = pdf.output('blob');
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = safeFilename;
+      document.body.appendChild(link);
+      link.click();
+      setTimeout(() => {
+        document.body.removeChild(link);
+        URL.revokeObjectURL(blobUrl);
+      }, 1000);
+    }
+
     return true;
   } catch (error) {
     console.error('jsPDF/html2canvas export error, executing print fallback:', error);

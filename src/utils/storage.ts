@@ -2,12 +2,18 @@ import { ProductionProject, SmartAlert, DecisionInsight } from '../types';
 import { INITIAL_PROJECTS } from '../data/initialData';
 import { getIdbItem, setIdbItem, clearIdbStore, STORES } from './indexedDb';
 
-const STORAGE_KEY = 'tct_audiovisual_production_db_v2';
+const STORAGE_KEY = 'tct_audiovisual_production_db_v3_clean';
+const LEGACY_STORAGE_KEY = 'tct_audiovisual_production_db_v2';
 const SYNC_TIMESTAMP_KEY = 'tct_last_sync_timestamp';
 const IDB_PROJECTS_KEY = 'all_projects';
 
 // In-memory runtime cache for instant synchronous access
 let memoryProjectsCache: ProductionProject[] | null = null;
+
+// Helper to filter out old mock/demo projects
+const isDemoProjectId = (id: string) => {
+  return id.startsWith('tct-proj-00') || id === 'tct-proj-001' || id === 'tct-proj-002' || id === 'tct-proj-003' || id === 'tct-proj-004' || id === 'tct-proj-005';
+};
 
 /**
  * Compacts projects specifically for localStorage to avoid 5MB browser quota errors.
@@ -39,48 +45,51 @@ const compactForLocalStorage = (projects: ProductionProject[]): ProductionProjec
  * Synchronously retrieves projects from memory or localStorage.
  */
 export const getStoredProjects = (): ProductionProject[] => {
-  if (memoryProjectsCache && memoryProjectsCache.length > 0) {
+  if (memoryProjectsCache !== null) {
     return memoryProjectsCache;
   }
 
   try {
+    // Remove legacy demo data if present
+    localStorage.removeItem(LEGACY_STORAGE_KEY);
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       const parsed = JSON.parse(saved);
-      if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].phases) {
-        memoryProjectsCache = parsed;
-        return parsed;
+      if (Array.isArray(parsed)) {
+        const cleaned = parsed.filter(p => !isDemoProjectId(p.id));
+        memoryProjectsCache = cleaned;
+        return cleaned;
       }
     }
   } catch (err) {
     console.warn('Notice loading projects from localStorage (checking fallback):', err);
   }
 
-  // Initialize with default demo projects
-  memoryProjectsCache = INITIAL_PROJECTS;
-  // Trigger background async save to IndexedDB and safe localStorage
-  saveProjects(INITIAL_PROJECTS);
-  return INITIAL_PROJECTS;
+  // Initialize with clean empty list
+  memoryProjectsCache = [];
+  trySafeLocalStorageSave([]);
+  return [];
 };
 
 /**
  * Asynchronously initializes storage from IndexedDB on application launch.
- * If IndexedDB holds rich data (including full photos and attachments), it hydrates the application state.
+ * If IndexedDB holds rich data, it hydrates the application state (filtering out any old demo data).
  */
 export const initStorage = async (onHydrated?: (projects: ProductionProject[]) => void): Promise<ProductionProject[]> => {
   try {
     const idbProjects = await getIdbItem<ProductionProject[]>(STORES.PROJECTS, IDB_PROJECTS_KEY);
-    if (idbProjects && Array.isArray(idbProjects) && idbProjects.length > 0 && idbProjects[0].phases) {
-      memoryProjectsCache = idbProjects;
-      // Try to keep a safe compacted copy in localStorage
-      trySafeLocalStorageSave(idbProjects);
+    if (idbProjects && Array.isArray(idbProjects)) {
+      const cleaned = idbProjects.filter(p => !isDemoProjectId(p.id));
+      memoryProjectsCache = cleaned;
+      await setIdbItem(STORES.PROJECTS, IDB_PROJECTS_KEY, cleaned);
+      trySafeLocalStorageSave(cleaned);
       if (onHydrated) {
-        onHydrated(idbProjects);
+        onHydrated(cleaned);
       }
-      return idbProjects;
+      return cleaned;
     }
 
-    // If IDB is empty, seed from current memory or localStorage
+    // If IDB is empty or uninitialized
     const current = getStoredProjects();
     await setIdbItem(STORES.PROJECTS, IDB_PROJECTS_KEY, current);
     if (onHydrated) {
@@ -92,6 +101,20 @@ export const initStorage = async (onHydrated?: (projects: ProductionProject[]) =
     const fallback = getStoredProjects();
     if (onHydrated) onHydrated(fallback);
     return fallback;
+  }
+};
+
+/**
+ * Completely clears all contracts and productions.
+ */
+export const clearAllProjects = async (): Promise<void> => {
+  memoryProjectsCache = [];
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(LEGACY_STORAGE_KEY);
+    await clearIdbStore(STORES.PROJECTS);
+  } catch (e) {
+    console.warn('Error clearing projects store:', e);
   }
 };
 

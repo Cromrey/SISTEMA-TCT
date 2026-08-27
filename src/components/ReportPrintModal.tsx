@@ -89,17 +89,14 @@ export const ReportPrintModal: React.FC<ReportPrintModalProps> = ({
       <div className="bg-white w-full max-w-4xl rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[96vh]">
         
         {/* Top Control Bar (Hidden when printing) */}
-        <div className="print:hidden px-4 sm:px-6 py-4 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800 shrink-0 flex-wrap gap-2">
-          <div className="flex items-center space-x-3">
+        <div className="print:hidden px-3 sm:px-6 py-3 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800 shrink-0 flex-wrap gap-2">
+          <div className="flex items-center space-x-2.5">
             <TCTLogo size="xs" variant="icon-only" />
             <div>
-              <span className="text-xs font-black text-amber-400 uppercase tracking-wide">
-                Corporación TCT • Auditoría & Ficha Técnica Oficial
-              </span>
               <h2 className="text-sm sm:text-base font-black text-white flex items-center gap-2">
-                <span>{project.uniqueCode}</span>
-                <span className="text-slate-400 font-normal">|</span>
-                <span className="text-slate-300 font-bold">{project.clientName}</span>
+                <span className="text-amber-400">FICHA TÉCNICA N° {project.uniqueCode}</span>
+                <span className="text-slate-500 font-normal">|</span>
+                <span className="text-slate-300 font-bold text-xs sm:text-sm truncate max-w-[140px] sm:max-w-[240px]">{project.clientName}</span>
               </h2>
             </div>
           </div>
@@ -107,32 +104,41 @@ export const ReportPrintModal: React.FC<ReportPrintModalProps> = ({
           <div className="flex items-center space-x-1.5 sm:space-x-2 flex-wrap gap-1">
             <button
               onClick={handlePrint}
-              className="px-3.5 sm:px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-black text-xs rounded-xl flex items-center gap-1.5 transition-all cursor-pointer shadow-md"
+              className="px-3 sm:px-4 py-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-black text-xs rounded-xl flex items-center gap-1.5 transition-all cursor-pointer shadow-md"
               title="Abrir cuadro de diálogo de impresión"
             >
               <Printer className="w-4 h-4 text-slate-950" />
               <span>Imprimir Ficha</span>
             </button>
 
+            <button
+              onClick={handleExportPdf}
+              disabled={isGeneratingPdf}
+              className="px-2.5 sm:px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all cursor-pointer"
+              title="Descargar PDF"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">PDF</span>
+            </button>
+
             {/* Navigation Icons (Atrás, Salir) */}
             <button
               type="button"
               onClick={onClose}
-              className="px-2.5 py-1.5 sm:py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 hover:border-amber-400/50 text-xs font-bold flex items-center gap-1 transition-all cursor-pointer shadow-xs"
+              className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs font-bold flex items-center gap-1 transition-all cursor-pointer"
               title="Atrás"
             >
-              <ChevronLeft className="w-4 h-4" />
+              <ChevronLeft className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Atrás</span>
             </button>
 
             <button
               type="button"
               onClick={onClose}
-              className="p-1.5 sm:px-3 sm:py-2 rounded-xl bg-slate-800 hover:bg-red-950/60 hover:text-red-300 text-slate-300 border border-slate-700 hover:border-red-500/50 transition-colors cursor-pointer flex items-center gap-1 font-bold text-xs"
-              title="Salir / Cerrar ventana"
+              className="p-1.5 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition-colors"
+              title="Cerrar ventana"
             >
-              <span className="hidden sm:inline">Salir</span>
-              <X className="w-4 h-4" />
+              <X className="w-5 h-5" />
             </button>
           </div>
         </div>
@@ -415,14 +421,12 @@ export const ReportPrintModal: React.FC<ReportPrintModalProps> = ({
             </p>
           </div>
 
-          {/* Official Signatures (Visibles y nítidas) */}
+          {/* Official Signatures (Zona en blanco para firma y sello) */}
           <div className="pt-4 border-t-2 border-slate-900 grid grid-cols-2 gap-6 text-center text-[10px] page-break-inside-avoid">
             <div className="space-y-2">
-              <div className="h-16 border-b-2 border-slate-900 w-48 mx-auto flex flex-col items-center justify-end pb-1 bg-slate-50/60 rounded-t-md">
-                <span className="font-mono text-[9px] text-slate-600 font-bold uppercase tracking-wider">Firma & Sello Corporativo</span>
-                <span className="text-[8px] text-amber-800 font-black">TCT PRODUCCIONES</span>
-              </div>
+              <div className="h-16 border-b-2 border-slate-900 w-48 mx-auto bg-white rounded-t-md" />
               <div className="space-y-0.5">
+                <span className="font-mono text-[9px] text-slate-600 font-bold uppercase tracking-wider block">Firma & Sello Corporativo</span>
                 <p className="font-black text-slate-900 uppercase text-[10px]">CORPORACIÓN TCT S.A.C.</p>
                 <p className="text-[9px] text-slate-600 font-medium">Director de Producción / Asesor Comercial</p>
                 <p className="text-[10px] text-slate-900 font-black">{advisorName}</p>
@@ -432,11 +436,9 @@ export const ReportPrintModal: React.FC<ReportPrintModalProps> = ({
             </div>
 
             <div className="space-y-2">
-              <div className="h-16 border-b-2 border-slate-900 w-48 mx-auto flex flex-col items-center justify-end pb-1 bg-slate-50/60 rounded-t-md">
-                <span className="font-mono text-[9px] text-slate-600 font-bold uppercase tracking-wider">Firma del Cliente</span>
-                <span className="text-[8px] text-slate-500 font-bold">Conforme</span>
-              </div>
+              <div className="h-16 border-b-2 border-slate-900 w-48 mx-auto bg-white rounded-t-md" />
               <div className="space-y-0.5">
+                <span className="font-mono text-[9px] text-slate-600 font-bold uppercase tracking-wider block">Firma del Cliente</span>
                 <p className="font-black text-slate-900 uppercase text-[10px]">{project.clientName}</p>
                 <p className="text-[9.5px] text-slate-900 font-black font-mono">DNI / RUC: {project.clientDniRuc || '73849201'}</p>
                 <p className="text-[9px] font-black text-slate-600 uppercase tracking-wider">El Contratante</p>

@@ -112,53 +112,51 @@ export const GlobalPdfExportModal: React.FC<GlobalPdfExportModalProps> = ({
       <div className="bg-white w-full max-w-5xl rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh]">
         
         {/* Header - Screen only */}
-        <div className="p-4 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800 print:hidden flex-wrap gap-2">
-          <div className="flex items-center space-x-3">
-            <TCTLogo size="sm" variant="icon-only" />
+        <div className="px-3 sm:px-6 py-3 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800 print:hidden flex-wrap gap-2">
+          <div className="flex items-center space-x-2.5">
+            <TCTLogo size="xs" variant="icon-only" />
             <div>
               <h3 className="text-sm sm:text-base font-black text-white flex items-center gap-2">
-                <span>Centro de Exportación Oficial a PDF</span>
-                <span className="text-[10px] font-mono bg-amber-400/20 text-amber-300 border border-amber-400/40 px-2 py-0.5 rounded-full">
-                  CORPORACIÓN TCT
-                </span>
+                <span className="text-amber-400">REPORTES Y AUDITORÍA GENERAL</span>
+                <span className="text-slate-500 font-normal">|</span>
+                <span className="text-slate-300 font-bold text-xs sm:text-sm">Corporación TCT</span>
               </h3>
-              <p className="text-xs text-slate-400">
-                Selecciona el tipo de informe corporativo para visualizar e imprimir en formato PDF de alta calidad
-              </p>
             </div>
           </div>
 
           <div className="flex items-center space-x-1.5 sm:space-x-2 flex-wrap gap-1">
             <button
               onClick={handlePrint}
-              className="px-3 sm:px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 text-xs font-black rounded-xl shadow-md flex items-center gap-1.5 transition-all cursor-pointer"
+              className="px-3 sm:px-4 py-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 text-xs font-black rounded-xl shadow-md flex items-center gap-1.5 transition-all cursor-pointer"
               title="Abrir cuadro de diálogo de impresión y Guardar como PDF"
             >
               <Printer className="w-4 h-4" />
-              <span>PDF / Imprimir</span>
+              <span>Imprimir / PDF</span>
             </button>
 
             <button
               onClick={handleDownloadWordDoc}
-              className="px-3 sm:px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-sm flex items-center gap-1.5 transition-all cursor-pointer"
+              className="px-2.5 sm:px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-sm flex items-center gap-1.5 transition-all cursor-pointer"
               title="Descargar Reporte en Word Editable (.doc)"
             >
-              <FileText className="w-4 h-4 text-white" />
-              <span>Word (.doc)</span>
+              <FileText className="w-3.5 h-3.5 text-white" />
+              <span className="hidden sm:inline">Word</span>
+            </button>
+
+            {/* Navigation Icons (Atrás, Salir) */}
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs font-bold flex items-center gap-1 transition-all cursor-pointer"
+              title="Atrás"
+            >
+              <span className="hidden sm:inline">Atrás</span>
             </button>
 
             <button
-              onClick={handleDownloadHtml}
-              className="px-2.5 sm:px-3 py-2 bg-slate-800 hover:bg-slate-700 text-amber-300 font-bold text-xs rounded-xl border border-slate-700 shadow-sm flex items-center gap-1 transition-all cursor-pointer"
-              title="Descargar archivo imprimible directamente al equipo"
-            >
-              <Download className="w-3.5 h-3.5 text-amber-400" />
-              <span className="hidden lg:inline">.HTML</span>
-            </button>
-            
-            <button
               onClick={onClose}
-              className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
+              className="p-1.5 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition-colors"
+              title="Cerrar ventana"
             >
               <X className="w-5 h-5" />
             </button>
@@ -596,15 +594,17 @@ export const GlobalPdfExportModal: React.FC<GlobalPdfExportModalProps> = ({
             </div>
           )}
 
-          {/* Signatures & Corporate Seal Footer */}
-          <div className="mt-10 pt-6 border-t-2 border-slate-900 grid grid-cols-2 gap-8 text-center text-xs">
+          {/* Signatures & Corporate Seal Footer (Zona en blanco para firma y sello) */}
+          <div className="mt-10 pt-6 border-t-2 border-slate-900 grid grid-cols-2 gap-8 text-center text-xs page-break-inside-avoid">
             <div>
-              <div className="h-14 border-b border-dashed border-slate-400 mx-auto w-48 mb-2" />
+              <div className="h-16 border-b-2 border-slate-900 mx-auto w-48 mb-2 bg-white" />
+              <span className="font-mono text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Firma y Sello</span>
               <p className="font-black text-slate-900">Ing. Roberto Acuña</p>
               <p className="text-[10px] text-slate-500 uppercase">Director General • Corporación TCT</p>
             </div>
             <div>
-              <div className="h-14 border-b border-dashed border-slate-400 mx-auto w-48 mb-2" />
+              <div className="h-16 border-b-2 border-slate-900 mx-auto w-48 mb-2 bg-white" />
+              <span className="font-mono text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Firma y Sello</span>
               <p className="font-black text-slate-900">Área de Auditoría y Producción</p>
               <p className="text-[10px] text-slate-500 uppercase">Control de Calidad Audiovisual TCT</p>
             </div>

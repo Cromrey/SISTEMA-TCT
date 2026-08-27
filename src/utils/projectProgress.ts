@@ -17,22 +17,24 @@ export interface ProjectProgressInfo {
   isStep3Blinking: boolean;
   needsStep123Attachments: boolean;
   isContractSigned: boolean;
+  isStep2Check2Complete: boolean;
   isStep2Checklist3Complete: boolean;
 }
 
 /**
- * Checks if the project has satisfied requirements up to Checklist 3 of Step 2
- * Unlocks the progress percentage strikethrough (erasing tachado) and enables printing.
+ * Checks if the project has completed the second check of Phase 1, Step 2 (Adelanto en Efectivo / Congelamiento de fecha).
+ * RULE: The percentage strikethrough (tachado) is eliminated ONLY when this 2nd check is validated.
+ * This also enables the "Imprimir Contrato" option.
  */
-export const checkIsStep2Checklist3Complete = (project: ProductionProject): boolean => {
-  if (!project.phases || !Array.isArray(project.phases) || project.phases.length === 0) {
+export const checkIsStep2Check2Complete = (project: ProductionProject): boolean => {
+  if (!project || !project.phases || !Array.isArray(project.phases) || project.phases.length === 0) {
     return false;
   }
   const allSteps = project.phases.flatMap(p => p.steps || []);
   const step2 = allSteps.find(s => s.stepNumber === 2);
   const step3 = allSteps.find(s => s.stepNumber === 3);
 
-  // If contract is exported or Step 3 or subsequent is in progress/completed
+  // If contract was already exported or Step 3 or subsequent is in progress/completed
   if (project.contractExported || (step3 && (step3.status === 'completed' || step3.status === 'in_progress'))) {
     return true;
   }
@@ -43,17 +45,20 @@ export const checkIsStep2Checklist3Complete = (project: ProductionProject): bool
     return true;
   }
 
-  // Check Step 2 checklist: completed up to checklist 3
+  // Check Step 2 checklist: second check (index 1 / c2_2) completed or at least 2 checks completed
   if (step2 && step2.checklist && Array.isArray(step2.checklist) && step2.checklist.length > 0) {
     const checkedCount = step2.checklist.filter(c => c.completed).length;
-    const checklist3Completed = Boolean(step2.checklist[2]?.completed);
-    if (checklist3Completed || checkedCount >= 3 || (step2.checklist.length <= 3 && checkedCount === step2.checklist.length)) {
+    const secondCheckCompleted = Boolean(step2.checklist[1]?.completed);
+    if (secondCheckCompleted || checkedCount >= 2) {
       return true;
     }
   }
 
   return false;
 };
+
+// Backward-compatible alias
+export const checkIsStep2Checklist3Complete = checkIsStep2Check2Complete;
 
 export const getProjectProgressInfo = (project: ProductionProject): ProjectProgressInfo => {
   let totalSteps = 0;
@@ -126,7 +131,7 @@ export const getProjectProgressInfo = (project: ProductionProject): ProjectProgr
     (step3HasAttachment || project.contractExported)
   );
 
-  const isStep2DoneWithChecklist3 = checkIsStep2Checklist3Complete(project);
+  const isStep2DoneWithCheck2 = checkIsStep2Check2Complete(project);
 
   let calculatedPercentage = 0;
   if (completedSteps === 0 && checkedChecklistCount === 0 && totalAttachmentsCount === 0) {
@@ -135,7 +140,7 @@ export const getProjectProgressInfo = (project: ProductionProject): ProjectProgr
     if (!isContractSigned) {
       // Before contract signing with attachment, progress advances through steps 1, 2, 3 but remains bounded up to 25.00%
       const step1Weight = (completedSteps >= 1 ? 8.33 : (checkedChecklistCount >= 1 ? 4.16 : 0)) + (step1HasAttachment ? 2.0 : 0);
-      const step2Weight = (completedSteps >= 2 ? 8.33 : (checkedChecklistCount >= 3 ? 4.16 : 0)) + (step2HasAttachment ? 2.0 : 0);
+      const step2Weight = (completedSteps >= 2 ? 8.33 : (checkedChecklistCount >= 2 ? 4.16 : 0)) + (step2HasAttachment ? 2.0 : 0);
       const step3Weight = (step3HasAttachment ? 4.34 : 0);
       calculatedPercentage = Math.min(25.00, Number((step1Weight + step2Weight + step3Weight).toFixed(2)));
     } else {
@@ -155,9 +160,9 @@ export const getProjectProgressInfo = (project: ProductionProject): ProjectProgr
     }
   }
 
-  // Strikethrough rule: percentage is strikethrough (tachado) until Step 2 Checklist 3 is completed
-  const isStrikethrough = !isStep2DoneWithChecklist3;
-  const isStep3Blinking = !isContractSigned && isStep2DoneWithChecklist3;
+  // Strikethrough rule: percentage is strikethrough (tachado) until Step 2 Check 2 is completed
+  const isStrikethrough = !isStep2DoneWithCheck2;
+  const isStep3Blinking = !isContractSigned && isStep2DoneWithCheck2;
   const needsStep123Attachments = !isContractSigned;
 
   const rawPercentage = calculatedPercentage;
@@ -168,9 +173,9 @@ export const getProjectProgressInfo = (project: ProductionProject): ProjectProgr
 
   let validationMessage = '';
   if (isStrikethrough) {
-    validationMessage = `⚠️ AVANCE ${formattedPercentage} EN REVISIÓN (TACHADO): Se habilitará el avance oficial sin tachar y la impresión al completar hasta el Checklist 3 del Paso 2 (Recepción y validación de adelanto).`;
+    validationMessage = `⚠️ AVANCE ${formattedPercentage} EN REVISIÓN (TACHADO): Se eliminará el tachado y se habilitará la opción Imprimir Contrato al validar el 2° check del Paso 2 (Congelamiento de fecha y anticipo).`;
   } else if (!isContractSigned) {
-    validationMessage = `⚡ AVANCE HABILITADO (${formattedPercentage}): Checklist de anticipo verificado. Hito activo: Firma y suscripción de contrato (Paso 3).`;
+    validationMessage = `⚡ AVANCE HABILITADO (${formattedPercentage}): 2° Check del Paso 2 verificado. Impresión de contrato habilitada. Hito: Firma de Contrato (Paso 3).`;
   } else if (completedSteps >= 12 && !step12HasAttachment) {
     validationMessage = '⚠️ PASO 12 PENDIENTE DE ADJUNTO: Para alcanzar el 100.00%, adjunte el Acta de Conformidad o comprobante de entrega.';
   } else if (!isValidated) {
@@ -196,6 +201,7 @@ export const getProjectProgressInfo = (project: ProductionProject): ProjectProgr
     isStep3Blinking,
     needsStep123Attachments,
     isContractSigned,
-    isStep2Checklist3Complete: isStep2DoneWithChecklist3
+    isStep2Check2Complete: isStep2DoneWithCheck2,
+    isStep2Checklist3Complete: isStep2DoneWithCheck2
   };
 };

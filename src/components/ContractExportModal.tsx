@@ -11,6 +11,7 @@ import {
 import { finalizeContractExportStep3 } from '../utils/stepSequenceHelper';
 import { getStoredUsers } from '../utils/authStorage';
 import { getStoredRules, INITIAL_CONTRACT_DESIGN } from '../utils/rulesStorage';
+import { checkIsStep2Check2Complete } from '../utils/projectProgress';
 import { 
   Printer, 
   X, 
@@ -47,10 +48,8 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
 
   const currentData = isEditing ? editedProject : project;
 
-  // Determine if Step 3 (Firma de Contrato) is completed with uploaded attachment
-  const step3 = currentData.phases?.[0]?.steps?.find(s => s.stepNumber === 3);
-  const hasStep3Attachment = Boolean(step3?.attachments && step3.attachments.length > 0) || Boolean(currentData.contractExported && !currentData.contractPendingAttachment);
-  const isStep3Completed = Boolean(step3?.status === 'completed' && hasStep3Attachment);
+  // RULE: The percentage strikethrough is removed AND contract printing is enabled upon validating the 2nd check of Step 2 (Phase 1)
+  const canPrintContract = checkIsStep2Check2Complete(currentData);
 
   const handleFinalizeAndRegisterExport = () => {
     if (onUpdateProject) {
@@ -65,8 +64,8 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
   };
 
   const handleExportPdf = async () => {
-    if (!isStep3Completed) {
-      alert('🔒 Exportación bloqueada: Requiere culminar el Paso 3 (Firma de Contrato) y adjuntar el documento de sustento escaneado/digital.');
+    if (!canPrintContract) {
+      alert('🔒 Exportación bloqueada: Requiere validar el segundo check del Paso 2 (Congelamiento de fecha y anticipo).');
       return;
     }
     handleFinalizeAndRegisterExport();
@@ -80,6 +79,10 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
   };
 
   const handlePrint = () => {
+    if (!canPrintContract) {
+      alert('🔒 Impresión bloqueada: Requiere validar el segundo check del Paso 2 (Congelamiento de fecha y anticipo).');
+      return;
+    }
     printElement('tct-contract-document', `Contrato-${currentData.contractNumber || currentData.uniqueCode}`);
   };
 
@@ -89,8 +92,8 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
   };
 
   const handleSendContractWhatsApp = async () => {
-    if (!isStep3Completed) {
-      alert('🔒 Envío de contrato bloqueado: Requiere firmar el contrato y registrar el archivo adjunto en el Paso 3.');
+    if (!canPrintContract) {
+      alert('🔒 Envío de contrato bloqueado: Requiere validar el segundo check del Paso 2.');
       return;
     }
     // Generate the official PDF so the user has the file ready to attach, then trigger WhatsApp
@@ -100,10 +103,6 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
   };
 
   const handleSaveEdits = () => {
-    if (!isStep3Completed) {
-      alert('🔒 Guardado bloqueado: El contrato preliminar requiere formalización y firma en el Paso 3 para fijar cambios.');
-      return;
-    }
     if (onUpdateProject) {
       onUpdateProject(editedProject);
     }
@@ -165,122 +164,113 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4">
       <div className="bg-white w-full max-w-4xl rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[96vh]">
         
-        {/* Top Control Bar (Hidden during Print) */}
-        <div className="print:hidden px-4 sm:px-6 py-4 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800 shrink-0 flex-wrap gap-2">
-          <div className="flex items-center space-x-3">
+        {/* Top Control Bar (Hidden during Print) - Synthetic & Responsive */}
+        <div className="print:hidden px-3 sm:px-6 py-3 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800 shrink-0 flex-wrap gap-2">
+          <div className="flex items-center space-x-2.5">
             <TCTLogo size="xs" variant="icon-only" />
             <div>
-              <span className="text-xs font-black text-amber-400 uppercase tracking-wide">
-                Corporación TCT • Contrato Oficial de Prestación de Servicios
-              </span>
               <h2 className="text-sm sm:text-base font-black text-white flex items-center gap-2">
-                <span>{currentData.contractNumber}</span>
-                <span className="text-slate-400 font-normal">|</span>
-                <span className="text-slate-300 font-bold">{currentData.clientName}</span>
+                <span className="text-amber-400">CONTRATO N° {currentData.contractNumber || currentData.uniqueCode}</span>
+                <span className="text-slate-500 font-normal">|</span>
+                <span className="text-slate-300 font-bold text-xs sm:text-sm truncate max-w-[140px] sm:max-w-[240px]">{currentData.clientName}</span>
               </h2>
             </div>
           </div>
 
-          <div className="flex items-center space-x-2 sm:space-x-3 flex-wrap gap-1.5">
+          <div className="flex items-center space-x-1.5 sm:space-x-2 flex-wrap">
             {/* Admin Edit Controls (Only if Admin) */}
             {isAdmin && (
               isEditing ? (
                 <button
                   onClick={handleSaveEdits}
-                  disabled={!isStep3Completed}
-                  className={`px-3 py-1.5 font-bold text-xs rounded-xl shadow-md flex items-center gap-1.5 transition-all cursor-pointer ${
-                    isStep3Completed
-                      ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
-                      : 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
-                  }`}
-                  title={isStep3Completed ? "Guardar Cambios del Contrato" : "Guardado bloqueado: Requiere Paso 3 culminado"}
+                  className="px-2.5 sm:px-3 py-1.5 font-bold text-xs rounded-xl shadow-md flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white transition-all cursor-pointer"
+                  title="Guardar Cambios del Contrato"
                 >
-                  <Save className="w-4 h-4" />
-                  <span>Guardar Cambios</span>
+                  <Save className="w-3.5 h-3.5" />
+                  <span>Guardar</span>
                 </button>
               ) : (
                 <button
                   onClick={() => setIsEditing(true)}
-                  className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all cursor-pointer"
-                  title="Editar datos del Contrato (Exclusivo Administrador)"
+                  className="px-2.5 sm:px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all cursor-pointer"
+                  title="Editar datos del Contrato"
                 >
-                  <Edit3 className="w-4 h-4 text-amber-400" />
-                  <span>Editar Contrato</span>
+                  <Edit3 className="w-3.5 h-3.5 text-amber-400" />
+                  <span className="hidden sm:inline">Editar</span>
                 </button>
               )
             )}
 
-            {/* Imprimir Contrato Button (Bloqueado si no se ha culminado el Paso 3) */}
+            {/* Imprimir Contrato Button (Enabled by 2nd check of Step 2) */}
             <button
               onClick={handlePrint}
               type="button"
-              disabled={!isStep3Completed}
-              className={`px-3 sm:px-4 py-1.5 sm:py-2 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all ${
-                isStep3Completed
-                  ? 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 shadow-md cursor-pointer'
+              disabled={!canPrintContract}
+              className={`px-3 sm:px-4 py-1.5 sm:py-2 font-black text-xs rounded-xl flex items-center gap-1.5 transition-all ${
+                canPrintContract
+                  ? 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 shadow-md cursor-pointer'
                   : 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed opacity-75'
               }`}
               title={
-                isStep3Completed
-                  ? "Imprimir contrato oficial"
-                  : "Impresión bloqueada: Requiere validación y firma de contrato en Paso 3"
+                canPrintContract
+                  ? "Imprimir Contrato Oficial A4"
+                  : "Impresión bloqueada: Requiere validar el segundo check del Paso 2 (Congelamiento de fecha y anticipo)"
               }
             >
-              {!isStep3Completed ? (
-                <Lock className="w-4 h-4 text-slate-500" />
+              {!canPrintContract ? (
+                <Lock className="w-3.5 h-3.5 text-slate-500" />
               ) : (
-                <Printer className="w-4 h-4 text-slate-950" />
+                <Printer className="w-3.5 h-3.5 text-slate-950" />
               )}
               <span>Imprimir Contrato</span>
+            </button>
+
+            {/* Descargar PDF Button */}
+            <button
+              onClick={handleExportPdf}
+              type="button"
+              disabled={!canPrintContract || isGeneratingPdf}
+              className={`px-2.5 sm:px-3 py-1.5 sm:py-2 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all ${
+                canPrintContract
+                  ? 'bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 cursor-pointer'
+                  : 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed opacity-60'
+              }`}
+              title={
+                canPrintContract
+                  ? "Descargar Contrato en PDF Oficial A4"
+                  : "Descarga bloqueada: Requiere validar el segundo check del Paso 2"
+              }
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">PDF</span>
             </button>
 
             {/* Navigation Icons (Atrás, Salir) */}
             <button
               type="button"
               onClick={onClose}
-              className="px-2.5 py-1.5 sm:py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 hover:border-amber-400/50 text-xs font-bold flex items-center gap-1 transition-all cursor-pointer shadow-xs"
+              className="px-2.5 py-1.5 sm:py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs font-bold flex items-center gap-1 transition-all cursor-pointer"
               title="Atrás"
             >
-              <ChevronLeft className="w-4 h-4" />
+              <ChevronLeft className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Atrás</span>
             </button>
 
             <button
               type="button"
               onClick={onClose}
-              className="p-1.5 sm:px-3 sm:py-2 rounded-xl bg-slate-800 hover:bg-red-950/60 hover:text-red-300 text-slate-300 border border-slate-700 hover:border-red-500/50 transition-colors cursor-pointer flex items-center gap-1 font-bold text-xs"
-              title="Salir / Cerrar ventana"
+              className="p-1.5 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition-colors"
+              title="Cerrar ventana"
             >
-              <span className="hidden sm:inline">Salir</span>
-              <X className="w-4 h-4" />
+              <X className="w-5 h-5" />
             </button>
           </div>
         </div>
 
-        {/* Informative Status Banner about Step 3 */}
-        {!isStep3Completed ? (
-          <div className="bg-amber-500/10 border-b border-amber-500/30 px-4 py-2 text-xs flex items-center justify-between gap-3 text-amber-950">
-            <div className="flex items-center gap-2 font-medium">
-              <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
-              <span>
-                <strong>Contrato Preliminar:</strong> La exportación a PDF, guardado y envío de contrato están bloqueados hasta adjuntar el contrato firmado en el <strong>Paso 3</strong>. Sí puede <strong>Imprimir</strong> o <strong>Enviar Reporte a WhatsApp (990010020)</strong>.
-              </span>
-            </div>
-            <span className="text-[10px] bg-amber-200 text-amber-900 font-bold px-2 py-0.5 rounded-full shrink-0">
-              Paso 3 Pendiente
-            </span>
-          </div>
-        ) : (
-          <div className="bg-emerald-500/10 border-b border-emerald-500/30 px-4 py-2 text-xs flex items-center justify-between gap-3 text-emerald-950">
-            <div className="flex items-center gap-2 font-medium">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span>
-                <strong>Contrato Formalizado y Firmado:</strong> Habilitada la exportación a PDF oficial, guardado definitivo y envío a WhatsApp.
-              </span>
-            </div>
-            <span className="text-[10px] bg-emerald-200 text-emerald-900 font-bold px-2 py-0.5 rounded-full shrink-0">
-              ✓ Paso 3 Culminado
-            </span>
+        {/* Minimal 1-line validation note if print is not yet unlocked */}
+        {!canPrintContract && (
+          <div className="print:hidden bg-amber-500/10 border-b border-amber-500/20 px-4 py-1.5 text-center text-xs font-medium text-amber-300">
+            ⚠️ <strong>Requisito de Impresión:</strong> Se habilitará la opción Imprimir Contrato al validar el 2° check del Paso 2 (Congelamiento de fecha y anticipo).
           </div>
         )}
 
@@ -1086,16 +1076,15 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
                 </div>
               </div>
 
-              {/* Official Signatures: Asesor Comercial & EL CLIENTE (Visibles y nítidas) */}
+              {/* Official Signatures: Asesor Comercial & EL CLIENTE (Zona de firma en blanco, nítida para firmar y sellar) */}
               <div className="pt-6 border-t-2 border-slate-950 grid grid-cols-2 gap-8 text-center text-[10px] page-break-inside-avoid">
                 <div className="space-y-2">
-                  <div className="h-20 border-b-2 border-slate-900 w-56 mx-auto bg-slate-50/60 rounded-t-lg flex flex-col items-center justify-end pb-2">
-                    <span className="font-mono text-[9px] text-slate-600 font-bold uppercase tracking-wider">
-                      Firma y Sello Autorizado
-                    </span>
-                    <span className="text-[8px] text-amber-800 font-black">CORPORACIÓN TCT</span>
-                  </div>
+                  {/* Signature space strictly in blank with clean bottom line */}
+                  <div className="h-20 border-b-2 border-slate-900 w-56 mx-auto bg-white rounded-t-lg" />
                   <div className="space-y-0.5">
+                    <p className="font-mono text-[9px] text-slate-600 font-bold uppercase tracking-wider">
+                      Firma y Sello Autorizado
+                    </p>
                     <p className="font-black text-slate-900 uppercase text-[10px]">{contractDesign.headerTitle || 'CORPORACIÓN TCT S.A.C.'}</p>
                     <p className="text-[9px] text-slate-600 font-medium uppercase italic">
                       {contractDesign.signerAdvisorRole || 'Director de Producción / Asesor Comercial'}
@@ -1110,13 +1099,12 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
                 </div>
 
                 <div className="space-y-2">
-                  <div className="h-20 border-b-2 border-slate-900 w-56 mx-auto bg-slate-50/60 rounded-t-lg flex flex-col items-center justify-end pb-2">
-                    <span className="font-mono text-[9px] text-slate-600 font-bold uppercase tracking-wider">
-                      Firma del Cliente Contratante
-                    </span>
-                    <span className="text-[8px] text-slate-500 font-bold italic">Conforme</span>
-                  </div>
+                  {/* Signature space strictly in blank with clean bottom line */}
+                  <div className="h-20 border-b-2 border-slate-900 w-56 mx-auto bg-white rounded-t-lg" />
                   <div className="space-y-0.5">
+                    <p className="font-mono text-[9px] text-slate-600 font-bold uppercase tracking-wider">
+                      Firma del Cliente Contratante
+                    </p>
                     <p className="font-black text-slate-900 uppercase text-[10px]">{currentData.clientName}</p>
                     <p className="text-[9.5px] text-slate-900 font-black font-mono">DNI / RUC: {currentData.clientDniRuc || currentData.clientDni || '__________________'}</p>
                     <p className="text-[9px] font-black text-slate-600 uppercase tracking-wider italic">EL CLIENTE</p>
