@@ -13,7 +13,9 @@ import {
   getActiveSession, 
   setActiveSession, 
   getStoredUsers, 
-  usersToStaffMembers 
+  usersToStaffMembers,
+  isSessionSuperceded,
+  getDeviceSessionToken
 } from './utils/authStorage';
 import { LoginPage } from './components/LoginPage';
 import { UserManagementModal } from './components/UserManagementModal';
@@ -179,7 +181,21 @@ export default function App() {
     showToast('⏱️ Sesión cerrada automáticamente por inactividad de 3 minutos.');
   };
 
-  // 3-Minute Inactivity and Background Tab Tracker
+  // Trigger logout when account is accessed from another device/window
+  const handleConcurrentAccessLogout = () => {
+    setActiveSession(null);
+    setCurrentUser(null);
+    setSelectedProjectForDetail(null);
+    setSelectedProjectForReport(null);
+    setSelectedProjectForContract(null);
+    setIsNewProjectModalOpen(false);
+    setIsAnalyticsModalOpen(false);
+    setIsRulesModalOpen(false);
+    setIsUsersModalOpen(false);
+    showToast('🔒 Se inició sesión con esta cuenta desde otro dispositivo. La sesión anterior fue cerrada.');
+  };
+
+  // 3-Minute Inactivity and Concurrent Session Checker
   useEffect(() => {
     if (!currentUser) return;
 
@@ -193,26 +209,36 @@ export default function App() {
       'keydown',
       'touchstart',
       'scroll',
-      'click'
+      'click',
+      'wheel'
     ];
 
     activityEvents.forEach((evt) => {
       window.addEventListener(evt, recordUserActivity, { passive: true });
     });
 
-    // Check every 2 seconds if 3 minutes of inactivity elapsed
+    // Check every 1.5 seconds if 3 minutes of inactivity elapsed OR if session was superceded by another login
     const checkInterval = setInterval(() => {
+      // 1. Inactivity check
       const elapsed = Date.now() - lastActiveTimestampRef.current;
       if (elapsed >= INACTIVITY_TIMEOUT_MS) {
         handleAutoLogout();
+        return;
       }
-    }, 2000);
+
+      // 2. Concurrency check (single device per account)
+      if (currentUser && isSessionSuperceded(currentUser)) {
+        handleConcurrentAccessLogout();
+      }
+    }, 1500);
 
     // Tab visibility change (minimized / backgrounded tab)
     const handleVisibilityChange = () => {
       const elapsed = Date.now() - lastActiveTimestampRef.current;
       if (elapsed >= INACTIVITY_TIMEOUT_MS) {
         handleAutoLogout();
+      } else if (currentUser && isSessionSuperceded(currentUser)) {
+        handleConcurrentAccessLogout();
       }
     };
 

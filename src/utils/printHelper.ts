@@ -119,125 +119,114 @@ export function printElement(elementId: string, docTitle: string = 'Documento Co
   const targetEl = document.getElementById(elementId);
   if (!targetEl) {
     console.error(`Target print element #${elementId} not found in DOM`);
+    window.print();
     return;
   }
 
   try {
-    // 1. Prepare styles collection (Tailwind styles + font rules + specific print formatting)
-    const styleTags = Array.from(document.querySelectorAll('link[rel="stylesheet"], style'))
-      .map(node => node.outerHTML)
-      .join('\n');
-
-    // 2. Clone content HTML
-    const contentHtml = targetEl.innerHTML;
-
-    // 3. Create a clean, isolated printing iframe
-    const printFrame = document.createElement('iframe');
-    printFrame.setAttribute('aria-hidden', 'true');
-    printFrame.style.position = 'fixed';
-    printFrame.style.right = '0';
-    printFrame.style.bottom = '0';
-    printFrame.style.width = '0';
-    printFrame.style.height = '0';
-    printFrame.style.border = 'none';
-    printFrame.style.zIndex = '-9999';
-    document.body.appendChild(printFrame);
-
-    const frameDoc = printFrame.contentWindow?.document || printFrame.contentDocument;
-    if (!frameDoc || !printFrame.contentWindow) {
-      // Fallback to popup or direct print
-      fallbackWindowPrint(contentHtml, docTitle, styleTags);
-      return;
+    // 1. Inject or update the global high-compatibility print styles
+    const styleId = 'tct-universal-print-stylesheet';
+    let styleTag = document.getElementById(styleId) as HTMLStyleElement | null;
+    if (!styleTag) {
+      styleTag = document.createElement('style');
+      styleTag.id = styleId;
+      document.head.appendChild(styleTag);
     }
 
-    frameDoc.open();
-    frameDoc.write(`
-      <!DOCTYPE html>
-      <html lang="es">
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>${docTitle}</title>
-        ${styleTags}
-        <style>
-          @page {
-            size: A4 portrait;
-            margin: 8mm 10mm 10mm 10mm;
-          }
-          * {
-            box-sizing: border-box !important;
-          }
-          html, body {
-            margin: 0 !important;
-            padding: 0 !important;
-            background: #ffffff !important;
-            color: #0f172a !important;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-            color-adjust: exact !important;
-            font-size: 11px;
-            line-height: 1.35;
-            overflow: visible !important;
-            height: auto !important;
-          }
-          body::before {
-            content: "TCT";
-            position: fixed;
-            top: 45%;
-            left: 35%;
-            font-size: 120px;
-            font-weight: 900;
-            color: rgba(200, 210, 225, 0.08);
-            transform: rotate(-35deg);
-            pointer-events: none;
-            z-index: 0;
-          }
-          .print\\:hidden, button, .no-print {
-            display: none !important;
-          }
-          .page-break-inside-avoid {
-            break-inside: avoid !important;
-            page-break-inside: avoid !important;
-          }
-          svg {
-            shape-rendering: geometricPrecision !important;
-            print-color-adjust: exact !important;
-            -webkit-print-color-adjust: exact !important;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="p-2 print:p-0">
-          ${contentHtml}
-        </div>
-      </body>
-      </html>
-    `);
-    frameDoc.close();
-
-    // Trigger print after styles and vectors finish evaluation
-    setTimeout(() => {
-      try {
-        printFrame.contentWindow?.focus();
-        printFrame.contentWindow?.print();
-      } catch (err) {
-        console.warn('Iframe print restricted, triggering window fallback:', err);
-        fallbackWindowPrint(contentHtml, docTitle, styleTags);
-      } finally {
-        setTimeout(() => {
-          try {
-            if (document.body.contains(printFrame)) {
-              document.body.removeChild(printFrame);
-            }
-          } catch (e) {}
-        }, 3000);
+    styleTag.textContent = `
+      @media print {
+        @page {
+          size: A4 portrait;
+          margin: 8mm 10mm 10mm 10mm;
+        }
+        *, *::before, *::after {
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+          color-adjust: exact !important;
+          box-sizing: border-box !important;
+        }
+        html, body {
+          margin: 0 !important;
+          padding: 0 !important;
+          background: #ffffff !important;
+          color: #0f172a !important;
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+          overflow: visible !important;
+          height: auto !important;
+          min-height: 100% !important;
+        }
+        /* Hide all UI navigation, controls, headers and modal backdrops */
+        .print\\:hidden, button, nav, header, .no-print {
+          display: none !important;
+        }
+        /* Make modal backdrop completely transparent and static during print */
+        .fixed.inset-0 {
+          position: static !important;
+          background: transparent !important;
+          backdrop-filter: none !important;
+          padding: 0 !important;
+          margin: 0 !important;
+          overflow: visible !important;
+          display: block !important;
+          height: auto !important;
+          max-height: none !important;
+          width: 100% !important;
+          max-width: 100% !important;
+          box-shadow: none !important;
+          border: none !important;
+        }
+        .max-h-\\[96vh\\], .max-h-\\[90vh\\] {
+          max-height: none !important;
+          height: auto !important;
+          overflow: visible !important;
+          box-shadow: none !important;
+          border: none !important;
+        }
+        #${elementId} {
+          display: block !important;
+          overflow: visible !important;
+          height: auto !important;
+          max-height: none !important;
+          padding: 0 !important;
+          margin: 0 !important;
+          background: #ffffff !important;
+        }
+        .page-break-after, .break-after-page {
+          page-break-after: always !important;
+          break-after: page !important;
+        }
+        .page-break-before, .break-before-page {
+          page-break-before: always !important;
+          break-before: page !important;
+        }
+        .page-break-inside-avoid, .break-inside-avoid {
+          page-break-inside: avoid !important;
+          break-inside: avoid !important;
+        }
+        svg {
+          shape-rendering: geometricPrecision !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
       }
-    }, 450);
+    `;
+
+    // 2. Set document title for clean print header/filename
+    const prevTitle = document.title;
+    document.title = docTitle;
+
+    // 3. Trigger native window.print() directly
+    window.focus();
+    setTimeout(() => {
+      window.print();
+      // Restore title after print dialog closes
+      setTimeout(() => {
+        document.title = prevTitle;
+      }, 1000);
+    }, 50);
 
   } catch (err) {
-    console.error('Print execution notice:', err);
-    // Direct system print fallback
+    console.error('Direct print execution error:', err);
     window.print();
   }
 }

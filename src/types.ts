@@ -447,4 +447,5 @@ export interface AuthUser {
   isActive: boolean;
   createdAt: string;
   lastLoginAt?: string;
+  currentSessionToken?: string;
 }

@@ -2,6 +2,8 @@ import { AuthUser, StaffMember } from '../types';
 
 export const AUTH_USERS_STORAGE_KEY = 'tct_auth_users_v1';
 export const ACTIVE_SESSION_STORAGE_KEY = 'tct_active_user_session_v1';
+export const ACTIVE_DEVICE_TOKEN_KEY = 'tct_device_session_token_v1';
+export const SESSION_INVALIDATION_EVENT = 'tct_session_invalidated';
 
 export const DEFAULT_AUTH_USERS: AuthUser[] = [
   {
@@ -134,6 +136,28 @@ export function saveStoredUsers(users: AuthUser[]): void {
   }
 }
 
+export function getDeviceSessionToken(): string | null {
+  try {
+    return localStorage.getItem(ACTIVE_DEVICE_TOKEN_KEY) || sessionStorage.getItem(ACTIVE_DEVICE_TOKEN_KEY);
+  } catch (err) {
+    return null;
+  }
+}
+
+export function setDeviceSessionToken(token: string | null): void {
+  try {
+    if (!token) {
+      localStorage.removeItem(ACTIVE_DEVICE_TOKEN_KEY);
+      sessionStorage.removeItem(ACTIVE_DEVICE_TOKEN_KEY);
+    } else {
+      localStorage.setItem(ACTIVE_DEVICE_TOKEN_KEY, token);
+      sessionStorage.setItem(ACTIVE_DEVICE_TOKEN_KEY, token);
+    }
+  } catch (err) {
+    console.error('Error setting device session token:', err);
+  }
+}
+
 export function getActiveSession(): AuthUser | null {
   try {
     const raw = localStorage.getItem(ACTIVE_SESSION_STORAGE_KEY) || sessionStorage.getItem(ACTIVE_SESSION_STORAGE_KEY);
@@ -151,6 +175,7 @@ export function setActiveSession(user: AuthUser | null, remember: boolean = true
     if (!user) {
       localStorage.removeItem(ACTIVE_SESSION_STORAGE_KEY);
       sessionStorage.removeItem(ACTIVE_SESSION_STORAGE_KEY);
+      setDeviceSessionToken(null);
     } else {
       const dataStr = JSON.stringify(user);
       if (remember) {
@@ -164,6 +189,25 @@ export function setActiveSession(user: AuthUser | null, remember: boolean = true
   }
 }
 
+export function isSessionSuperceded(user: AuthUser): boolean {
+  try {
+    const currentDeviceToken = getDeviceSessionToken();
+    if (!currentDeviceToken) return false;
+    
+    const users = getStoredUsers();
+    const storedUser = users.find(u => u.id === user.id);
+    if (!storedUser) return false;
+
+    // If another device/window logged in, storedUser.currentSessionToken has been updated to a newer token
+    if (storedUser.currentSessionToken && storedUser.currentSessionToken !== currentDeviceToken) {
+      return true;
+    }
+    return false;
+  } catch (err) {
+    return false;
+  }
+}
+
 export function authenticateUser(usernameInput: string, passwordInput: string): { success: boolean; user?: AuthUser; error?: string } {
   const users = getStoredUsers();
   const trimmedUser = usernameInput.trim();
@@ -173,38 +217,44 @@ export function authenticateUser(usernameInput: string, passwordInput: string): 
     return { success: false, error: 'Por favor ingrese usuario y contraseña.' };
   }
 
-  const cleanUser = trimmedUser.toLowerCase().replace(/^@/, '');
-  const cleanPass = trimmedPass.toLowerCase();
-
+  // STRICT Case-Sensitive match for both username and password (respetando mayúsculas y minúsculas)
   const found = users.find(u => {
-    const uName = (u.username || '').toLowerCase().trim();
-    const uFull = (u.fullName || '').toLowerCase().trim();
-    const uFirst = uFull.split(' ')[0] || '';
-    const uEmail = (u.email || '').toLowerCase().trim();
-    const uPass = (u.password || '').trim();
-
-    const matchesUser = uName === cleanUser || uFull === cleanUser || uFirst === cleanUser || uEmail === cleanUser;
-    const matchesPass = uPass === trimmedPass || uPass.toLowerCase() === cleanPass;
-
-    return matchesUser && matchesPass;
+    const exactUserMatch = u.username === trimmedUser || u.email === trimmedUser;
+    const exactPassMatch = u.password === trimmedPass;
+    return exactUserMatch && exactPassMatch;
   });
 
   if (!found) {
-    return { success: false, error: 'Usuario o contraseña incorrectos. Verifique sus credenciales.' };
+    return { success: false, error: 'Usuario o contraseña incorrectos. Recuerde que el sistema distingue entre mayúsculas y minúsculas.' };
   }
 
   if (!found.isActive) {
     return { success: false, error: 'Esta cuenta de usuario se encuentra desactivada. Contacte al Administrador.' };
   }
 
-  // Update last login timestamp
+  // Generate unique session token for single device concurrency control
+  const newSessionToken = `tct_sess_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+  setDeviceSessionToken(newSessionToken);
+
+  // Update last login timestamp and session token in user store
   const updatedUser: AuthUser = {
     ...found,
-    lastLoginAt: new Date().toISOString()
+    lastLoginAt: new Date().toISOString(),
+    currentSessionToken: newSessionToken
   };
 
   const updatedList = users.map(u => u.id === found.id ? updatedUser : u);
   saveStoredUsers(updatedList);
+  setActiveSession(updatedUser, true);
+
+  // Notify other tabs/devices of login concurrency update
+  try {
+    localStorage.setItem('tct_last_auth_event', JSON.stringify({
+      userId: updatedUser.id,
+      token: newSessionToken,
+      timestamp: Date.now()
+    }));
+  } catch (e) {}
 
   return { success: true, user: updatedUser };
 }
