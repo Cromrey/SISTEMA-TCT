@@ -168,6 +168,7 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
   const [showButtonsMenu, setShowButtonsMenu] = useState<boolean>(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Logo change state
   const logoFileInputRef = useRef<HTMLInputElement>(null);
@@ -1349,6 +1350,14 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
             <span className="flex items-center gap-1.5">
               <CheckCircle2 className="w-4 h-4" />
               {successMessage}
+            </span>
+          </div>
+        )}
+        {errorMessage && (
+          <div className="bg-red-600 text-white px-4 py-2 text-xs font-bold flex items-center justify-between shadow-inner">
+            <span className="flex items-center gap-1.5">
+              <AlertCircle className="w-4 h-4" />
+              {errorMessage}
             </span>
           </div>
         )}
@@ -3859,6 +3868,8 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
                 </div>
               </div>
             </div>
+          )}
+ 
           {/* ========================================================= */}
           {/* TAB 12: MONITOR DE USUARIOS EN VIVO Y CONTROL DE SESIONES  */}
           {/* ========================================================= */}
