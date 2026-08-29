@@ -57,19 +57,30 @@ export const EmployeePortal: React.FC<EmployeePortalProps> = ({
     const steps = [...phase3.steps];
 
     const amount = currentProject.finalBalance || (currentProject.totalBudget - currentProject.initialDeposit);
+    const nowFormatted = new Date().toLocaleString('es-PE', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
     steps[1] = {
       ...steps[1],
       status: 'completed',
-      completedAt: new Date().toLocaleTimeString(),
+      completedAt: nowFormatted,
+      completedBy: 'Carlos Mendoza (Director de Cámara TCT)',
+      lastUpdatedAt: nowFormatted,
+      lastUpdatedBy: 'Carlos Mendoza (Director de Cámara TCT)',
       fieldPaymentData: {
         paymentStatus: 'paid',
         amountCollected: amount,
         paymentMethod: 'Efectivo',
         paymentTime: `${new Date().toLocaleTimeString()} (Cumplido antes de 7:00 PM)`,
-        technicianInCharge: 'Director de Cámara TCT',
+        technicianInCharge: 'Carlos Mendoza (Director de Cámara TCT)',
         receiptNumber: `REC-CAMPO-${Math.floor(1000 + Math.random() * 9000)}`
       },
-      checklist: steps[1].checklist?.map(c => ({ ...c, completed: true }))
+      checklist: steps[1].checklist?.map(c => ({ ...c, completed: true, completedAt: nowFormatted }))
     };
     phase3.steps = steps;
     updatedPhases[2] = phase3;
@@ -95,19 +106,30 @@ export const EmployeePortal: React.FC<EmployeePortalProps> = ({
     const phase3 = { ...updatedPhases[2] };
     const steps = [...phase3.steps];
 
+    const nowFormatted = new Date().toLocaleString('es-PE', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
     steps[2] = {
       ...steps[2],
       status: 'completed',
-      completedAt: new Date().toISOString(),
+      completedAt: nowFormatted,
+      completedBy: 'Pedro Alva (Técnico de Ingest TCT)',
+      lastUpdatedAt: nowFormatted,
+      lastUpdatedBy: 'Pedro Alva (Técnico de Ingest TCT)',
       ingestData: {
         sdCardsCount: sdCount,
         totalGigabytes: gbCount,
         serverLocation: `NAS-TCT-STORAGE-01 / ${currentProject.uniqueCode}`,
         backupVerified: true,
-        technicianName: 'Técnico de Ingest TCT',
+        technicianName: 'Pedro Alva (Técnico de Ingest TCT)',
         backupDate: new Date().toISOString().split('T')[0]
       },
-      checklist: steps[2].checklist?.map(c => ({ ...c, completed: true }))
+      checklist: steps[2].checklist?.map(c => ({ ...c, completed: true, completedAt: nowFormatted }))
     };
     phase3.steps = steps;
     updatedPhases[2] = phase3;

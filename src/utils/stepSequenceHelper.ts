@@ -229,22 +229,32 @@ export const validateStepCompletion = (
  */
 export const finalizeContractExportStep3 = (
   project: ProductionProject,
-  userName = 'Administrador TCT'
+  userName = 'Michael Romero (Administrador TCT)'
 ): ProductionProject => {
   const updatedPhases = [...project.phases];
+  const nowFormatted = new Date().toLocaleString('es-PE', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
 
   // In Phase 1: Steps 1 & 2 completed, Step 3 is Firma de Contrato in_progress
   if (updatedPhases[0] && updatedPhases[0].steps) {
     const phase1Steps = updatedPhases[0].steps.map((st) => {
       if (st.stepNumber === 1 || st.stepNumber === 2) {
         const allChecklistCompleted = st.checklist
-          ? st.checklist.map(c => ({ ...c, completed: true, completedAt: c.completedAt || new Date().toLocaleTimeString() }))
+          ? st.checklist.map(c => ({ ...c, completed: true, completedAt: c.completedAt || nowFormatted }))
           : [];
 
         return {
           ...st,
           status: 'completed' as const,
-          completedAt: st.completedAt || new Date().toLocaleTimeString(),
+          completedAt: st.completedAt || nowFormatted,
+          completedBy: st.completedBy || userName,
+          lastUpdatedAt: nowFormatted,
+          lastUpdatedBy: userName,
           checklist: allChecklistCompleted
         };
       }

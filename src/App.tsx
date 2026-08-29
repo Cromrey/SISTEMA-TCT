@@ -674,7 +674,7 @@ export default function App() {
       {/* MODAL 1: Complete Project Detail & 12-Step Sequential Inspector */}
       {selectedProjectForDetail && (
         <ProjectDetailModal
-          project={selectedProjectForDetail}
+          project={projects.find(p => p.id === selectedProjectForDetail.id) || selectedProjectForDetail}
           currentUser={currentUser}
           currentRole={currentRole}
           onClose={() => setSelectedProjectForDetail(null)}
@@ -712,7 +712,7 @@ export default function App() {
       {/* MODAL 5: Official TCT Contract Export Modal with Watermark */}
       {selectedProjectForContract && (
         <ContractExportModal
-          project={selectedProjectForContract}
+          project={projects.find(p => p.id === selectedProjectForContract.id) || selectedProjectForContract}
           currentRole={currentRole}
           onClose={() => setSelectedProjectForContract(null)}
           onUpdateProject={handleUpdateProject}
@@ -722,7 +722,7 @@ export default function App() {
       {/* MODAL 6: Official 12-Step Progress Report (Ficha Técnica de Auditoría Oficial) */}
       {selectedProjectForReport && (
         <ProjectProgressReportModal
-          project={selectedProjectForReport}
+          project={projects.find(p => p.id === selectedProjectForReport.id) || selectedProjectForReport}
           onClose={() => setSelectedProjectForReport(null)}
         />
       )}

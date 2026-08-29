@@ -91,6 +91,9 @@ export interface StepData {
   status: StepStatus;
   completedAt?: string;
   completedBy?: string;
+  lastUpdatedAt?: string;
+  lastUpdatedBy?: string;
+  responsibleStaff?: string;
   deadline?: string;
   notes?: string;
   checklist?: ChecklistItem[];

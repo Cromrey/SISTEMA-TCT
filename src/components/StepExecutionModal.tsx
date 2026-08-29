@@ -426,6 +426,16 @@ FECHA: ${acceptanceDate}
       backupDate: new Date().toISOString().split('T')[0]
     } : stepData.ingestData;
 
+    const activeSession = getActiveSession();
+    const currentUserName = activeSession?.fullName || (currentRole === 'admin' ? 'Michael Romero (Administrador TCT)' : 'Técnico de Producción TCT');
+    const nowFormatted = new Date().toLocaleString('es-PE', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
     const candidateStep: StepData = {
       ...stepData,
       status: finalStatus,
@@ -437,7 +447,11 @@ FECHA: ${acceptanceDate}
       conformityAcceptance: stepData.stepNumber === 12 ? conformityData : stepData.conformityAcceptance,
       fieldPaymentData: currentFieldPaymentData,
       ingestData: currentIngestData,
-      completedAt: finalStatus === 'completed' ? (stepData.completedAt || new Date().toLocaleTimeString()) : undefined
+      completedAt: finalStatus === 'completed' ? (stepData.completedAt || nowFormatted) : undefined,
+      completedBy: finalStatus === 'completed' ? (stepData.completedBy || currentUserName) : undefined,
+      lastUpdatedAt: nowFormatted,
+      lastUpdatedBy: currentUserName,
+      responsibleStaff: stepData.responsibleStaff || currentUserName
     };
 
     // 2. Validate step requirements if trying to mark completed
