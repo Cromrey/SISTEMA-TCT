@@ -114,6 +114,25 @@ export function setActiveSession(user: AuthUser | null, remember: boolean = true
   }
 }
 
+export function clearAllActiveSessions(): void {
+  try {
+    localStorage.removeItem(ACTIVE_SESSION_STORAGE_KEY);
+    sessionStorage.removeItem(ACTIVE_SESSION_STORAGE_KEY);
+    localStorage.removeItem(ACTIVE_DEVICE_TOKEN_KEY);
+    sessionStorage.removeItem(ACTIVE_DEVICE_TOKEN_KEY);
+    localStorage.removeItem('tct_current_session_id_v1');
+    sessionStorage.removeItem('tct_current_session_id_v1');
+    localStorage.removeItem('tct_active_live_sessions_v1');
+    
+    // Also notify server
+    try {
+      fetch('/api/sessions/clear-all', { method: 'POST' }).catch(() => {});
+    } catch (e) {}
+  } catch (err) {
+    console.error('Error clearing active sessions:', err);
+  }
+}
+
 export function isSessionSuperceded(user: AuthUser): boolean {
   try {
     const currentDeviceToken = getDeviceSessionToken();
@@ -405,16 +424,11 @@ export function getUserProjectAssignments(user: AuthUser, projects: any[]): User
 }
 
 /**
- * Checks if a project is visible/accessible to the given user based on corporate role:
- * - Admin: Full visibility (sees all projects created by Admin and all employees).
- * - Employee: Strictly scoped visibility (sees ONLY their own created projects).
+ * Checks if a project was created by, advised by, or assigned to a specific user.
  */
-export function isProjectVisibleToUser(project: ProductionProject, user: AuthUser | null): boolean {
+export function isProjectAssociatedWithUser(project: ProductionProject, user: AuthUser | null): boolean {
   if (!user) return false;
-  // Admin sees all projects
-  if (user.role === 'admin') return true;
 
-  // Employee sees strictly their own created projects
   const userId = user.id?.trim().toLowerCase();
   const username = user.username?.trim().toLowerCase();
   const fullName = user.fullName?.trim().toLowerCase();
@@ -436,26 +450,50 @@ export function isProjectVisibleToUser(project: ProductionProject, user: AuthUse
   }
 
   // 4. Direct creator Full Name
-  if (project.createdByName && fullName && project.createdByName.toLowerCase().trim() === fullName) {
+  if (project.createdByName && fullName && (
+    project.createdByName.toLowerCase().trim() === fullName ||
+    fullName.includes(project.createdByName.toLowerCase().trim()) ||
+    project.createdByName.toLowerCase().includes(fullName)
+  )) {
     return true;
   }
 
   // 5. Contract Holder / Advisor
-  if (project.contractHolder && fullName && project.contractHolder.toLowerCase().includes(fullName)) {
+  if (project.contractHolder && (
+    (fullName && project.contractHolder.toLowerCase().includes(fullName)) ||
+    (username && project.contractHolder.toLowerCase().includes(username))
+  )) {
     return true;
   }
 
-  // 6. Assigned Staff (if user was creator or assigned technician)
+  // 6. Assigned Staff (if user was assigned technician/camera)
   if (project.assignedStaff && Array.isArray(project.assignedStaff)) {
     const isStaff = project.assignedStaff.some(s => 
       (s.id && userId && s.id.toLowerCase().trim() === userId) ||
-      (s.name && fullName && s.name.toLowerCase().trim() === fullName) ||
-      (s.name && fullName && s.name.toLowerCase().includes(fullName))
+      (s.name && fullName && (
+        s.name.toLowerCase().trim() === fullName ||
+        s.name.toLowerCase().includes(fullName) ||
+        fullName.includes(s.name.toLowerCase().trim())
+      ))
     );
     if (isStaff) return true;
   }
 
   return false;
+}
+
+/**
+ * Checks if a project is visible/accessible to the given user based on corporate role:
+ * - Admin: Full visibility (sees all projects created by Admin and all employees).
+ * - Employee: Strictly scoped visibility (sees ONLY their own created projects).
+ */
+export function isProjectVisibleToUser(project: ProductionProject, user: AuthUser | null): boolean {
+  if (!user) return false;
+  // Admin sees all projects
+  if (user.role === 'admin') return true;
+
+  // Employee sees strictly their own created/assigned projects
+  return isProjectAssociatedWithUser(project, user);
 }
 
 /**

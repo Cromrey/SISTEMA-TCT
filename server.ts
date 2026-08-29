@@ -325,6 +325,26 @@ app.post("/api/sessions/logout", (req, res) => {
   }
 });
 
+// 8b. Terminate/Purge ALL active sessions immediately (Force global re-login)
+app.post("/api/sessions/clear-all", (req, res) => {
+  try {
+    const now = Date.now();
+    let count = 0;
+    for (const session of activeLiveSessions.values()) {
+      session.status = "terminated";
+      session.terminationReason = "admin_forced";
+      session.terminationMessage = "El sistema ha cerrado todas las sesiones activas. Por favor, inicie sesión nuevamente.";
+      session.terminatedAt = now;
+      count++;
+    }
+    activeLiveSessions.clear();
+    console.log(`[TCT Security] Purged all ${count} active sessions.`);
+    res.json({ success: true, count });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // 9. Sync Projects & Data across multi-devices
 app.get("/api/sync/projects", (req, res) => {
   res.json({ success: true, projects: serverProjects });

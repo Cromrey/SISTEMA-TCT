@@ -46,7 +46,7 @@ import { TimelineGanttView } from './TimelineGanttView';
 import { GlobalPdfExportModal, PdfReportType } from './GlobalPdfExportModal';
 import { formatDateDDMMAA } from '../utils/dateFormatter';
 import { getProjectProgressInfo } from '../utils/projectProgress';
-import { getStoredUsers } from '../utils/authStorage';
+import { getStoredUsers, isProjectAssociatedWithUser } from '../utils/authStorage';
 import {
   ResponsiveContainer,
   BarChart,
@@ -281,14 +281,23 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   // Filter projects by Grouping, Specific Phase, Search, and EventType
   const filteredProjects = projects.filter(p => {
-    const q = searchQuery.toLowerCase();
-    const matchesSearch = 
+    const q = searchQuery.toLowerCase().trim();
+    const matchesSearch = !q || (
       p.title.toLowerCase().includes(q) ||
       p.uniqueCode.toLowerCase().includes(q) ||
       p.clientName.toLowerCase().includes(q) ||
       p.contractNumber.toLowerCase().includes(q) ||
       (p.quotationCode && p.quotationCode.toLowerCase().includes(q)) ||
-      (p.contractHolder && p.contractHolder.toLowerCase().includes(q));
+      (p.contractHolder && p.contractHolder.toLowerCase().includes(q)) ||
+      (p.createdByName && p.createdByName.toLowerCase().includes(q)) ||
+      (p.createdByUsername && p.createdByUsername.toLowerCase().includes(q)) ||
+      (p.createdByDni && p.createdByDni.includes(q)) ||
+      (p.contractHolderDni && p.contractHolderDni.includes(q)) ||
+      (p.assignedStaff && Array.isArray(p.assignedStaff) && p.assignedStaff.some(s => {
+        const sName = typeof s === 'string' ? s : (s && typeof s === 'object' ? s.name || '' : '');
+        return sName.toLowerCase().includes(q);
+      }))
+    );
 
     const matchesType = selectedTypeFilter === 'all' || p.eventType === selectedTypeFilter;
 
@@ -323,25 +332,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       }
     }
 
-    // User Filter
+    // User / Creator Filter
     const selectedUserObj = selectedUserFilter && selectedUserFilter !== 'all'
       ? effectiveUsersList.find(u => u.id === selectedUserFilter)
       : null;
 
-    const uName = selectedUserObj ? (selectedUserObj.username || '').toLowerCase() : '';
-    const uFullFirst = selectedUserObj ? (selectedUserObj.fullName || '').toLowerCase().split(' ')[0] : '';
-
-    const matchesUser = !selectedUserObj || (
-      (p.contractHolder && uName && p.contractHolder.toLowerCase().includes(uName)) ||
-      (p.contractHolder && uFullFirst && p.contractHolder.toLowerCase().includes(uFullFirst)) ||
-      (p.createdByName && uName && p.createdByName.toLowerCase().includes(uName)) ||
-      (p.createdByName && uFullFirst && p.createdByName.toLowerCase().includes(uFullFirst)) ||
-      (p.assignedStaff && Array.isArray(p.assignedStaff) && p.assignedStaff.some(s => {
-        const sName = typeof s === 'string' ? s : (s && typeof s === 'object' ? s.name || '' : '');
-        const sNameLower = sName.toLowerCase();
-        return (uName && sNameLower.includes(uName)) || (uFullFirst && sNameLower.includes(uFullFirst));
-      }))
-    );
+    const matchesUser = !selectedUserObj || isProjectAssociatedWithUser(p, selectedUserObj);
 
     return matchesSearch && matchesType && matchesGroup && matchesUser;
   });
@@ -556,22 +552,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
             {/* Individual user pills */}
             {effectiveUsersList.map((usr) => {
-              const usrName = (usr.username || '').toLowerCase();
-              const usrFullFirst = (usr.fullName || '').toLowerCase().split(' ')[0];
-
-              const userProjectsCount = projects.filter(p => {
-                const holderMatch = (p.contractHolder && usrName && p.contractHolder.toLowerCase().includes(usrName)) ||
-                                    (p.contractHolder && usrFullFirst && p.contractHolder.toLowerCase().includes(usrFullFirst));
-                const creatorMatch = (p.createdByName && usrName && p.createdByName.toLowerCase().includes(usrName)) ||
-                                     (p.createdByName && usrFullFirst && p.createdByName.toLowerCase().includes(usrFullFirst));
-                const staffMatch = p.assignedStaff && Array.isArray(p.assignedStaff) && p.assignedStaff.some(s => {
-                  const sName = typeof s === 'string' ? s : (s && typeof s === 'object' ? s.name || '' : '');
-                  const sNameLower = sName.toLowerCase();
-                  return (usrName && sNameLower.includes(usrName)) || (usrFullFirst && sNameLower.includes(usrFullFirst));
-                });
-                return holderMatch || creatorMatch || staffMatch;
-              }).length;
-
+              const userProjectsCount = projects.filter(p => isProjectAssociatedWithUser(p, usr)).length;
               const isSelected = selectedUserFilter === usr.id;
 
               return (

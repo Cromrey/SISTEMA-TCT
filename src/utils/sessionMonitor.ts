@@ -362,3 +362,15 @@ export async function logoutLiveSession(sessionId: string): Promise<void> {
   } catch (e) {}
   setCurrentSessionId(null);
 }
+
+// Purge all live sessions from server and client cache
+export async function purgeAllLiveSessions(): Promise<boolean> {
+  try {
+    await fetch('/api/sessions/clear-all', { method: 'POST' });
+  } catch (e) {}
+  cachedLiveSessions = [];
+  localStorage.removeItem(LIVE_SESSIONS_STORAGE_KEY);
+  setCurrentSessionId(null);
+  window.dispatchEvent(new CustomEvent(SESSIONS_REFRESHED_EVENT, { detail: [] }));
+  return true;
+}
