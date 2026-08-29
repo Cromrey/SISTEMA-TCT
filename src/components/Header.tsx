@@ -82,16 +82,10 @@ export const Header: React.FC<HeaderProps> = ({
       onLogout(true);
     }
   };
-  // Find current active user job title or cargo
-  const activeUser = allUsers.find(u => 
-    (currentRole === 'employee' && u.fullName === currentStaff.name) || 
-    (currentRole === 'admin' && u.role === 'admin') ||
-    u.id === currentUser?.id
-  ) || currentUser;
-
-  const currentJobTitle = currentRole === 'admin' 
-    ? 'Administrador General' 
-    : (currentStaff?.role || activeUser?.jobTitle || 'Técnico de Producción');
+  // Accurate active user resolution directly from authenticated session
+  const displayName = currentUser?.fullName || (currentRole === 'admin' ? 'Ing. Michael Romero' : (currentStaff?.name || 'Usuario TCT'));
+  const displayRole = currentUser?.role || currentRole;
+  const displayJobTitle = currentUser?.jobTitle || (displayRole === 'admin' ? 'Administrador General' : (currentStaff?.role || 'Asesor / Técnico'));
 
   const handleSelectUser = (userId: string) => {
     const selectedUser = allUsers.find(u => u.id === userId);
@@ -174,25 +168,25 @@ export const Header: React.FC<HeaderProps> = ({
             <div className="flex items-center bg-slate-950/90 p-1 sm:p-1.5 rounded-xl border border-slate-800 shadow-inner">
               <div className="flex items-center space-x-1.5 px-1.5 py-0.5">
                 <div className={`w-5 h-5 sm:w-6 sm:h-6 rounded-lg flex items-center justify-center text-[10px] font-black shrink-0 ${
-                  currentRole === 'admin' 
+                  displayRole === 'admin' 
                     ? 'bg-amber-500 text-slate-950 ring-1 ring-amber-400' 
                     : 'bg-blue-500 text-white ring-1 ring-blue-400'
                 }`}>
-                  {currentRole === 'admin' ? '🛡️' : '🎬'}
+                  {displayRole === 'admin' ? '🛡️' : '🎬'}
                 </div>
 
-                <div className="flex items-center space-x-1.5 max-w-[150px] sm:max-w-[220px]">
-                  <span className="text-xs font-black text-white truncate" title={currentUser?.fullName || 'Usuario TCT'}>
-                    {currentUser?.fullName || (currentRole === 'admin' ? 'Michael Romero (Administrador)' : currentStaff.name)}
+                <div className="flex items-center space-x-1.5 max-w-[160px] sm:max-w-[240px]">
+                  <span className="text-xs font-black text-white truncate" title={`${displayName} • ${displayJobTitle}`}>
+                    {displayName}
                   </span>
 
                   {/* Role / Cargo Badge right beside user */}
                   <span className={`hidden sm:inline-block px-2 py-0.5 rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-wider whitespace-nowrap shadow-xs ${
-                    currentRole === 'admin'
+                    displayRole === 'admin'
                       ? 'bg-amber-400/20 text-amber-300 border border-amber-400/40'
                       : 'bg-blue-500/20 text-blue-300 border border-blue-400/40'
                   }`}>
-                    {currentJobTitle}
+                    {displayJobTitle}
                   </span>
                 </div>
               </div>

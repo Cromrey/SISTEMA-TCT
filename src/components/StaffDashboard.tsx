@@ -95,9 +95,57 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
   const overallStaffProgress = myTotalSteps > 0 ? ((myDoneSteps / myTotalSteps) * 100).toFixed(2) : '0.00';
   const todayStr = new Date().toISOString().split('T')[0];
 
+  const employeeName = currentUser?.fullName || currentStaff.name;
+  const employeeJobTitle = currentUser?.jobTitle || currentStaff.role || 'Asesor Comercial / Técnico';
+  const employeeUsername = currentUser?.username ? `@${currentUser.username}` : '';
+  const employeeDni = currentUser?.dni ? `DNI: ${currentUser.dni}` : '';
+
   return (
     <div className="space-y-6">
       
+      {/* Personalized Welcome Banner for Authenticated Employee */}
+      <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white p-4 sm:p-5 rounded-3xl border border-slate-700/80 shadow-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex items-center space-x-3.5">
+          <div className="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center font-black text-xl shadow-inner ring-2 ring-blue-400 shrink-0">
+            🎬
+          </div>
+          <div>
+            <div className="flex items-center space-x-2 flex-wrap">
+              <span className="text-[10px] uppercase font-black tracking-wider bg-blue-500/20 text-blue-300 border border-blue-400/40 px-2 py-0.5 rounded-md">
+                Sesión de Empleado Activa
+              </span>
+              {employeeDni && (
+                <span className="text-[11px] font-mono text-slate-400 bg-slate-950 px-2 py-0.5 rounded-md border border-slate-800">
+                  {employeeDni}
+                </span>
+              )}
+            </div>
+            <h2 className="text-lg sm:text-xl font-black text-white mt-0.5 flex items-center gap-2">
+              <span>{employeeName}</span>
+              {employeeUsername && (
+                <span className="text-xs font-mono font-normal text-amber-300">
+                  {employeeUsername}
+                </span>
+              )}
+            </h2>
+            <p className="text-xs text-slate-300">
+              <strong className="text-amber-400">{employeeJobTitle}</strong> • Espacio privado de gestión de expedientes y cotizaciones
+            </p>
+          </div>
+        </div>
+
+        {onOpenNewProject && (
+          <button
+            type="button"
+            onClick={onOpenNewProject}
+            className="w-full sm:w-auto inline-flex items-center justify-center space-x-2 px-4 py-2.5 rounded-2xl bg-gradient-to-tr from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs shadow-md cursor-pointer transition-all active:scale-95 shrink-0"
+          >
+            <PlusCircle className="w-4 h-4" />
+            <span>Nueva Producción</span>
+          </button>
+        )}
+      </div>
+
       {/* KPI Cards Strip */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         
