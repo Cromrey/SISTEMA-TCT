@@ -6,7 +6,7 @@ const RULES_STORAGE_KEY = 'tct_master_rules_v1';
 export const INITIAL_CONTRACT_DESIGN: TCTContractDesign = {
   headerTitle: 'CORPORACIÓN TCT',
   headerSubtitle: 'Servicios Audiovisuales, Producción Cinematográfica & Fotografía Profesional',
-  headerLegalInfo: 'RUC: 20608941253 • Jr. Las Camelias 450, San Isidro, Lima • Tel: (01) 748-9200',
+  headerLegalInfo: 'RUC: 20608941253 • Av. Torre Tagle 185, Miraflores, Lima • Tel: +51 990 010 020',
   logoType: 'official',
   fontFamily: 'sans',
   primaryColor: '#0f172a',
@@ -15,7 +15,7 @@ export const INITIAL_CONTRACT_DESIGN: TCTContractDesign = {
   contractIntroText: 'Conste por el presente documento el contrato de servicios celebrado entre CORPORACIÓN TCT y EL CLIENTE.',
   clause4PreservationText: '* CORPORACIÓN TCT conservará los archivos MASTER y brutos, hasta un plazo de 03 días posteriores a la fecha programada de entrega del material. De no recoger en la fecha de entrega sólo se conservará el archivo MASTER.',
   internetPublishingAgreementText: 'EL CLIENTE declara que de forma libre, voluntaria y expresa la publicación, exhibición y difusión de extractos de los videos y fotografías del evento en las plataformas de internet, redes sociales y portafolio profesional de CORPORACIÓN TCT.',
-  footerText: 'Documento emitido formalmente por el Sistema Integrado de Gestión Audiovisual de Corporación TCT: SIGAT • Perú',
+  footerText: 'Sistema Integrado de Gestión Audiovisual de Corporación TCT: SIGAT • Perú',
   signerAdvisorRole: 'Director de Producción / Asesor Comercial'
 };
 
@@ -26,10 +26,10 @@ export const INITIAL_COMPANY_INFO: TCTCompanyInfo = {
   ruc: '20608941253',
   legalRepresentative: 'Ing. Michael RomeroReyes',
   productionDirector: 'Director de Producción / Asesor Comercial',
-  address: 'Av. Las Palmeras 451, Of. 302, Los Olivos, Lima - Perú',
-  fiscalAddress: 'Av. Las Palmeras 451, Of. 302, Los Olivos, Lima - Perú',
-  phoneMain: '+51 912 345 678',
-  phoneSecondary: '+51 987 654 321',
+  address: 'Av. Torre Tagle 185, Miraflores, Lima - Perú',
+  fiscalAddress: 'Av. Torre Tagle 185, Miraflores, Lima - Perú',
+  phoneMain: '+51 990 010 020',
+  phoneSecondary: '+51 990 010 020',
   email: 'contacto@corporaciontct.com',
   website: 'https://corporaciontct.com',
   contractMasterStorageDays: 5,
@@ -587,6 +587,18 @@ export const getStoredRules = (): TCTMasterRules => {
         templateFormats: parsed.templateFormats || INITIAL_TEMPLATE_FORMATS,
         contractDesign: parsed.contractDesign ? { ...INITIAL_CONTRACT_DESIGN, ...parsed.contractDesign } : INITIAL_CONTRACT_DESIGN
       };
+
+      // Clean old placeholder addresses
+      if (combined.companyInfo.address?.includes('Palmeras') || combined.companyInfo.address?.includes('Camelias')) {
+        combined.companyInfo.address = 'Av. Torre Tagle 185, Miraflores, Lima - Perú';
+        combined.companyInfo.fiscalAddress = 'Av. Torre Tagle 185, Miraflores, Lima - Perú';
+        combined.companyInfo.phoneMain = '+51 990 010 020';
+        combined.companyInfo.phoneSecondary = '+51 990 010 020';
+      }
+      if (combined.contractDesign.headerLegalInfo?.includes('Camelias') || combined.contractDesign.headerLegalInfo?.includes('Palmeras') || combined.contractDesign.headerLegalInfo?.includes('748-9200')) {
+        combined.contractDesign.headerLegalInfo = 'RUC: 20608941253 • Av. Torre Tagle 185, Miraflores, Lima • Tel: +51 990 010 020';
+      }
+
       memoryRulesCache = combined;
       return combined;
     }

@@ -872,17 +872,6 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
             <span className="text-[11px] text-slate-500 font-medium">
               Última actualización: {new Date(project.updatedAt).toLocaleString()}
             </span>
-            {onDeleteProject && currentRole === 'admin' && (
-              <button
-                type="button"
-                onClick={() => onDeleteProject(project.id)}
-                className="px-3 py-1.5 rounded-xl bg-red-600/10 hover:bg-red-600/20 text-red-700 text-xs font-bold transition-colors flex items-center gap-1.5 border border-red-300 cursor-pointer"
-                title="Eliminar este expediente de forma justificada"
-              >
-                <Trash2 className="w-3.5 h-3.5 text-red-600" />
-                <span>Eliminar Expediente</span>
-              </button>
-            )}
           </div>
 
           <div className="flex items-center space-x-2">

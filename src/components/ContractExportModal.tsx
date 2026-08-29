@@ -299,7 +299,7 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
                       {contractDesign.headerSubtitle || 'Servicios Audiovisuales, Producción Cinematográfica & Fotografía Profesional'}
                     </p>
                     <p className="text-[9px] text-slate-500 font-mono italic">
-                      {contractDesign.headerLegalInfo || 'RUC: 20608941253 • Jr. Las Camelias 450, San Isidro, Lima • Tel: (01) 748-9200'}
+                      {contractDesign.headerLegalInfo || 'RUC: 20608941253 • Av. Torre Tagle 185, Miraflores, Lima • WhatsApp / Tel: +51 990 010 020'}
                     </p>
                   </div>
                 </div>

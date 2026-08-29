@@ -37,6 +37,7 @@ import {
   getLastSyncTime,
   deleteAllContractsHistory,
   deleteProjectsByFilter,
+  deleteSingleProject,
   factoryResetAllSystemData
 } from '../utils/storage';
 import { 
@@ -322,9 +323,29 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
   };
 
   // --- Selective Deletion & Data Management State ---
+  const [selectedProjectIdToDelete, setSelectedProjectIdToDelete] = useState<string>('');
   const [deleteFilterDataType, setDeleteFilterDataType] = useState<'contracts' | 'quotations' | 'employees' | 'by_event_type' | 'archived_only'>('contracts');
   const [deleteFilterEventType, setDeleteFilterEventType] = useState<string>('all');
   const [deleteFilterStaffRole, setDeleteFilterStaffRole] = useState<'all' | 'employee' | 'admin'>('employee');
+
+  const handleDeleteSingleSelectedProject = () => {
+    if (!selectedProjectIdToDelete) {
+      notifyError('Por favor selecciona un expediente para eliminar.');
+      return;
+    }
+    const all = getStoredProjects();
+    const target = all.find(p => p.id === selectedProjectIdToDelete);
+    const targetTitle = target ? `${target.title} (${target.contractNumber || target.uniqueCode || target.clientName})` : 'este expediente';
+    
+    if (window.confirm(`¿Estás seguro de que deseas ELIMINAR DEFINITIVAMENTE el expediente "${targetTitle}"?\n\nEsta acción borrará el contrato, historial de 12 pasos y todos sus adjuntos.`)) {
+      deleteSingleProject(selectedProjectIdToDelete);
+      setSelectedProjectIdToDelete('');
+      const updated = getStoredProjects();
+      setProjectsList(updated);
+      if (onProjectsChange) onProjectsChange(updated);
+      notifySuccess(`🗑️ Expediente "${targetTitle}" eliminado exitosamente del sistema.`);
+    }
+  };
 
   // File input ref for JSON restore
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -4408,113 +4429,146 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
                   </h4>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   
-                  {/* Option A: Borrar Historial de Todos los Contratos */}
-                  <div className="bg-red-50/50 p-5 rounded-3xl border border-red-200 space-y-3 flex flex-col justify-between">
+                  {/* Option 1: Eliminar Expediente Individual (Exclusivo en Ventana de Reglas) */}
+                  <div className="bg-white p-4 rounded-3xl border-2 border-red-200 shadow-sm space-y-3 flex flex-col justify-between">
                     <div className="space-y-2">
-                      <div className="flex items-center space-x-2 text-red-700">
-                        <Trash2 className="w-5 h-5" />
+                      <div className="flex items-center space-x-2 text-red-600">
+                        <Trash2 className="w-4 h-4" />
                         <h5 className="font-black text-slate-900 text-xs sm:text-sm">
-                          Borrar Historial de Todos los Contratos
+                          Eliminar Expediente Individual
                         </h5>
                       </div>
-                      <p className="text-xs text-slate-600 leading-relaxed">
-                        Elimina el historial completo de contratos, eventos y cotizaciones de la base de datos local. Las cuentas de usuario y reglas no se alteran.
+                      <p className="text-[11px] text-slate-600 leading-tight">
+                        Selecciona un expediente específico para eliminarlo de la base de datos con su contrato y 12 pasos:
+                      </p>
+
+                      <div className="pt-1">
+                        <label className="text-[9.5px] font-black text-slate-500 uppercase block mb-1">
+                          Seleccionar Expediente:
+                        </label>
+                        <select
+                          value={selectedProjectIdToDelete}
+                          onChange={(e) => setSelectedProjectIdToDelete(e.target.value)}
+                          className="w-full bg-slate-50 border border-slate-300 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-800"
+                        >
+                          <option value="">-- Elegir Expediente / Contrato --</option>
+                          {projectsList.map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {p.contractNumber || p.uniqueCode || 'S/N'} • {p.clientName} ({p.eventType})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleDeleteSingleSelectedProject}
+                      disabled={!selectedProjectIdToDelete}
+                      className="w-full py-2 bg-red-600 hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-black text-xs rounded-xl transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer mt-1"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Eliminar Expediente</span>
+                    </button>
+                  </div>
+
+                  {/* Option 2: Borrar Historial de Todos los Contratos */}
+                  <div className="bg-red-50/50 p-4 rounded-3xl border border-red-200 space-y-3 flex flex-col justify-between">
+                    <div className="space-y-2">
+                      <div className="flex items-center space-x-2 text-red-700">
+                        <Trash2 className="w-4 h-4" />
+                        <h5 className="font-black text-slate-900 text-xs sm:text-sm">
+                          Vaciar Todos los Contratos
+                        </h5>
+                      </div>
+                      <p className="text-[11px] text-slate-600 leading-tight">
+                        Elimina el historial completo de contratos y eventos. Las cuentas de usuario y reglas no se alteran.
                       </p>
                     </div>
 
                     <button
                       onClick={handleDeleteAllContractsHistory}
-                      className="w-full py-2.5 bg-red-600 hover:bg-red-700 text-white font-black text-xs rounded-xl transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                      className="w-full py-2 bg-red-600 hover:bg-red-700 text-white font-black text-xs rounded-xl transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-3.5 h-3.5" />
                       <span>Vaciar Todos los Contratos</span>
                     </button>
                   </div>
 
-                  {/* Option B: Borrado Selectivo con Filtros */}
-                  <div className="bg-slate-50 p-5 rounded-3xl border border-slate-300 space-y-3 flex flex-col justify-between">
-                    <div className="space-y-2.5">
+                  {/* Option 3: Borrado Selectivo con Filtros */}
+                  <div className="bg-slate-50 p-4 rounded-3xl border border-slate-300 space-y-3 flex flex-col justify-between">
+                    <div className="space-y-2">
                       <div className="flex items-center space-x-2 text-amber-700">
-                        <Sliders className="w-5 h-5" />
+                        <Sliders className="w-4 h-4" />
                         <h5 className="font-black text-slate-900 text-xs sm:text-sm">
-                          Borrado Selectivo con Filtros
+                          Borrado Selectivo
                         </h5>
                       </div>
-                      <p className="text-[11px] text-slate-500">
-                        Elimina únicamente los elementos específicos que selecciones mediante filtros:
+                      <p className="text-[11px] text-slate-500 leading-tight">
+                        Elimina elementos filtrados por criterio:
                       </p>
 
-                      <div className="space-y-2 pt-1">
-                        <div>
-                          <label className="text-[10px] font-black text-slate-600 uppercase block mb-1">
-                            ¿Qué deseas borrar?
-                          </label>
-                          <select
-                            value={deleteFilterDataType}
-                            onChange={(e: any) => setDeleteFilterDataType(e.target.value)}
-                            className="w-full bg-white border border-slate-300 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-800"
-                          >
-                            <option value="contracts">Solo Contratos Firmados (con N°)</option>
-                            <option value="quotations">Solo Cotizaciones Preliminares</option>
-                            <option value="employees">Solo Cuentas de Empleados Técnicos</option>
-                            <option value="by_event_type">Solo Proyectos por Tipo de Evento</option>
-                            <option value="archived_only">Solo Proyectos Archivados / 12 Pasos</option>
-                          </select>
-                        </div>
+                      <div className="space-y-1.5 pt-0.5">
+                        <select
+                          value={deleteFilterDataType}
+                          onChange={(e: any) => setDeleteFilterDataType(e.target.value)}
+                          className="w-full bg-white border border-slate-300 rounded-xl px-2 py-1 text-xs font-bold text-slate-800"
+                        >
+                          <option value="contracts">Solo Contratos Firmados</option>
+                          <option value="quotations">Solo Cotizaciones</option>
+                          <option value="employees">Solo Cuentas de Empleados</option>
+                          <option value="by_event_type">Por Tipo de Evento</option>
+                          <option value="archived_only">Solo Archivados / 12 Pasos</option>
+                        </select>
 
                         {deleteFilterDataType === 'by_event_type' && (
-                          <div>
-                            <label className="text-[10px] font-black text-slate-600 uppercase block mb-1">
-                              Tipo de Evento a Eliminar:
-                            </label>
-                            <select
-                              value={deleteFilterEventType}
-                              onChange={(e) => setDeleteFilterEventType(e.target.value)}
-                              className="w-full bg-white border border-slate-300 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-800"
-                            >
-                              <option value="all">Seleccionar Tipo...</option>
-                              <option value="Boda">Bodas</option>
-                              <option value="XV Años">XV Años</option>
-                              <option value="Evento Corporativo">Corporativos</option>
-                              <option value="Graduación">Graduaciones</option>
-                              <option value="Concierto / Festival">Conciertos</option>
-                            </select>
-                          </div>
+                          <select
+                            value={deleteFilterEventType}
+                            onChange={(e) => setDeleteFilterEventType(e.target.value)}
+                            className="w-full bg-white border border-slate-300 rounded-xl px-2 py-1 text-xs font-bold text-slate-800"
+                          >
+                            <option value="all">Seleccionar Tipo...</option>
+                            <option value="Boda">Bodas</option>
+                            <option value="XV Años">XV Años</option>
+                            <option value="Evento Corporativo">Corporativos</option>
+                            <option value="Graduación">Graduaciones</option>
+                            <option value="Concierto / Festival">Conciertos</option>
+                          </select>
                         )}
                       </div>
                     </div>
 
                     <button
                       onClick={handleExecuteSelectiveDeletion}
-                      className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-amber-400 font-black text-xs rounded-xl transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer mt-2"
+                      className="w-full py-2 bg-slate-900 hover:bg-slate-800 text-amber-400 font-black text-xs rounded-xl transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer mt-1"
                     >
-                      <Trash2 className="w-4 h-4 text-amber-400" />
-                      <span>Ejecutar Borrado Filtrado</span>
+                      <Trash2 className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Ejecutar Borrado</span>
                     </button>
                   </div>
 
-                  {/* Option C: Borrar TODOS los Datos (Factory Reset Total) */}
-                  <div className="bg-gradient-to-br from-red-950 to-slate-950 text-white p-5 rounded-3xl border border-red-900 space-y-3 flex flex-col justify-between shadow-lg">
+                  {/* Option 4: Borrar TODOS los Datos (Factory Reset Total) */}
+                  <div className="bg-gradient-to-br from-red-950 to-slate-950 text-white p-4 rounded-3xl border border-red-900 space-y-3 flex flex-col justify-between shadow-lg">
                     <div className="space-y-2">
                       <div className="flex items-center space-x-2 text-red-400">
-                        <AlertCircle className="w-5 h-5" />
+                        <AlertCircle className="w-4 h-4" />
                         <h5 className="font-black text-white text-xs sm:text-sm">
-                          Borrar TODOS los Datos (Factory Reset)
+                          Factory Reset Total
                         </h5>
                       </div>
-                      <p className="text-xs text-red-200/80 leading-relaxed">
-                        Purga total: borra todos los perfiles de empleados, contratos, cotizaciones, cargos, reglas personalizadas y archivos adjuntos.
+                      <p className="text-[11px] text-red-200/80 leading-tight">
+                        Purga total: perfiles, contratos, cotizaciones, cargos, reglas y adjuntos.
                       </p>
                     </div>
 
                     <button
                       onClick={handleFactoryResetAllData}
-                      className="w-full py-2.5 bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-700 hover:to-rose-800 text-white font-black text-xs rounded-xl transition-all shadow-md flex items-center justify-center gap-1.5 cursor-pointer"
+                      className="w-full py-2 bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-700 hover:to-rose-800 text-white font-black text-xs rounded-xl transition-all shadow-md flex items-center justify-center gap-1.5 cursor-pointer"
                     >
-                      <AlertCircle className="w-4 h-4 text-white" />
-                      <span>Reinicio Total de Fábrica</span>
+                      <AlertCircle className="w-3.5 h-3.5 text-white" />
+                      <span>Reinicio de Fábrica</span>
                     </button>
                   </div>
 

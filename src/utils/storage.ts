@@ -247,6 +247,19 @@ export const deleteProjectsByFilter = (options: {
 };
 
 /**
+ * Deletes a single project by ID with immediate persistence and event dispatch.
+ */
+export const deleteSingleProject = (projectId: string): boolean => {
+  const current = getStoredProjects();
+  const remaining = current.filter(p => p.id !== projectId);
+  if (remaining.length !== current.length) {
+    saveProjects(remaining);
+    return true;
+  }
+  return false;
+};
+
+/**
  * Master Factory Reset: Purges all project history, resets users, resets rules to factory default.
  */
 export const factoryResetAllSystemData = (): void => {

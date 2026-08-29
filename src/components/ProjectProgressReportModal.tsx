@@ -17,7 +17,13 @@ import {
   Radio,
   Scissors,
   CheckCircle2,
-  HardDrive
+  HardDrive,
+  Package,
+  Sparkles,
+  Send,
+  Tv,
+  Gift,
+  BookOpen
 } from 'lucide-react';
 
 interface ProjectProgressReportModalProps {
@@ -81,18 +87,18 @@ const PHASES_INFO: Record<number, PhaseStyle> = {
 
 // 12 Sequential Official Steps mapped to their phase number
 const OFFICIAL_STEPS_INFO = [
-  { stepNumber: 1, phaseNumber: 1, title: 'Cotización Oficial TCT', defaultStaff: 'Michael Romero (Asesor Comercial)', defaultChecks: 3 },
-  { stepNumber: 2, phaseNumber: 1, title: 'Adelanto en Efectivo', defaultStaff: 'Tesorería & Caja TCT', defaultChecks: 3 },
-  { stepNumber: 3, phaseNumber: 1, title: 'Firma de Contrato', defaultStaff: 'Carlos Mendoza (Director General)', defaultChecks: 3 },
-  { stepNumber: 4, phaseNumber: 2, title: 'Diseño del Flyer', defaultStaff: 'Álvaro Ruiz (Diseñador Gráfico)', defaultChecks: 3 },
-  { stepNumber: 5, phaseNumber: 2, title: 'Logística de Viaje', defaultStaff: 'Diego Castro (Coordinador Logística)', defaultChecks: 4 },
-  { stepNumber: 6, phaseNumber: 3, title: 'Viaje y Filmación Técnica', defaultStaff: 'Carlos Mendoza (Director de Cámara)', defaultChecks: 4 },
-  { stepNumber: 7, phaseNumber: 3, title: 'Regla de Cobro en Campo (Límite: 7:00 PM)', defaultStaff: 'Carlos Mendoza (Cobro en Campo)', defaultChecks: 3 },
-  { stepNumber: 8, phaseNumber: 3, title: 'Resguardo de Material (Ingest)', defaultStaff: 'Pedro Alva (Técnico Ingest TCT)', defaultChecks: 3 },
-  { stepNumber: 9, phaseNumber: 4, title: 'Edición y Entrega en USB', defaultStaff: 'Editor Audiovisual Senior', defaultChecks: 4 },
-  { stepNumber: 10, phaseNumber: 4, title: 'Publicación Garantizada', defaultStaff: 'Lucía Ramos (Community Manager)', defaultChecks: 3 },
-  { stepNumber: 11, phaseNumber: 5, title: 'Entrega de Fotolibro', defaultStaff: 'Martín Vega (Especialista Fotolibro)', defaultChecks: 4 },
-  { stepNumber: 12, phaseNumber: 6, title: 'Borrado de Archivos', defaultStaff: 'Michael Romero (Auditor TCT)', defaultChecks: 3 },
+  { stepNumber: 1, phaseNumber: 1, title: 'Cotización Oficial TCT', defaultChecks: 3 },
+  { stepNumber: 2, phaseNumber: 1, title: 'Adelanto en Efectivo', defaultChecks: 3 },
+  { stepNumber: 3, phaseNumber: 1, title: 'Firma de Contrato', defaultChecks: 3 },
+  { stepNumber: 4, phaseNumber: 2, title: 'Diseño del Flyer', defaultChecks: 3 },
+  { stepNumber: 5, phaseNumber: 2, title: 'Logística de Viaje', defaultChecks: 4 },
+  { stepNumber: 6, phaseNumber: 3, title: 'Viaje y Filmación Técnica', defaultChecks: 4 },
+  { stepNumber: 7, phaseNumber: 3, title: 'Regla de Cobro en Campo (Límite: 7:00 PM)', defaultChecks: 3 },
+  { stepNumber: 8, phaseNumber: 3, title: 'Resguardo de Material (Ingest)', defaultChecks: 3 },
+  { stepNumber: 9, phaseNumber: 4, title: 'Edición y Entrega en USB', defaultChecks: 4 },
+  { stepNumber: 10, phaseNumber: 4, title: 'Publicación Garantizada', defaultChecks: 3 },
+  { stepNumber: 11, phaseNumber: 5, title: 'Entrega de Fotolibro', defaultChecks: 4 },
+  { stepNumber: 12, phaseNumber: 6, title: 'Borrado de Archivos', defaultChecks: 3 },
 ];
 
 export const ProjectProgressReportModal: React.FC<ProjectProgressReportModalProps> = ({
@@ -105,6 +111,19 @@ export const ProjectProgressReportModal: React.FC<ProjectProgressReportModalProp
   const systemUsers = useMemo(() => getStoredUsers(), []);
   const masterRules = useMemo(() => getStoredRules(), []);
   const contractDesign = masterRules.contractDesign;
+
+  const companyLegalInfo = useMemo(() => {
+    const raw = contractDesign?.headerLegalInfo;
+    if (raw && !raw.includes('Camelias') && !raw.includes('Palmeras')) {
+      return raw;
+    }
+    const addr = masterRules?.companyInfo?.address && !masterRules.companyInfo.address.includes('Palmeras')
+      ? masterRules.companyInfo.address
+      : 'Av. Torre Tagle 185, Miraflores, Lima';
+    const phone = masterRules?.companyInfo?.phoneMain || '+51 990 010 020';
+    const ruc = masterRules?.companyInfo?.ruc || '20608941253';
+    return `RUC: ${ruc} • ${addr} • WhatsApp / Tel: ${phone}`;
+  }, [contractDesign, masterRules]);
 
   const matchedUser = useMemo(() => {
     const createdLower = (project.createdByName || '').toLowerCase();
@@ -190,10 +209,124 @@ export const ProjectProgressReportModal: React.FC<ProjectProgressReportModalProp
     return defaultStaff;
   }, [project]);
 
+  // Deliverables committed in the New Production Form
+  const deliverablesList = useMemo(() => {
+    const list: {
+      title: string;
+      desc: string;
+      badge: string;
+      icon: React.ReactNode;
+      badgeColor: string;
+    }[] = [];
+
+    // 1. Video Master Cine 4K
+    list.push({
+      title: 'Video Master Cine 4K UHD',
+      desc: 'Edición cinematográfica profesional en 4K UHD, corrección de color y resguardo en servidor TCT.',
+      badge: 'Master Cine 4K',
+      badgeColor: 'bg-amber-100 text-amber-900 border-amber-300',
+      icon: <Video className="w-3.5 h-3.5 text-amber-700" />
+    });
+
+    // 2. Memoria USB
+    const isNoUsb = !project.usbCapacity || project.usbCapacity === 'NO_USB' || project.usbCapacity.toLowerCase().includes('no');
+    list.push({
+      title: isNoUsb ? 'Entrega Digital / USB Provisto por Cliente' : `Memoria USB 3.2 (${project.usbCapacity || project.usbSpecification || '128GB'})`,
+      desc: isNoUsb 
+        ? 'El cliente proveerá su propia unidad de almacenamiento físico o descarga segura por enlace cloud.'
+        : 'Memoria física USB 3.2 de alta velocidad con el material audiovisual master editado y archivos brutos.',
+      badge: isNoUsb ? 'USB Cliente' : `USB ${project.usbCapacity || '128GB'}`,
+      badgeColor: isNoUsb ? 'bg-slate-100 text-slate-700 border-slate-300' : 'bg-blue-100 text-blue-900 border-blue-300',
+      icon: <HardDrive className="w-3.5 h-3.5 text-blue-700" />
+    });
+
+    // 3. Flyer Digital Promocional
+    if (project.includesFlyerDesign || (project.flyerAnticipationDays && project.flyerAnticipationDays > 0)) {
+      list.push({
+        title: 'Diseño de Flyer Publicitario Digital',
+        desc: `01 Flyer gráfico digital promocional entregado con ${project.flyerAnticipationDays || 20} días de anticipación para redes.`,
+        badge: 'Flyer Digital',
+        badgeColor: 'bg-emerald-100 text-emerald-900 border-emerald-300',
+        icon: <FileText className="w-3.5 h-3.5 text-emerald-700" />
+      });
+    }
+
+    // 4. Transmisión en Vivo Streaming HD
+    if (project.includesLiveStreaming || (project.liveStreamPrice && Number(project.liveStreamPrice) > 0)) {
+      const isFree = Number(project.liveStreamPrice || 0) === 0;
+      list.push({
+        title: 'Transmisión en Vivo Streaming HD',
+        desc: isFree 
+          ? 'Cobertura multicámara y enlace streaming en directo incluido como cortesía promocional.'
+          : `Transmisión streaming en vivo por plataformas oficiales (Tarifa: S/. ${Number(project.liveStreamPrice).toFixed(2)}).`,
+        badge: isFree ? 'Streaming Cortesía' : 'Streaming HD',
+        badgeColor: 'bg-indigo-100 text-indigo-900 border-indigo-300',
+        icon: <Radio className="w-3.5 h-3.5 text-indigo-700" />
+      });
+    }
+
+    // 5. Fotolibro / Fotobook Impreso
+    if (project.includesPhotobook || project.photobookPagesCount) {
+      list.push({
+        title: `Fotobook Impreso (${project.photobookPagesCount || 20} páginas)`,
+        desc: 'Fotolibro empastado de lujo, papel fotográfico premium, acabado mate/brillante y maquetación exclusiva.',
+        badge: `Fotobook ${project.photobookPagesCount || 20} Págs`,
+        badgeColor: 'bg-rose-100 text-rose-900 border-rose-300',
+        icon: <BookOpen className="w-3.5 h-3.5 text-rose-700" />
+      });
+    }
+
+    // 6. Cobertura con Dron Cine 4K
+    if (project.includesDrone) {
+      list.push({
+        title: 'Cobertura Aérea con Dron Cine 4K',
+        desc: 'Tomas aéreas panorámicas cinematográficas en ultra alta definición con piloto acreditado TCT.',
+        badge: 'Dron Cine 4K',
+        badgeColor: 'bg-cyan-100 text-cyan-900 border-cyan-300',
+        icon: <Send className="w-3.5 h-3.5 text-cyan-700" />
+      });
+    }
+
+    // 7. Sesión Fotográfica Profesional
+    if (project.includesPhotoshoot) {
+      list.push({
+        title: 'Sesión Fotográfica Profesional',
+        desc: 'Sesión previa o protocolar con edición artística de fotografías en alta resolución y retoque de color.',
+        badge: 'Sesión Foto HD',
+        badgeColor: 'bg-teal-100 text-teal-900 border-teal-300',
+        icon: <Camera className="w-3.5 h-3.5 text-teal-700" />
+      });
+    }
+
+    // 8. Spot Publicitario de Audio/Video
+    if (project.includesAudioVideoSpot) {
+      list.push({
+        title: 'Spot Publicitario Video / Audio',
+        desc: `Spot promocional de ${project.spotDuration || '30 seg'} adaptado para pantallas gigantes y redes sociales.`,
+        badge: 'Spot Publicitario',
+        badgeColor: 'bg-purple-100 text-purple-900 border-purple-300',
+        icon: <Tv className="w-3.5 h-3.5 text-purple-700" />
+      });
+    }
+
+    // 9. Obsequio Especial Corporativo
+    if (project.giftIncluded) {
+      list.push({
+        title: 'Obsequio Especial Corporativo TCT',
+        desc: 'Detalle institucional de cortesía entregado formalmente con el paquete de entregables finales.',
+        badge: 'Obsequio TCT',
+        badgeColor: 'bg-amber-100 text-amber-900 border-amber-300',
+        icon: <Gift className="w-3.5 h-3.5 text-amber-700" />
+      });
+    }
+
+    return list;
+  }, [project]);
+
   // Role color assignment helper
   const getRoleBadgeStyle = (roleName: string, index: number) => {
     const roleLower = roleName.toLowerCase();
-    if (roleLower.includes('director') || roleLower.includes('cámara')) {
+    if (roleLower.includes('cámara') || roleLower.includes('director')) {
       return {
         cardBg: 'bg-blue-50/90 border-blue-200 text-blue-900',
         badgeBg: 'bg-blue-600 text-white',
@@ -298,44 +431,44 @@ export const ProjectProgressReportModal: React.FC<ProjectProgressReportModalProp
                 </span>
               </h2>
               <p className="text-[10px] text-slate-400">
-                Ficha técnica oficial de auditoría secuencial y equipo de producción
+                Ficha Técnica, Auditoría de Fases y Resumen de Entregables
               </p>
             </div>
           </div>
 
           <div className="flex items-center space-x-2">
-            {/* Download PDF Button */}
-            <button
-              onClick={handleDownloadPdf}
-              disabled={isGeneratingPdf}
-              type="button"
-              className="px-3.5 py-1.5 sm:py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-xs font-black rounded-xl shadow-md flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
-              title="Descargar Reporte en formato PDF A4 Oficial (Sin Marca de Agua)"
-            >
-              {isGeneratingPdf ? (
-                <Loader2 className="w-4 h-4 animate-spin text-slate-950" />
-              ) : (
-                <Download className="w-4 h-4 text-slate-950" />
-              )}
-              <span>{isGeneratingPdf ? 'Generando PDF...' : 'Descargar PDF'}</span>
-            </button>
-
-            {/* Send WhatsApp Peru 990010020 */}
             <button
               onClick={handleSendWhatsApp}
-              type="button"
-              className="px-3 py-1.5 sm:py-2 bg-[#25D366] hover:bg-[#20bd5a] text-white font-bold text-xs rounded-xl shadow-md flex items-center gap-1.5 transition-all cursor-pointer"
-              title="Compartir reporte a WhatsApp Perú (990010020)"
+              className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-xs flex items-center space-x-1.5 cursor-pointer"
+              title="Compartir resumen por WhatsApp"
             >
-              <MessageCircle className="w-3.5 h-3.5" />
+              <MessageCircle className="w-4 h-4" />
               <span className="hidden sm:inline">WhatsApp</span>
             </button>
 
-            {/* Close Button */}
+            <button
+              onClick={handleDownloadPdf}
+              disabled={isGeneratingPdf}
+              className="px-4 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black transition-all shadow-xs flex items-center space-x-1.5 cursor-pointer disabled:opacity-50"
+              title="Descargar Reporte Completo en PDF"
+            >
+              {isGeneratingPdf ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Generando PDF...</span>
+                </>
+              ) : (
+                <>
+                  <Download className="w-4 h-4" />
+                  <span>Imprimir / PDF</span>
+                </>
+              )}
+            </button>
+
             <button
               onClick={onClose}
-              type="button"
-              className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+              className="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors cursor-pointer"
+              title="Cerrar Reporte"
             >
               <X className="w-5 h-5" />
             </button>
@@ -368,7 +501,7 @@ export const ProjectProgressReportModal: React.FC<ProjectProgressReportModalProp
                       PRODUCCIÓN AUDIOVISUAL, EVENTOS & MONITOREO DE ENTREGABLES
                     </p>
                     <p className="text-[8.5px] sm:text-[9px] text-slate-500 font-medium leading-tight mt-0.5">
-                      RUC: 20608941253 • Jr. Las Camelias 450, San Isidro, Lima • Tel: (01) 748-9200
+                      {companyLegalInfo}
                     </p>
                   </div>
                 </div>
@@ -428,44 +561,37 @@ export const ProjectProgressReportModal: React.FC<ProjectProgressReportModalProp
               
               {/* Column 1: Client Data (Jalado del formulario de producción) */}
               <div className="bg-slate-50/80 border border-slate-200/90 rounded-xl p-2.5 space-y-1">
-                <span className="text-[8.5px] font-bold text-slate-400 uppercase tracking-wider block">
-                  DATOS DEL CLIENTE
+                <span className="text-[8.5px] font-black text-slate-400 uppercase tracking-wider block">
+                  DATOS DEL CONTRATANTE
                 </span>
                 <p className="text-xs font-black text-slate-950 leading-tight">
                   {project.clientName}
                 </p>
-                <p className="text-[9.5px] text-slate-600 font-mono">
-                  DNI/RUC: <strong className="text-slate-800">{project.clientDniRuc || project.clientDni || 'No registrado'}</strong>
-                </p>
-                <p className="text-[9.5px] text-slate-600">
-                  Tel: <strong className="text-slate-800">{project.clientPhone || '+51 987654321'}</strong>
-                </p>
-                <p className="text-[9.5px] text-slate-600 truncate">
-                  Dir: <span className="text-slate-700">{project.clientAddress || 'Lima, Perú'}</span>
-                </p>
+                <div className="space-y-0.5 text-[9.5px] text-slate-600">
+                  <p>DNI / RUC: <strong className="text-slate-900 font-mono">{project.clientDniRuc || project.clientDni || 'No registrado'}</strong></p>
+                  <p>Teléfono: <strong className="text-slate-900 font-mono">{project.clientPhone || '+51 987 654 321'}</strong></p>
+                  {project.clientEmail && <p className="truncate">Email: {project.clientEmail}</p>}
+                </div>
               </div>
 
-              {/* Column 2: Event Details */}
+              {/* Column 2: Event Logistics & Schedule */}
               <div className="bg-slate-50/80 border border-slate-200/90 rounded-xl p-2.5 space-y-1">
-                <span className="text-[8.5px] font-bold text-slate-400 uppercase tracking-wider block">
-                  DETALLES DEL EVENTO
+                <span className="text-[8.5px] font-black text-slate-400 uppercase tracking-wider block">
+                  LOGÍSTICA & HORARIOS DEL EVENTO
                 </span>
-                <p className="text-xs font-black text-slate-950 font-mono leading-tight">
-                  {project.eventDate}
+                <p className="text-[10.5px] font-bold text-slate-900 leading-tight">
+                  {project.eventDate} ({project.eventCity || project.locationCity || 'Lima'})
                 </p>
-                <p className="text-[9px] text-slate-600 leading-tight">
-                  Horario: {scheduleFormatted}
-                </p>
-                <p className="text-[9.5px] text-slate-600 truncate">
-                  Locación: <strong className="text-slate-800">{project.eventLocation || project.location || 'Salón de Eventos / Lima'}</strong>
-                </p>
-                <p className="text-[9.5px] text-slate-600 truncate">
-                  Dirección: <span className="text-slate-700">{project.eventAddress || project.eventLocation || project.location || 'Lima, Perú'}</span>
-                </p>
+                <div className="space-y-0.5 text-[9.5px] text-slate-600">
+                  <p className="truncate">Locación: <strong className="text-slate-800">{project.eventLocation || project.locationAddress || 'Local Principal'}</strong></p>
+                  <p className="text-[8.5px] text-slate-700 font-mono truncate">
+                    Horario: {scheduleFormatted}
+                  </p>
+                </div>
               </div>
 
-              {/* Column 3: Financial Status (Dark Container) */}
-              <div className="bg-slate-950 text-white rounded-xl p-2.5 space-y-1 flex flex-col justify-between shadow-xs border border-slate-800">
+              {/* Column 3: Financial Summary (S/.) */}
+              <div className="bg-slate-950 text-white rounded-xl p-2.5 space-y-1 shadow-xs">
                 <span className="text-[8.5px] font-black text-amber-400 uppercase tracking-wider block">
                   ESTADO ECONÓMICO (S/.)
                 </span>
@@ -546,15 +672,17 @@ export const ProjectProgressReportModal: React.FC<ProjectProgressReportModalProp
                     let stepPercentage = 0;
                     if (isCompleted) {
                       stepPercentage = 100;
-                    } else if (totalStepItems > 0) {
+                    } else if (totalStepItems > 0 && (checkedChecks > 0 || actualAttachmentsCount > 0)) {
                       stepPercentage = Number(((completedStepItems / totalStepItems) * 100).toFixed(2));
                     }
                     stepPercentage = Math.min(100, Math.max(0, stepPercentage));
                     const formattedStepPercentage = `${stepPercentage.toFixed(2)}%`;
 
-                    // Last updated user and timestamp
-                    const responsibleName = stepData?.lastUpdatedBy || stepData?.completedBy || stepData?.responsibleStaff || stepMeta.defaultStaff;
-                    const timestamp = stepData?.lastUpdatedAt || stepData?.completedAt;
+                    // Exact user responsible logic:
+                    // Only show if the step actually has progress, and only the user who made the last change
+                    const hasProgress = isCompleted || stepPercentage > 0;
+                    const rawResponsible = (stepData?.lastUpdatedBy || stepData?.completedBy || '').trim();
+                    const timestamp = (stepData?.lastUpdatedAt || stepData?.completedAt || '').trim();
 
                     return (
                       <div 
@@ -632,22 +760,28 @@ export const ProjectProgressReportModal: React.FC<ProjectProgressReportModalProp
                           )}
                         </div>
 
-                        {/* 5. Responsable / Verificación (Nombre del usuario que realizó el último cambio + Fecha y Hora) */}
+                        {/* 5. Responsable / Verificación (Solo el usuario del último cambio si hay avance) */}
                         <div className="col-span-2 text-[8px] leading-tight truncate">
-                          <p className="font-bold text-slate-900 truncate" title={responsibleName}>
-                            {responsibleName}
-                          </p>
-                          {timestamp ? (
-                            <p className="text-[7px] text-slate-500 font-mono flex items-center gap-0.5 truncate mt-0.5">
-                              <span className={isCompleted ? 'text-emerald-700 font-bold' : 'text-amber-700 font-bold'}>
-                                {isCompleted ? '✓' : '⚡'}
-                              </span>
-                              <span className="truncate">{timestamp}</span>
-                            </p>
+                          {hasProgress && rawResponsible ? (
+                            <>
+                              <p className="font-bold text-slate-900 truncate" title={rawResponsible}>
+                                {rawResponsible}
+                              </p>
+                              {timestamp ? (
+                                <p className="text-[7px] text-slate-500 font-mono flex items-center gap-0.5 truncate mt-0.5">
+                                  <span className={isCompleted ? 'text-emerald-700 font-bold' : 'text-amber-700 font-bold'}>
+                                    {isCompleted ? '✓' : '⚡'}
+                                  </span>
+                                  <span className="truncate">{timestamp}</span>
+                                </p>
+                              ) : (
+                                <p className="text-[7px] text-slate-400 italic mt-0.5">
+                                  {isCompleted ? 'Validado OK' : 'En progreso'}
+                                </p>
+                              )}
+                            </>
                           ) : (
-                            <p className="text-[7px] text-slate-400 italic mt-0.5">
-                              {isCompleted ? 'Validado OK' : 'En espera'}
-                            </p>
+                            <span className="text-slate-300 text-[9px] font-mono select-none">-</span>
                           )}
                         </div>
 
@@ -660,7 +794,6 @@ export const ProjectProgressReportModal: React.FC<ProjectProgressReportModalProp
 
             {/* =========================================================
                 TÉCNICOS ASIGNADOS (EQUIPO DE PRODUCCIÓN CON COLORES)
-                (Reemplaza el antiguo cuadro de Garantías & Plazos)
                 ========================================================= */}
             <div className="bg-slate-50/90 border border-slate-200 rounded-xl p-2.5 space-y-1.5 text-[9px]">
               <div className="flex items-center justify-between">
@@ -716,6 +849,49 @@ export const ProjectProgressReportModal: React.FC<ProjectProgressReportModalProp
               )}
             </div>
 
+            {/* =========================================================
+                ENTREGABLES & SERVICIOS COMPROMETIDOS SEGÚN EXPEDIENTE
+                (Jalados automáticamente del formulario de Nueva Producción)
+                ========================================================= */}
+            <div className="bg-slate-50/90 border border-slate-200 rounded-xl p-2.5 space-y-1.5 text-[9px]">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-1.5 text-slate-950 font-black uppercase text-[8.5px] tracking-wider">
+                  <Package className="w-3.5 h-3.5 text-[#d97706]" />
+                  <span>ENTREGABLES & SERVICIOS COMPROMETIDOS EN EL EXPEDIENTE</span>
+                </div>
+                <span className="text-[7.5px] font-mono text-slate-500 font-medium">
+                  {deliverablesList.length} Entregables Registrados
+                </span>
+              </div>
+
+              {/* Grid of Deliverables Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-1.5 pt-0.5">
+                {deliverablesList.map((deliv, idx) => (
+                  <div 
+                    key={`deliv-${idx}`}
+                    className="p-1.5 rounded-lg border border-slate-200 bg-white shadow-2xs flex items-start gap-1.5"
+                  >
+                    <div className="p-1 rounded-md bg-slate-50 border border-slate-200 shrink-0 mt-0.5">
+                      {deliv.icon}
+                    </div>
+                    <div className="space-y-0.5 min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-1">
+                        <p className="font-black text-slate-900 text-[8px] truncate">
+                          {deliv.title}
+                        </p>
+                        <span className={`px-1 py-0.2 rounded text-[6px] font-bold border uppercase shrink-0 ${deliv.badgeColor}`}>
+                          {deliv.badge}
+                        </span>
+                      </div>
+                      <p className="text-[7px] text-slate-500 leading-tight line-clamp-2">
+                        {deliv.desc}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             {/* Full-Width Thick Divider */}
             <div className="h-0.5 bg-slate-950 w-full" />
 
@@ -723,13 +899,12 @@ export const ProjectProgressReportModal: React.FC<ProjectProgressReportModalProp
                 SECCIÓN DE FIRMAS Y CONFORMIDADES (TCT Y CLIENTE)
                 (Jalados automáticamente de los datos de Nueva Producción)
                 ========================================================= */}
-            <div className="pt-2">
+            <div className="pt-1 space-y-3">
               <div className="grid grid-cols-2 gap-8 text-center">
                 
-                {/* TCT Sello & Firma Asesor / Director */}
+                {/* TCT Asesor / Director */}
                 <div className="flex flex-col items-center">
                   <div className="w-48 border-t-2 border-slate-900 mb-1" />
-                  <span className="text-[7.5px] text-slate-400 italic mb-0.5">Firma & Sello Corporativo</span>
                   <p className="font-black text-slate-950 text-[9.5px] uppercase tracking-tight">
                     {contractDesign?.headerTitle || 'CORPORACIÓN TCT S.A.C.'}
                   </p>
@@ -738,10 +913,9 @@ export const ProjectProgressReportModal: React.FC<ProjectProgressReportModalProp
                   <p className="text-[8px] text-slate-500 font-mono">DNI: {advisorDni}</p>
                 </div>
 
-                {/* Cliente Firma (Jalado del cliente de Nueva Producción) */}
+                {/* Cliente (Jalado del cliente de Nueva Producción) */}
                 <div className="flex flex-col items-center">
                   <div className="w-48 border-t-2 border-slate-900 mb-1" />
-                  <span className="text-[7.5px] text-slate-400 italic mb-0.5">Firma del Contratante</span>
                   <p className="font-black text-slate-950 text-[9.5px] uppercase tracking-tight">
                     {project.clientName.toUpperCase()}
                   </p>
@@ -756,9 +930,9 @@ export const ProjectProgressReportModal: React.FC<ProjectProgressReportModalProp
 
               </div>
 
-              {/* Micro-footer */}
-              <div className="text-center pt-3 text-[7.5px] text-slate-400 font-mono">
-                Documento Oficial de Auditoría y Control Técnico emitido por Corporación TCT • Lima, Perú
+              {/* Official SIGAT Footer Text */}
+              <div className="text-center pt-2 text-[8px] sm:text-[8.5px] text-slate-500 font-mono border-t border-slate-200 mt-2">
+                Sistema Integrado de Gestión Audiovisual de Corporación TCT: SIGAT ------- Página 1 de 1
               </div>
             </div>
 
