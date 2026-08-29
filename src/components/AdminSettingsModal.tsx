@@ -53,6 +53,7 @@ import { TCTLogo } from './TCTLogo';
 import { exportElementToPdf } from '../utils/printHelper';
 import { 
   getStoredLiveSessions, 
+  fetchLiveSessionsFromServer,
   terminateSessionById, 
   blockAndExpelUser, 
   unblockUser, 
@@ -270,53 +271,70 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
 
   // Live session auto-sync
   useEffect(() => {
-    const syncSessions = () => {
-      setLiveSessionsList(getStoredLiveSessions());
+    let isMounted = true;
+    const syncSessions = async () => {
+      try {
+        const live = await fetchLiveSessionsFromServer();
+        if (isMounted && Array.isArray(live)) {
+          setLiveSessionsList(live);
+        }
+      } catch (e) {
+        if (isMounted) {
+          setLiveSessionsList(getStoredLiveSessions());
+        }
+      }
     };
+
+    syncSessions();
     window.addEventListener('tct_live_sessions_updated', syncSessions);
-    const interval = setInterval(syncSessions, 2500);
+    const interval = setInterval(syncSessions, 2000);
     return () => {
+      isMounted = false;
       window.removeEventListener('tct_live_sessions_updated', syncSessions);
       clearInterval(interval);
     };
   }, []);
 
-  const handleExpelSession = (session: LiveSession) => {
+  const handleExpelSession = async (session: LiveSession) => {
     if (window.confirm(`¿Seguro que deseas expulsar y cerrar la sesión activa de ${session.fullName} (${session.username})?`)) {
-      terminateSessionById(session.sessionId);
-      setLiveSessionsList(getStoredLiveSessions());
+      await terminateSessionById(session.sessionId);
+      const updated = await fetchLiveSessionsFromServer();
+      setLiveSessionsList(updated);
       notifySuccess(`✓ Sesión activa de ${session.fullName} expulsada y cerrada en tiempo real.`);
     }
   };
 
-  const handleBlockAndExpelUser = (session: LiveSession) => {
+  const handleBlockAndExpelUser = async (session: LiveSession) => {
     if (session.username.toUpperCase() === 'TCT') {
       notifyError('No se puede bloquear la cuenta principal de Administrador "TCT".');
       return;
     }
     if (window.confirm(`⚠️ ¿Bloquear acceso y expulsar inmediatamente a ${session.fullName} (@${session.username})? No podrá volver a ingresar al aplicativo.`)) {
-      blockAndExpelUser(session.userId);
-      setLiveSessionsList(getStoredLiveSessions());
+      await blockAndExpelUser(session.userId);
+      const updated = await fetchLiveSessionsFromServer();
+      setLiveSessionsList(updated);
       setUsersList(getStoredUsers());
       notifySuccess(`🚫 Usuario ${session.fullName} bloqueado y expulsado.`);
     }
   };
 
-  const handleUnblockSessionUser = (userId: string, name: string) => {
-    unblockUser(userId);
-    setLiveSessionsList(getStoredLiveSessions());
+  const handleUnblockSessionUser = async (userId: string, name: string) => {
+    await unblockUser(userId);
+    const updated = await fetchLiveSessionsFromServer();
+    setLiveSessionsList(updated);
     setUsersList(getStoredUsers());
     notifySuccess(`✅ Usuario ${name} desbloqueado exitosamente.`);
   };
 
-  const handleDeleteUserAccount = (userId: string, username: string, name: string) => {
+  const handleDeleteUserAccount = async (userId: string, username: string, name: string) => {
     if (username.toUpperCase() === 'TCT') {
       notifyError('No se puede eliminar la cuenta principal de Administrador "TCT".');
       return;
     }
     if (window.confirm(`⚠️ ¿Eliminar definitivamente la cuenta de ${name} (@${username}) y cerrar todas sus sesiones?`)) {
       deleteUserAccountAndPurge(userId);
-      setLiveSessionsList(getStoredLiveSessions());
+      const updated = await fetchLiveSessionsFromServer();
+      setLiveSessionsList(updated);
       setUsersList(getStoredUsers());
       notifySuccess(`🗑️ Cuenta de ${name} eliminada y purgada del sistema.`);
     }

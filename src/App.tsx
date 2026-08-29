@@ -17,6 +17,14 @@ import {
   isSessionSuperceded,
   getDeviceSessionToken
 } from './utils/authStorage';
+import {
+  registerLiveSession,
+  sendSessionHeartbeat,
+  getCurrentSessionId,
+  setCurrentSessionId,
+  logoutLiveSession,
+  SESSION_TERMINATION_EVENT
+} from './utils/sessionMonitor';
 import { LoginPage } from './components/LoginPage';
 import { UserManagementModal } from './components/UserManagementModal';
 import { Header } from './components/Header';
@@ -95,8 +103,12 @@ export default function App() {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [savedAdminFilter, setSavedAdminFilter] = useState<'all' | 'pending' | 'in_progress' | 'completed' | 'overdue' | 'phase_specific'>('all');
 
-  // Track timestamp for 3-minute continuous use / background auto-logout
+  // Track timestamp for continuous use / background auto-logout (Inactivity timeout: 10 minutes)
   const lastActiveTimestampRef = useRef<number>(Date.now());
+  const [logoutNotice, setLogoutNotice] = useState<{
+    type: 'concurrent_login' | 'inactivity' | 'admin_forced' | 'user_blocked' | 'normal';
+    message: string;
+  } | null>(null);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -145,7 +157,6 @@ export default function App() {
 
   // Handle navigation history: Go Forward (Swipe left-to-right or Header Forward button)
   const handleGoForward = () => {
-    // If no modal open, open the latest active project or open new project wizard
     if (!selectedProjectForDetail && !selectedProjectForContract && !isNewProjectModalOpen && !isAnalyticsModalOpen && !isRulesModalOpen && !isUsersModalOpen) {
       const activeProj = projects.find(p => !p.isArchived);
       if (activeProj) {
@@ -168,8 +179,13 @@ export default function App() {
     enabled: false
   });
 
-  // Trigger auto-logout on inactivity
-  const handleAutoLogout = () => {
+  // Master Logout handler
+  const handleLogout = async (deepExit: boolean = false, customNotice?: { type: 'concurrent_login' | 'inactivity' | 'admin_forced' | 'user_blocked' | 'normal'; message: string }) => {
+    const currentSessId = getCurrentSessionId();
+    if (currentSessId) {
+      logoutLiveSession(currentSessId);
+    }
+
     setActiveSession(null);
     setCurrentUser(null);
     setSelectedProjectForDetail(null);
@@ -178,23 +194,25 @@ export default function App() {
     setIsAnalyticsModalOpen(false);
     setIsRulesModalOpen(false);
     setIsUsersModalOpen(false);
-    showToast('⏱️ Sesión cerrada por tiempo prolongado de inactividad.');
+
+    if (customNotice) {
+      setLogoutNotice(customNotice);
+    }
+
+    if (deepExit) {
+      showToast('🔒 Saliendo del sistema TCT...');
+      try {
+        window.open('', '_self', '');
+        window.close();
+      } catch (err) {
+        console.warn('Could not execute window.close():', err);
+      }
+    } else if (!customNotice) {
+      showToast('Sesión cerrada correctamente. Ingrese con sus credenciales TCT.');
+    }
   };
 
-  // Trigger logout when account is accessed from another device/window
-  const handleConcurrentAccessLogout = () => {
-    setActiveSession(null);
-    setCurrentUser(null);
-    setSelectedProjectForDetail(null);
-    setSelectedProjectForContract(null);
-    setIsNewProjectModalOpen(false);
-    setIsAnalyticsModalOpen(false);
-    setIsRulesModalOpen(false);
-    setIsUsersModalOpen(false);
-    showToast('🔒 Se inició sesión con esta cuenta desde otro dispositivo. La sesión anterior fue cerrada.');
-  };
-
-  // 3-Minute Inactivity and Concurrent Session Checker
+  // Inactivity & Real-Time Single Device Session Checker with Server Heartbeat
   useEffect(() => {
     if (!currentUser) return;
 
@@ -209,39 +227,126 @@ export default function App() {
       'touchstart',
       'scroll',
       'click',
-      'wheel'
+      'wheel',
+      'pointerdown'
     ];
 
     activityEvents.forEach((evt) => {
       window.addEventListener(evt, recordUserActivity, { passive: true });
     });
 
-    // Check every 1.5 seconds if 3 minutes of inactivity elapsed OR if session was superceded by another login
-    const checkInterval = setInterval(() => {
-      // 1. Inactivity check
+    let isChecking = false;
+
+    // Check every 2 seconds: Inactivity limit + Concurrency token check with server
+    const checkInterval = setInterval(async () => {
+      if (isChecking) return;
+      isChecking = true;
+
+      try {
+        // 1. Inactivity auto-logout check (10 minutes of complete desuso)
+        const elapsed = Date.now() - lastActiveTimestampRef.current;
+        if (elapsed >= INACTIVITY_TIMEOUT_MS) {
+          handleLogout(false, {
+            type: 'inactivity',
+            message: 'El aplicativo se cerró automáticamente por inactividad / desuso. Ingrese nuevamente sus credenciales para acceder al panel principal.'
+          });
+          return;
+        }
+
+        const isIdle = elapsed > 2 * 60 * 1000;
+        const sessionId = getCurrentSessionId();
+        const token = getDeviceSessionToken();
+
+        // 2. Server Heartbeat ping (Enforces single active device across all phones/PCs)
+        if (sessionId && token) {
+          const res = await sendSessionHeartbeat(sessionId, token, isIdle);
+          if (!res.valid) {
+            if (res.reason === 'concurrent_login') {
+              handleLogout(false, {
+                type: 'concurrent_login',
+                message: 'Tu cuenta ha sido abierta en otro equipo o celular. Por seguridad de 1 solo usuario activo a la vez, esta sesión anterior ha sido cerrada automáticamente.'
+              });
+            } else if (res.reason === 'admin_forced') {
+              handleLogout(false, {
+                type: 'admin_forced',
+                message: 'Tu sesión fue cerrada remotamente por el Administrador de Corporación TCT.'
+              });
+            } else if (res.reason === 'user_blocked') {
+              handleLogout(false, {
+                type: 'user_blocked',
+                message: 'Tu cuenta de usuario ha sido desactivada o bloqueada por el Administrador.'
+              });
+            } else {
+              handleLogout(false, {
+                type: 'inactivity',
+                message: res.message || 'Tu sesión ha finalizado.'
+              });
+            }
+            return;
+          }
+        }
+
+        // 3. Client Storage fallback concurrency check
+        if (currentUser && isSessionSuperceded(currentUser)) {
+          handleLogout(false, {
+            type: 'concurrent_login',
+            message: 'Tu cuenta ha sido abierta en otro dispositivo. Por seguridad de 1 solo usuario activo a la vez, esta sesión fue cerrada automáticamente.'
+          });
+        }
+      } catch (err) {
+        console.error('Session check loop error:', err);
+      } finally {
+        isChecking = false;
+      }
+    }, 2000);
+
+    // Tab visibility change (when returning from minimized/background app on mobile)
+    const handleVisibilityChange = async () => {
       const elapsed = Date.now() - lastActiveTimestampRef.current;
       if (elapsed >= INACTIVITY_TIMEOUT_MS) {
-        handleAutoLogout();
-        return;
-      }
-
-      // 2. Concurrency check (single device per account)
-      if (currentUser && isSessionSuperceded(currentUser)) {
-        handleConcurrentAccessLogout();
-      }
-    }, 1500);
-
-    // Tab visibility change (minimized / backgrounded tab)
-    const handleVisibilityChange = () => {
-      const elapsed = Date.now() - lastActiveTimestampRef.current;
-      if (elapsed >= INACTIVITY_TIMEOUT_MS) {
-        handleAutoLogout();
-      } else if (currentUser && isSessionSuperceded(currentUser)) {
-        handleConcurrentAccessLogout();
+        handleLogout(false, {
+          type: 'inactivity',
+          message: 'Sesión cerrada por desuso / tiempo en segundo plano.'
+        });
+      } else {
+        // Ping immediately on foreground
+        const sessionId = getCurrentSessionId();
+        const token = getDeviceSessionToken();
+        if (sessionId && token) {
+          const res = await sendSessionHeartbeat(sessionId, token, false);
+          if (!res.valid) {
+            handleLogout(false, {
+              type: res.reason === 'concurrent_login' ? 'concurrent_login' : 'admin_forced',
+              message: res.message || 'Tu sesión ha sido finalizada.'
+            });
+          }
+        }
       }
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    // Listen to immediate session termination broadcasts
+    const handleSessionTerminationEvent = (e: CustomEvent<any>) => {
+      const detail = e.detail;
+      if (!detail) return;
+      const currentSessId = getCurrentSessionId();
+      if (detail.sessionId && detail.sessionId === currentSessId) {
+        handleLogout(false, {
+          type: 'admin_forced',
+          message: 'Tu sesión fue cerrada remotamente por el Administrador de Corporación TCT.'
+        });
+      } else if (detail.userId && currentUser && detail.userId === currentUser.id) {
+        handleLogout(false, {
+          type: detail.blocked ? 'user_blocked' : 'admin_forced',
+          message: detail.blocked 
+            ? 'Tu cuenta ha sido bloqueada/desactivada por el Administrador.' 
+            : 'Tu sesión fue cerrada remotamente por el Administrador.'
+        });
+      }
+    };
+
+    window.addEventListener(SESSION_TERMINATION_EVENT as any, handleSessionTerminationEvent);
 
     return () => {
       activityEvents.forEach((evt) => {
@@ -249,6 +354,7 @@ export default function App() {
       });
       clearInterval(checkInterval);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener(SESSION_TERMINATION_EVENT as any, handleSessionTerminationEvent);
     };
   }, [currentUser]);
 
@@ -379,11 +485,22 @@ export default function App() {
   }, [selectedProjectForDetail, selectedProjectForContract]);
 
   // Handle Login Success
-  const handleLoginSuccess = (user: AuthUser, remember: boolean) => {
+  const handleLoginSuccess = async (user: AuthUser, remember: boolean) => {
     lastActiveTimestampRef.current = Date.now();
+    setLogoutNotice(null);
     setActiveSession(user, remember);
     setCurrentUser(user);
     setCurrentRole(user.role);
+
+    // Register live session on server (Enforces 1 single active device across all phones/PCs)
+    try {
+      const regResult = await registerLiveSession(user);
+      if (regResult && regResult.hadPreviousSession) {
+        showToast('⚠️ Se detectó sesión activa previa. Se transfirió el control a este equipo y se cerró la sesión anterior.');
+      }
+    } catch (err) {
+      console.warn('Session server registration warning:', err);
+    }
 
     // If employee, auto-select their staff profile
     const staffList = usersToStaffMembers(getStoredUsers());
@@ -404,23 +521,6 @@ export default function App() {
     }
 
     showToast(`✓ ¡Bienvenido(a), ${user.fullName}! Acceso como ${user.role === 'admin' ? 'Administrador' : 'Empleado'}.`);
-  };
-
-  // Handle Logout (Single click = standard logout, Double click = deep exit)
-  const handleLogout = (deepExit: boolean = false) => {
-    setActiveSession(null);
-    setCurrentUser(null);
-    if (deepExit) {
-      showToast('🔒 Saliendo del sistema TCT...');
-      try {
-        window.open('', '_self', '');
-        window.close();
-      } catch (err) {
-        console.warn('Could not execute window.close():', err);
-      }
-    } else {
-      showToast('Sesión cerrada correctamente. Ingrese con sus credenciales TCT.');
-    }
   };
 
   // Update a project
@@ -515,7 +615,13 @@ export default function App() {
 
   // If no user is logged in, show the official TCT Login Screen!
   if (!currentUser) {
-    return <LoginPage onLoginSuccess={handleLoginSuccess} />;
+    return (
+      <LoginPage 
+        onLoginSuccess={handleLoginSuccess} 
+        initialLogoutNotice={logoutNotice}
+        onClearNotice={() => setLogoutNotice(null)}
+      />
+    );
   }
 
   return (

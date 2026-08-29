@@ -29,12 +29,21 @@ import {
 
 interface LoginPageProps {
   onLoginSuccess: (user: AuthUser, remember: boolean) => void;
+  initialLogoutNotice?: {
+    type: 'concurrent_login' | 'inactivity' | 'admin_forced' | 'user_blocked' | 'normal';
+    message: string;
+  } | null;
+  onClearNotice?: () => void;
 }
 
 const PERU_ADMIN_PHONE = '990010020';
 const PERU_ADMIN_PHONE_FORMATTED = '+51 990 010 020';
 
-export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
+export const LoginPage: React.FC<LoginPageProps> = ({ 
+  onLoginSuccess,
+  initialLogoutNotice,
+  onClearNotice 
+}) => {
   // Login Form States (Default to 'employee' as explicitly requested)
   const [selectedRoleTab, setSelectedRoleTab] = useState<UserRole>('employee');
   const [username, setUsername] = useState<string>('');
@@ -283,6 +292,55 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
             </p>
           </div>
         </div>
+
+        {/* Logout / Inactivity / Concurrency Notice Banner */}
+        {initialLogoutNotice && (
+          <div className={`p-4 rounded-2xl border shadow-xl flex items-start justify-between gap-3 animate-fade-in ${
+            initialLogoutNotice.type === 'concurrent_login'
+              ? 'bg-amber-950/90 border-amber-500/80 text-amber-200'
+              : initialLogoutNotice.type === 'inactivity'
+              ? 'bg-blue-950/90 border-blue-500/80 text-blue-200'
+              : initialLogoutNotice.type === 'user_blocked'
+              ? 'bg-red-950/90 border-red-500/80 text-red-200'
+              : 'bg-slate-900/90 border-slate-700 text-slate-200'
+          }`}>
+            <div className="flex items-start space-x-2.5 min-w-0">
+              <div className="p-1.5 rounded-lg bg-black/40 border border-white/10 shrink-0 mt-0.5">
+                {initialLogoutNotice.type === 'concurrent_login' ? (
+                  <Smartphone className="w-4 h-4 text-amber-400 animate-pulse" />
+                ) : initialLogoutNotice.type === 'inactivity' ? (
+                  <RotateCcw className="w-4 h-4 text-blue-400" />
+                ) : (
+                  <ShieldAlert className="w-4 h-4 text-red-400" />
+                )}
+              </div>
+              <div className="space-y-0.5 min-w-0">
+                <span className="text-[10px] font-black uppercase tracking-wider block opacity-90">
+                  {initialLogoutNotice.type === 'concurrent_login'
+                    ? '⚠️ Sesión en otro dispositivo'
+                    : initialLogoutNotice.type === 'inactivity'
+                    ? '⏱️ Cierre por inactividad / desuso'
+                    : initialLogoutNotice.type === 'user_blocked'
+                    ? '🚫 Acceso bloqueado'
+                    : '🔒 Aviso de sesión'}
+                </span>
+                <p className="text-xs font-semibold leading-tight">
+                  {initialLogoutNotice.message}
+                </p>
+              </div>
+            </div>
+            {onClearNotice && (
+              <button
+                type="button"
+                onClick={onClearNotice}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors cursor-pointer shrink-0"
+                title="Cerrar aviso"
+              >
+                <Check className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+        )}
 
         {/* ========================================================================= */}
         {/* STAGE 1: CREDENTIALS LOGIN FORM */}
