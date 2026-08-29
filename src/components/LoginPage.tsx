@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { AuthUser, UserRole } from '../types';
-import { authenticateUser } from '../utils/authStorage';
+import { authenticateUser, syncUsersWithServer } from '../utils/authStorage';
 import { TCTLogo } from './TCTLogo';
 import { WhatsAppAssistantBot } from './WhatsAppAssistantBot';
 import { 
@@ -65,6 +65,11 @@ export const LoginPage: React.FC<LoginPageProps> = ({
   const [twoFaError, setTwoFaError] = useState<string | null>(null);
   const [isVerifyingCode, setIsVerifyingCode] = useState<boolean>(false);
   const [dispatchStatusMessage, setDispatchStatusMessage] = useState<string | null>(null);
+
+  // Auto-sync users on mount to ensure users created in other windows/devices/incognito tabs are present
+  useEffect(() => {
+    syncUsersWithServer().catch(() => {});
+  }, []);
 
   // Auto-decrement countdown timer for 2FA resend
   useEffect(() => {
@@ -140,10 +145,17 @@ export const LoginPage: React.FC<LoginPageProps> = ({
   };
 
   // Step 1: Submit Credentials
-  const handleSubmitCredentials = (e: React.FormEvent) => {
+  const handleSubmitCredentials = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
     setIsLoading(true);
+
+    try {
+      // Force sync with server first to guarantee fresh user database
+      await syncUsersWithServer();
+    } catch (err) {
+      // ignore network glitch
+    }
 
     setTimeout(() => {
       const result = authenticateUser(username, password);
@@ -162,7 +174,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
       } else {
         setErrorMessage(result.error || 'Credenciales inválidas. Verifique su usuario y contraseña.');
       }
-    }, 350);
+    }, 150);
   };
 
   // Copy code to clipboard

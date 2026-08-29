@@ -49,8 +49,8 @@ const INITIAL_FALLBACK_STAFF: StaffMember[] = [
   { id: 'usr-emp-pedro', name: 'Pedro Alva', role: 'Editor & Ingest', phone: '+51 945 678 901', confirmed: true }
 ];
 
-// Inactivity timeout: 60 minutes = 3,600,000 milliseconds (Safe background threshold)
-const INACTIVITY_TIMEOUT_MS = 60 * 60 * 1000;
+// Inactivity timeout: EXACTLY 3 minutes (180,000 milliseconds = 180 seconds of desuso)
+const INACTIVITY_TIMEOUT_MS = 3 * 60 * 1000;
 
 export default function App() {
   // Authentication state
@@ -245,12 +245,12 @@ export default function App() {
       isChecking = true;
 
       try {
-        // 1. Inactivity auto-logout check (10 minutes of complete desuso)
+        // 1. Inactivity auto-logout check (3 minutes = 180s of complete desuso)
         const elapsed = Date.now() - lastActiveTimestampRef.current;
         if (elapsed >= INACTIVITY_TIMEOUT_MS) {
           handleLogout(false, {
             type: 'inactivity',
-            message: 'El aplicativo se cerró automáticamente por inactividad / desuso. Ingrese nuevamente sus credenciales para acceder al panel principal.'
+            message: '⚠️ El aplicativo se cerró automáticamente por inactividad (más de 3 minutos sin uso). Ingrese nuevamente sus credenciales para acceder.'
           });
           return;
         }

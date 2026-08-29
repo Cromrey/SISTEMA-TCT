@@ -122,7 +122,8 @@ import {
   Smartphone,
   Radio,
   RefreshCw,
-  Ban
+  Ban,
+  LogOut
 } from 'lucide-react';
 
 export type SettingsTab = 'company' | 'contract_design' | 'staff_assignment' | 'checklists' | 'equipment' | 'packages' | 'services' | 'formats' | 'users' | 'shortcuts' | 'system' | 'live_sessions';
@@ -296,11 +297,11 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
   }, []);
 
   const handleExpelSession = async (session: LiveSession) => {
-    if (window.confirm(`¿Seguro que deseas expulsar y cerrar la sesión activa de ${session.fullName} (${session.username})?`)) {
+    if (window.confirm(`🚪 ¿Deseas cerrar únicamente la sesión activa de ${session.fullName} (@${session.username})?\n\nℹ️ NOTA: Su cuenta de usuario y contraseña NO se eliminarán. El usuario podrá volver a ingresar al sistema cuando lo necesite.`)) {
       await terminateSessionById(session.sessionId);
       const updated = await fetchLiveSessionsFromServer();
       setLiveSessionsList(updated);
-      notifySuccess(`✓ Sesión activa de ${session.fullName} expulsada y cerrada en tiempo real.`);
+      notifySuccess(`✓ Sesión activa de ${session.fullName} cerrada. Su cuenta sigue activa para futuros ingresos.`);
     }
   };
 
@@ -4672,6 +4673,35 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
                     </span>
                   </div>
                 </div>
+
+                {/* Status Card: Inactivity Auto-Logout Policy (3 Minutes / 180s) */}
+                <div className="bg-gradient-to-r from-amber-500/10 via-slate-800/90 to-amber-500/10 p-3.5 sm:p-4 rounded-2xl border border-amber-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-left">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-9 h-9 rounded-xl bg-amber-500/20 border border-amber-400/40 text-amber-300 flex items-center justify-center shrink-0">
+                      <Clock className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs font-black text-amber-300 tracking-wide uppercase">
+                          Cierre Automático por Inactividad
+                        </span>
+                        <span className="text-[10px] font-mono font-bold bg-amber-400 text-slate-950 px-2 py-0.5 rounded-full">
+                          Límite: 3 Minutos (180s)
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-300 mt-0.5 leading-relaxed">
+                        Cualquier sesión abierta sin interactividad (sin clicks, teclas ni movimientos) por más de <strong>3 minutos</strong> se cierra automáticamente y retorna al login inicial por seguridad.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-700 shrink-0 text-right">
+                    <span className="text-[10px] font-bold text-emerald-400 block flex items-center gap-1">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse inline-block" />
+                      MONITOREO ACTIVO
+                    </span>
+                    <span className="text-[11px] font-mono text-slate-400">180s timeout</span>
+                  </div>
+                </div>
               </div>
 
               {/* Filters & Search Toolbar */}
@@ -4829,15 +4859,15 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
                           <div className="flex items-center space-x-2 shrink-0 flex-wrap">
                             {!isCurrentUser && (
                               <>
-                                {/* Expel Active Session */}
+                                {/* Solo Cerrar Sesión (NO elimina la cuenta, permite volver a ingresar luego) */}
                                 <button
                                   type="button"
                                   onClick={() => handleExpelSession(session)}
-                                  className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-amber-400 font-black text-xs rounded-xl shadow-xs flex items-center gap-1 transition-all cursor-pointer"
-                                  title="Cerrar la sesión de este usuario en tiempo real"
+                                  className="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-amber-400 font-bold text-xs rounded-xl shadow-xs flex items-center gap-1.5 transition-all cursor-pointer border border-slate-700 hover:border-amber-400"
+                                  title="Cerrar únicamente la sesión activa. La cuenta y contraseña del usuario se conservan para que pueda volver a iniciar sesión cuando lo desee."
                                 >
-                                  <UserX className="w-3.5 h-3.5" />
-                                  <span>Expulsar</span>
+                                  <LogOut className="w-3.5 h-3.5 text-amber-400" />
+                                  <span>Cerrar Sesión</span>
                                 </button>
 
                                 {/* Block or Unblock User */}
@@ -4845,7 +4875,7 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
                                   <button
                                     type="button"
                                     onClick={() => handleUnblockSessionUser(session.userId, session.fullName)}
-                                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs rounded-xl shadow-xs flex items-center gap-1 transition-all cursor-pointer"
+                                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs flex items-center gap-1 transition-all cursor-pointer"
                                     title="Desbloquear cuenta para que pueda volver a iniciar sesión"
                                   >
                                     <CheckCircle2 className="w-3.5 h-3.5" />
@@ -4855,8 +4885,8 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
                                   <button
                                     type="button"
                                     onClick={() => handleBlockAndExpelUser(session)}
-                                    className="px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-800 font-black text-xs rounded-xl border border-red-300 flex items-center gap-1 transition-all cursor-pointer"
-                                    title="Bloquear cuenta y expulsar permanentemente"
+                                    className="px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-800 font-bold text-xs rounded-xl border border-red-300 flex items-center gap-1 transition-all cursor-pointer"
+                                    title="Bloquear cuenta temporalmente"
                                   >
                                     <Ban className="w-3.5 h-3.5" />
                                     <span>Bloquear</span>
@@ -4868,7 +4898,7 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
                                   type="button"
                                   onClick={() => handleDeleteUserAccount(session.userId, session.username, session.fullName)}
                                   className="p-1.5 bg-slate-100 hover:bg-red-600 hover:text-white text-slate-400 rounded-xl transition-colors cursor-pointer"
-                                  title="Eliminar usuario definitivamente"
+                                  title="Eliminar cuenta de usuario definitivamente"
                                 >
                                   <Trash2 className="w-3.5 h-3.5" />
                                 </button>

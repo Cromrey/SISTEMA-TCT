@@ -53,9 +53,36 @@ export function saveStoredUsers(users: AuthUser[]): void {
   try {
     localStorage.setItem(AUTH_USERS_STORAGE_KEY, JSON.stringify(users));
     window.dispatchEvent(new CustomEvent('tct_users_updated', { detail: users }));
+
+    // Asynchronously push to server for instant cross-device/incognito sync
+    try {
+      fetch('/api/sync/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ users })
+      }).catch(() => {});
+    } catch (e) {}
   } catch (err) {
     console.error('Error saving users to storage:', err);
   }
+}
+
+// Fetch freshest user list from server (supports incognito windows, new tabs, multiple devices)
+export async function syncUsersWithServer(): Promise<AuthUser[]> {
+  try {
+    const res = await fetch('/api/sync/users', { cache: 'no-store' });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success && Array.isArray(data.users) && data.users.length > 0) {
+        localStorage.setItem(AUTH_USERS_STORAGE_KEY, JSON.stringify(data.users));
+        window.dispatchEvent(new CustomEvent('tct_users_updated', { detail: data.users }));
+        return data.users;
+      }
+    }
+  } catch (err) {
+    // Fallback gracefully
+  }
+  return getStoredUsers();
 }
 
 export function getDeviceSessionToken(): string | null {
@@ -161,15 +188,26 @@ export function authenticateUser(usernameInput: string, passwordInput: string): 
     return { success: false, error: 'Por favor ingrese usuario y contraseña.' };
   }
 
-  // STRICT Case-Sensitive match for both username and password (respetando mayúsculas y minúsculas)
+  // Normalize username for comparison: ignore leading @ and case
+  const normInput = trimmedUser.replace(/^@/, '').toLowerCase();
+
   const found = users.find(u => {
-    const exactUserMatch = u.username === trimmedUser || u.email === trimmedUser;
-    const exactPassMatch = u.password === trimmedPass;
-    return exactUserMatch && exactPassMatch;
+    const storedUserNorm = (u.username || '').trim().replace(/^@/, '').toLowerCase();
+    const storedEmailNorm = (u.email || '').trim().toLowerCase();
+    const storedDni = (u.dni || '').trim();
+
+    const isUserMatch = (storedUserNorm === normInput) || 
+                        (storedEmailNorm === normInput) || 
+                        (storedDni && storedDni === trimmedUser);
+
+    // Password match: exact match
+    const isPassMatch = u.password === trimmedPass || (u.password && u.password.trim() === trimmedPass);
+
+    return isUserMatch && isPassMatch;
   });
 
   if (!found) {
-    return { success: false, error: 'Usuario o contraseña incorrectos. Recuerde que el sistema distingue entre mayúsculas y minúsculas.' };
+    return { success: false, error: 'Usuario o contraseña incorrectos. Verifique sus credenciales.' };
   }
 
   if (!found.isActive) {
@@ -201,6 +239,14 @@ export function authenticateUser(usernameInput: string, passwordInput: string): 
   } catch (e) {}
 
   return { success: true, user: updatedUser };
+}
+
+// Authenticate with guaranteed fresh server synchronization (resolves multi-window / multi-device login)
+export async function authenticateUserAsync(usernameInput: string, passwordInput: string): Promise<{ success: boolean; user?: AuthUser; error?: string }> {
+  try {
+    await syncUsersWithServer();
+  } catch (e) {}
+  return authenticateUser(usernameInput, passwordInput);
 }
 
 export function createOrUpdateUser(

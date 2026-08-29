@@ -32,8 +32,24 @@ export interface ServerLiveSession {
   terminatedAt?: number;
 }
 
+const DEFAULT_SERVER_USERS = [
+  {
+    id: "usr-admin-tct",
+    username: "TCT",
+    password: "TCT",
+    role: "admin",
+    fullName: "Michael Romero (Administrador TCT)",
+    dni: "45892314",
+    jobTitle: "Administrador General",
+    phone: "+51 990010020",
+    email: "admin@corporaciontct.pe",
+    isActive: true,
+    createdAt: "2026-01-01T00:00:00.000Z"
+  }
+];
+
 let activeLiveSessions: Map<string, ServerLiveSession> = new Map();
-let serverUsers: any[] = [];
+let serverUsers: any[] = [...DEFAULT_SERVER_USERS];
 let serverProjects: any[] = [];
 let serverRules: any = null;
 
@@ -340,6 +356,30 @@ app.post("/api/sessions/clear-all", (req, res) => {
     activeLiveSessions.clear();
     console.log(`[TCT Security] Purged all ${count} active sessions.`);
     res.json({ success: true, count });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 8c. Sync Users across all browser windows, incognito tabs, and remote devices
+app.get("/api/sync/users", (req, res) => {
+  res.json({ success: true, users: serverUsers });
+});
+
+app.post("/api/sync/users", (req, res) => {
+  try {
+    const { users } = req.body;
+    if (Array.isArray(users) && users.length > 0) {
+      // Ensure root TCT admin is always included
+      const hasRootAdmin = users.some(u => u.username?.toUpperCase() === 'TCT');
+      if (!hasRootAdmin) {
+        serverUsers = [DEFAULT_SERVER_USERS[0], ...users];
+      } else {
+        serverUsers = users;
+      }
+      console.log(`[TCT Sync] Synchronized ${serverUsers.length} user accounts with server.`);
+    }
+    res.json({ success: true, count: serverUsers.length, users: serverUsers });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
   }
