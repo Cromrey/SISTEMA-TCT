@@ -2,7 +2,6 @@ import React from 'react';
 import { 
   Layers, 
   X, 
-  Printer, 
   Camera, 
   ShieldCheck, 
   UserCheck, 
@@ -85,26 +84,22 @@ const SCREENS = [
   },
   {
     id: 'scr-8',
-    title: '8. Reporte Oficial Imprimible PDF a Todo Color',
+    title: '8. Exportación de Contratos Oficiales PDF A4',
     category: 'Documentación Oficial',
     badge: 'PDF OFICIAL',
     badgeColor: 'bg-slate-900 text-amber-400 font-bold',
-    description: 'Hoja membretada oficial de Corporación TCT con desglose de los 12 pasos, balances financieros, certificación de Ingest y firmas de conformidad.',
-    features: ['Membrete Corporación TCT', 'Código Único y Contrato', 'Firmas Autorizadas', 'Optimizado para Impresión']
+    description: 'Generación digital de contratos membretados oficiales de Corporación TCT con desglose de cláusulas, balances financieros y envío directo a WhatsApp.',
+    features: ['Membrete Corporación TCT', 'Código Único y Contrato', 'Firmas Autorizadas', 'Descarga Vectorial PDF']
   }
 ];
 
 export const AppScreenshotsModal: React.FC<AppScreenshotsModalProps> = ({ onClose }) => {
-  const handlePrint = () => {
-    window.print();
-  };
-
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5">
       <div className="bg-white w-full max-w-5xl rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[94vh]">
         
         {/* Top Header */}
-        <div className="print:hidden px-6 py-4 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
+        <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-400 to-blue-600 text-slate-950 font-black text-lg flex items-center justify-center shadow-md">
               <Layers className="w-5 h-5" />
@@ -120,14 +115,6 @@ export const AppScreenshotsModal: React.FC<AppScreenshotsModalProps> = ({ onClos
           </div>
 
           <div className="flex items-center space-x-2">
-            <button
-              onClick={handlePrint}
-              className="px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 text-slate-950 font-black text-xs rounded-xl shadow-md flex items-center gap-1.5 transition-all"
-            >
-              <Printer className="w-4 h-4" />
-              <span>Imprimir / Exportar Galería</span>
-            </button>
-
             <button
               onClick={onClose}
               className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"

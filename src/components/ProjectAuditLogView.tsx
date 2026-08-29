@@ -9,7 +9,6 @@ import {
   Filter, 
   PlusCircle, 
   FileText, 
-  Printer, 
   CheckCircle2, 
   Banknote, 
   HardDrive, 

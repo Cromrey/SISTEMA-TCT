@@ -63,7 +63,7 @@ export const downloadLovableBundle = (): void => {
       { path: 'src/components/AdminDashboard.tsx', purpose: 'Panel ejecutivo para directivos con KPIs, finanzas y proyectos' },
       { path: 'src/components/EmployeePortal.tsx', purpose: 'Panel móvil/campo para técnicos, regla 7:00 PM, Ingest y checklists' },
       { path: 'src/components/ComparativeAnalytics.tsx', purpose: 'Gráficos comparativos, tiempos SLA y toma de decisiones' },
-      { path: 'src/components/ReportPrintModal.tsx', purpose: 'Reporte oficial PDF imprimible a todo color con sellos TCT' }
+      { path: 'src/components/ContractExportModal.tsx', purpose: 'Generador de Contratos oficiales PDF con sellos TCT' }
     ],
     promptForLovable: generateLovablePrompt(),
     exportTimestamp: new Date().toISOString()

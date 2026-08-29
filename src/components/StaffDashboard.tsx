@@ -16,6 +16,7 @@ import {
   User,
   Paperclip,
   FileText,
+  FileCheck,
   Download
 } from 'lucide-react';
 import { CalendarView } from './CalendarView';
@@ -26,6 +27,7 @@ interface StaffDashboardProps {
   currentStaff: StaffMember;
   onOpenProject: (project: ProductionProject) => void;
   onOpenContractExport?: (project: ProductionProject) => void;
+  onOpenProgressReport?: (project: ProductionProject) => void;
   onOpenAnalytics?: () => void;
   onUpdateProject?: (project: ProductionProject) => void;
   onOpenNewProject?: () => void;
@@ -36,6 +38,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
   currentStaff,
   onOpenProject,
   onOpenContractExport,
+  onOpenProgressReport,
   onUpdateProject,
   onOpenNewProject
 }) => {
@@ -301,6 +304,21 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
                             >
                               <FileText className="w-3.5 h-3.5 text-amber-800" />
                               <span>Contrato</span>
+                            </button>
+                          )}
+
+                          {onOpenProgressReport && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onOpenProgressReport(project);
+                              }}
+                              className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 text-xs font-black transition-all flex items-center justify-center gap-1.5 border border-slate-700 shadow-2xs cursor-pointer"
+                              title="Descargar Ficha Técnica Oficial de Auditoría (12 Pasos)"
+                            >
+                              <FileCheck className="w-3.5 h-3.5 text-amber-400" />
+                              <span>Ficha PDF</span>
                             </button>
                           )}
 

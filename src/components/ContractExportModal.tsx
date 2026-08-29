@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { ProductionProject, UserRole, TCTContractDesign } from '../types';
 import { TCTLogo } from './TCTLogo';
 import { 
-  printElement, 
   exportElementToPdf, 
   sendToWhatsAppPeru, 
   buildReportWhatsAppText, 
@@ -14,7 +13,6 @@ import { getStoredUsers } from '../utils/authStorage';
 import { getStoredRules, INITIAL_CONTRACT_DESIGN } from '../utils/rulesStorage';
 import { checkIsStep2Check2Complete } from '../utils/projectProgress';
 import { 
-  Printer, 
   X, 
   Edit3, 
   Save, 
@@ -50,8 +48,8 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
 
   const currentData = isEditing ? editedProject : project;
 
-  // RULE: The percentage strikethrough is removed AND contract printing is enabled upon validating the 2nd check of Step 2 (Phase 1)
-  const canPrintContract = checkIsStep2Check2Complete(currentData);
+  // RULE: Contract export is enabled upon validating the 2nd check of Step 2 (Phase 1)
+  const canExportContract = checkIsStep2Check2Complete(currentData);
 
   const handleFinalizeAndRegisterExport = () => {
     if (onUpdateProject) {
@@ -66,7 +64,7 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
   };
 
   const handleExportPdf = async () => {
-    if (!canPrintContract) {
+    if (!canExportContract) {
       alert('🔒 Exportación bloqueada: Requiere validar el segundo check del Paso 2 (Congelamiento de fecha y anticipo).');
       return;
     }
@@ -80,21 +78,13 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
     }
   };
 
-  const handlePrint = () => {
-    if (!canPrintContract) {
-      alert('🔒 Impresión bloqueada: Requiere validar el segundo check del Paso 2 (Congelamiento de fecha y anticipo).');
-      return;
-    }
-    printElement('tct-contract-document', `Contrato-${currentData.contractNumber || currentData.uniqueCode}`);
-  };
-
   const handleSendReportWhatsApp = () => {
     const text = buildReportWhatsAppText(currentData);
     sendToWhatsAppPeru('990010020', text);
   };
 
   const handleSendContractWhatsApp = async () => {
-    if (!canPrintContract) {
+    if (!canExportContract) {
       alert('🔒 Envío de contrato bloqueado: Requiere validar el segundo check del Paso 2.');
       return;
     }
@@ -208,57 +198,39 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
               )
             )}
 
-            {/* Imprimir Contrato Button (Enabled by 2nd check of Step 2) */}
+            {/* Descargar Contrato PDF Button (Enabled by 2nd check of Step 2) */}
             <button
-              onClick={handlePrint}
+              onClick={handleExportPdf}
               type="button"
-              disabled={!canPrintContract}
-              className={`px-3 sm:px-4 py-1.5 sm:py-2 font-black text-xs rounded-xl flex items-center gap-1.5 transition-all ${
-                canPrintContract
+              disabled={!canExportContract || isGeneratingPdf}
+              className={`px-3.5 sm:px-4 py-1.5 sm:py-2 font-black text-xs rounded-xl flex items-center gap-1.5 transition-all ${
+                canExportContract
                   ? 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 shadow-md cursor-pointer'
                   : 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed opacity-75'
               }`}
               title={
-                canPrintContract
-                  ? "Imprimir Contrato Oficial A4"
-                  : "Impresión bloqueada: Requiere validar el segundo check del Paso 2 (Congelamiento de fecha y anticipo)"
+                canExportContract
+                  ? "Descargar Contrato Oficial en PDF A4"
+                  : "Descarga bloqueada: Requiere validar el segundo check del Paso 2 (Congelamiento de fecha y anticipo)"
               }
             >
-              {!canPrintContract ? (
+              {!canExportContract ? (
                 <Lock className="w-3.5 h-3.5 text-slate-500" />
+              ) : isGeneratingPdf ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-slate-950" />
               ) : (
-                <Printer className="w-3.5 h-3.5 text-slate-950" />
+                <Download className="w-3.5 h-3.5 text-slate-950" />
               )}
-              <span>Imprimir Contrato</span>
-            </button>
-
-            {/* Descargar PDF Button */}
-            <button
-              onClick={handleExportPdf}
-              type="button"
-              disabled={!canPrintContract || isGeneratingPdf}
-              className={`px-2.5 sm:px-3 py-1.5 sm:py-2 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all ${
-                canPrintContract
-                  ? 'bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 cursor-pointer'
-                  : 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed opacity-60'
-              }`}
-              title={
-                canPrintContract
-                  ? "Descargar Contrato en PDF Oficial A4"
-                  : "Descarga bloqueada: Requiere validar el segundo check del Paso 2"
-              }
-            >
-              <Download className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">PDF</span>
+              <span>{isGeneratingPdf ? 'Generando PDF...' : 'Descargar Contrato PDF'}</span>
             </button>
 
             {/* Direct WhatsApp Peru 990010020 Export Button */}
             <button
               onClick={handleSendContractWhatsApp}
               type="button"
-              disabled={!canPrintContract || isGeneratingPdf}
+              disabled={!canExportContract || isGeneratingPdf}
               className={`px-2.5 sm:px-3 py-1.5 sm:py-2 font-black text-xs rounded-xl flex items-center gap-1.5 transition-all ${
-                canPrintContract
+                canExportContract
                   ? 'bg-[#25D366] hover:bg-[#20bd5a] text-white shadow-md cursor-pointer'
                   : 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed opacity-60'
               }`}
@@ -291,26 +263,20 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
           </div>
         </div>
 
-        {/* Minimal 1-line validation note if print is not yet unlocked */}
-        {!canPrintContract && (
-          <div className="print:hidden bg-amber-500/10 border-b border-amber-500/20 px-4 py-1.5 text-center text-xs font-medium text-amber-300">
-            ⚠️ <strong>Requisito de Impresión:</strong> Se habilitará la opción Imprimir Contrato al validar el 2° check del Paso 2 (Congelamiento de fecha y anticipo).
+        {/* Minimal 1-line validation note if export is not yet unlocked */}
+        {!canExportContract && (
+          <div className="bg-amber-500/10 border-b border-amber-500/20 px-4 py-1.5 text-center text-xs font-medium text-amber-300">
+            ⚠️ <strong>Requisito de Exportación:</strong> Se habilitará la opción Descargar Contrato al validar el 2° check del Paso 2 (Congelamiento de fecha y anticipo).
           </div>
         )}
 
-        {/* Printable Contract Document Container (Strictly formatted for 2-page A4 vertical) */}
-        <div id="tct-contract-document" className={`relative p-4 sm:p-6 overflow-y-auto space-y-6 flex-1 bg-slate-100 text-slate-900 ${getFontClass()} print:p-0 print:space-y-0 print:bg-white`}>
+        {/* Contract Document Container (Strictly formatted for 2-page A4 vertical) */}
+        <div id="tct-contract-document" className={`relative p-4 sm:p-6 overflow-y-auto space-y-6 flex-1 bg-slate-100 text-slate-900 ${getFontClass()}`}>
           
           {/* =========================================================
               PÁGINA 1 DE 2: CABECERA, PARTES, EVENTO Y CONDICIONES ECONÓMICAS
               ========================================================= */}
           <div id="tct-contract-page-1" className="relative p-5 sm:p-7 bg-white rounded-xl shadow-xs border border-slate-200 space-y-3 print:border-none print:shadow-none print:p-2 print:space-y-2.5 break-after-page page-break-after min-h-[900px] print:min-h-0 flex flex-col justify-between">
-            
-            {/* Watermark Logo Background */}
-            <div className="absolute inset-0 flex items-center justify-center opacity-5 pointer-events-none p-8">
-              <TCTLogo size="2xl" variant="watermark" className="w-full max-w-sm" />
-            </div>
-
             <div className="space-y-3 relative z-10">
               {/* Official Letterhead Header */}
               <div className="relative flex items-center justify-between border-b-2 border-slate-950 pb-2.5 page-break-inside-avoid">
@@ -781,12 +747,6 @@ export const ContractExportModal: React.FC<ContractExportModalProps> = ({
               PÁGINA 2 DE 2: ENTREGABLES, CONDICIONES LEGALES Y FIRMAS
               ========================================================= */}
           <div id="tct-contract-page-2" className="relative p-5 sm:p-7 bg-white rounded-xl shadow-xs border border-slate-200 space-y-3 print:border-none print:shadow-none print:p-2 print:space-y-2.5 break-before-page page-break-before min-h-[900px] print:min-h-0 flex flex-col justify-between">
-            
-            {/* Watermark Logo Background */}
-            <div className="absolute inset-0 flex items-center justify-center opacity-5 pointer-events-none p-8">
-              <TCTLogo size="2xl" variant="watermark" className="w-full max-w-sm" />
-            </div>
-
             <div className="space-y-3 relative z-10">
               {/* Mini Header for Page 2 */}
               <div className="flex items-center justify-between border-b border-slate-200 pb-2 page-break-inside-avoid">

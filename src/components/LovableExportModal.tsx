@@ -103,7 +103,7 @@ export const LovableExportModal: React.FC<LovableExportModalProps> = ({ onClose 
               <li>📄 <strong>src/data/templateWorkflow.ts:</strong> Lógica de las 6 fases oficiales TCT</li>
               <li>📄 <strong>src/components/AdminDashboard.tsx:</strong> Panel de control y KPIs ejecutivos</li>
               <li>📄 <strong>src/components/EmployeePortal.tsx:</strong> Portal móvil para técnicos y regla 7:00 PM</li>
-              <li>📄 <strong>src/components/ReportPrintModal.tsx:</strong> Generador de PDF oficial con sellos</li>
+              <li>📄 <strong>src/components/ContractExportModal.tsx:</strong> Generador y exportador de Contratos PDF oficiales</li>
               <li>📄 <strong>src/components/ComparativeAnalytics.tsx:</strong> Gráficos Recharts y SLAs</li>
             </ul>
           </div>

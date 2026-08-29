@@ -8,7 +8,6 @@ import { getStoredUsers } from '../utils/authStorage';
 import { TCTLogo } from './TCTLogo';
 import { 
   X, 
-  Printer, 
   Calendar, 
   Coins,
   Banknote,
@@ -50,8 +49,8 @@ interface ProjectDetailModalProps {
   currentRole?: 'admin' | 'employee';
   onClose: () => void;
   onUpdateProject: (updated: ProductionProject) => void;
-  onOpenReportPrint: (project: ProductionProject) => void;
   onOpenContractExport?: (project: ProductionProject) => void;
+  onOpenProgressReport?: (project: ProductionProject) => void;
   onDeleteProject?: (projectId: string) => void;
 }
 
@@ -63,8 +62,8 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
   currentRole = 'admin',
   onClose,
   onUpdateProject,
-  onOpenReportPrint,
   onOpenContractExport,
+  onOpenProgressReport,
   onDeleteProject
 }) => {
   const [activeTab, setActiveTab] = useState<ModalTab>('phase_details');
@@ -454,15 +453,17 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
               </button>
             )}
 
-            <button
-              type="button"
-              onClick={() => onOpenReportPrint(project)}
-              className="px-2 sm:px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1 shadow-md transition-all shrink-0 cursor-pointer"
-              title="Reporte PDF"
-            >
-              <Printer className="w-3.5 h-3.5" />
-              <span className="hidden md:inline">Reporte PDF</span>
-            </button>
+            {onOpenProgressReport && (
+              <button
+                type="button"
+                onClick={() => onOpenProgressReport(project)}
+                className="px-2 sm:px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 hover:border-amber-400/50 font-black text-xs flex items-center gap-1 shadow-md transition-all shrink-0 cursor-pointer"
+                title="Descargar Ficha Técnica Oficial de 12 Pasos en PDF"
+              >
+                <FileCheck className="w-3.5 h-3.5 text-amber-400" />
+                <span className="hidden md:inline">Reporte 12 Pasos</span>
+              </button>
+            )}
 
             {onDeleteProject && currentRole === 'admin' && (
               <button

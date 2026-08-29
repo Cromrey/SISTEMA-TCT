@@ -25,8 +25,8 @@ import { StaffDashboard } from './components/StaffDashboard';
 import { ProjectDetailModal } from './components/ProjectDetailModal';
 import { NewProjectModal } from './components/NewProjectModal';
 import { ComparativeAnalyticsModal } from './components/ComparativeAnalyticsModal';
-import { ReportPrintModal } from './components/ReportPrintModal';
 import { ContractExportModal } from './components/ContractExportModal';
+import { ProjectProgressReportModal } from './components/ProjectProgressReportModal';
 import { AdminSettingsModal } from './components/AdminSettingsModal';
 import { DeleteProjectConfirmModal } from './components/DeleteProjectConfirmModal';
 import { useSwipeGesture } from './hooks/useSwipeGesture';
@@ -73,8 +73,8 @@ export default function App() {
   
   // Modals state
   const [selectedProjectForDetail, setSelectedProjectForDetail] = useState<ProductionProject | null>(null);
-  const [selectedProjectForReport, setSelectedProjectForReport] = useState<ProductionProject | null>(null);
   const [selectedProjectForContract, setSelectedProjectForContract] = useState<ProductionProject | null>(null);
+  const [selectedProjectForReport, setSelectedProjectForReport] = useState<ProductionProject | null>(null);
   const [isNewProjectModalOpen, setIsNewProjectModalOpen] = useState(false);
   const [isAnalyticsModalOpen, setIsAnalyticsModalOpen] = useState(false);
   const [isRulesModalOpen, setIsRulesModalOpen] = useState(false);
@@ -105,6 +105,11 @@ export default function App() {
 
   // Handle navigation history: Go Back (Swipe right-to-left or Header Back button)
   const handleGoBack = () => {
+    if (selectedProjectForReport) {
+      setSelectedProjectForReport(null);
+      showToast('← Cerrar reporte de avance');
+      return;
+    }
     if (selectedProjectForDetail) {
       setSelectedProjectForDetail(null);
       showToast('← Cerrar detalles de expediente');
@@ -113,11 +118,6 @@ export default function App() {
     if (selectedProjectForContract) {
       setSelectedProjectForContract(null);
       showToast('← Cerrar contrato');
-      return;
-    }
-    if (selectedProjectForReport) {
-      setSelectedProjectForReport(null);
-      showToast('← Cerrar reporte');
       return;
     }
     if (isNewProjectModalOpen) {
@@ -146,7 +146,7 @@ export default function App() {
   // Handle navigation history: Go Forward (Swipe left-to-right or Header Forward button)
   const handleGoForward = () => {
     // If no modal open, open the latest active project or open new project wizard
-    if (!selectedProjectForDetail && !selectedProjectForContract && !selectedProjectForReport && !isNewProjectModalOpen && !isAnalyticsModalOpen && !isRulesModalOpen && !isUsersModalOpen) {
+    if (!selectedProjectForDetail && !selectedProjectForContract && !isNewProjectModalOpen && !isAnalyticsModalOpen && !isRulesModalOpen && !isUsersModalOpen) {
       const activeProj = projects.find(p => !p.isArchived);
       if (activeProj) {
         setSelectedProjectForDetail(activeProj);
@@ -173,7 +173,6 @@ export default function App() {
     setActiveSession(null);
     setCurrentUser(null);
     setSelectedProjectForDetail(null);
-    setSelectedProjectForReport(null);
     setSelectedProjectForContract(null);
     setIsNewProjectModalOpen(false);
     setIsAnalyticsModalOpen(false);
@@ -187,7 +186,6 @@ export default function App() {
     setActiveSession(null);
     setCurrentUser(null);
     setSelectedProjectForDetail(null);
-    setSelectedProjectForReport(null);
     setSelectedProjectForContract(null);
     setIsNewProjectModalOpen(false);
     setIsAnalyticsModalOpen(false);
@@ -305,7 +303,6 @@ export default function App() {
         setProjects(prev => prev.filter(p => p.id !== id));
         if (selectedProjectForDetail?.id === id) setSelectedProjectForDetail(null);
         if (selectedProjectForContract?.id === id) setSelectedProjectForContract(null);
-        if (selectedProjectForReport?.id === id) setSelectedProjectForReport(null);
 
         // Show one-time broadcast deletion banner to all active users / admins
         setDeletionAlertBanner({
@@ -379,7 +376,7 @@ export default function App() {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, [selectedProjectForDetail, selectedProjectForContract, selectedProjectForReport]);
+  }, [selectedProjectForDetail, selectedProjectForContract]);
 
   // Handle Login Success
   const handleLoginSuccess = (user: AuthUser, remember: boolean) => {
@@ -491,7 +488,6 @@ export default function App() {
     setProjectToDelete(null);
     if (selectedProjectForDetail?.id === projectId) setSelectedProjectForDetail(null);
     if (selectedProjectForContract?.id === projectId) setSelectedProjectForContract(null);
-    if (selectedProjectForReport?.id === projectId) setSelectedProjectForReport(null);
 
     // Show prominent one-time confirmation banner
     setDeletionAlertBanner({
@@ -617,8 +613,8 @@ export default function App() {
             onSearchChange={setSearchQuery}
             onOpenProject={(proj) => setSelectedProjectForDetail(proj)}
             onOpenNewProject={() => setIsNewProjectModalOpen(true)}
-            onOpenReportPrint={(proj) => setSelectedProjectForReport(proj)}
             onOpenContractExport={(proj) => setSelectedProjectForContract(proj)}
+            onOpenProgressReport={(proj) => setSelectedProjectForReport(proj)}
             onOpenAnalytics={() => setIsAnalyticsModalOpen(true)}
             onUpdateProject={handleUpdateProject}
             onDeleteProject={handleDeleteProject}
@@ -641,6 +637,7 @@ export default function App() {
             currentStaff={currentStaff}
             onOpenProject={(proj) => setSelectedProjectForDetail(proj)}
             onOpenContractExport={(proj) => setSelectedProjectForContract(proj)}
+            onOpenProgressReport={(proj) => setSelectedProjectForReport(proj)}
             onOpenAnalytics={() => setIsAnalyticsModalOpen(true)}
             onUpdateProject={handleUpdateProject}
             onOpenNewProject={() => setIsNewProjectModalOpen(true)}
@@ -683,8 +680,8 @@ export default function App() {
           onClose={() => setSelectedProjectForDetail(null)}
           onUpdateProject={handleUpdateProject}
           onDeleteProject={currentRole === 'admin' ? handleDeleteProject : undefined}
-          onOpenReportPrint={(proj) => setSelectedProjectForReport(proj)}
           onOpenContractExport={(proj) => setSelectedProjectForContract(proj)}
+          onOpenProgressReport={(proj) => setSelectedProjectForReport(proj)}
         />
       )}
 
@@ -712,14 +709,6 @@ export default function App() {
         />
       )}
 
-      {/* MODAL 4: Printable PDF Official Report with TCT Watermark in Soles (S/.) */}
-      {selectedProjectForReport && (
-        <ReportPrintModal
-          project={selectedProjectForReport}
-          onClose={() => setSelectedProjectForReport(null)}
-        />
-      )}
-
       {/* MODAL 5: Official TCT Contract Export Modal with Watermark */}
       {selectedProjectForContract && (
         <ContractExportModal
@@ -727,6 +716,14 @@ export default function App() {
           currentRole={currentRole}
           onClose={() => setSelectedProjectForContract(null)}
           onUpdateProject={handleUpdateProject}
+        />
+      )}
+
+      {/* MODAL 6: Official 12-Step Progress Report (Ficha Técnica de Auditoría Oficial) */}
+      {selectedProjectForReport && (
+        <ProjectProgressReportModal
+          project={selectedProjectForReport}
+          onClose={() => setSelectedProjectForReport(null)}
         />
       )}
 

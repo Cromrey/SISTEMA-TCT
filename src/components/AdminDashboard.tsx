@@ -17,7 +17,6 @@ import {
   Tag,
   UserCheck,
   FileCheck,
-  Printer,
   Eye,
   CheckCircle2,
   AlertTriangle,
@@ -69,8 +68,8 @@ interface AdminDashboardProps {
   onSearchChange: (q: string) => void;
   onOpenProject: (project: ProductionProject) => void;
   onOpenNewProject: () => void;
-  onOpenReportPrint: (project: ProductionProject) => void;
   onOpenContractExport: (project: ProductionProject) => void;
+  onOpenProgressReport?: (project: ProductionProject) => void;
   onOpenAnalytics: () => void;
   onOpenRulesModal?: () => void;
   onUpdateProject?: (project: ProductionProject) => void;
@@ -93,8 +92,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onSearchChange,
   onOpenProject,
   onOpenNewProject,
-  onOpenReportPrint,
   onOpenContractExport,
+  onOpenProgressReport,
   onOpenAnalytics,
   onOpenRulesModal,
   onUpdateProject,
@@ -460,7 +459,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               className="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-amber-400 text-xs font-black flex items-center gap-1.5 shadow-sm transition-all border border-slate-700 cursor-pointer"
               title="Exportar a PDF Oficial TCT (Expedientes, Cronograma Gantt, KPI, Calendario, Cobranzas)"
             >
-              <Printer className="w-4 h-4 text-amber-400" />
+              <Download className="w-4 h-4 text-amber-400" />
               <span>Exportar a PDF</span>
             </button>
 
@@ -801,13 +800,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         <TimelineGanttView
           projects={projects}
           onOpenProject={onOpenProject}
-          onOpenReport={onOpenReportPrint}
         />
       ) : currentView === 'executive' ? (
         <ExecutiveSummaryModule
           projects={projects}
           onOpenProject={onOpenProject}
-          onOpenReportPrint={onOpenReportPrint}
         />
       ) : currentView === 'ranking' ? (
         <div className="space-y-6">
@@ -1151,8 +1148,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
                     </div>
 
-                    {/* Right Column: Actions (Contrato, Informe, Ver 12 Pasos, Borrar) */}
-                    <div className="grid grid-cols-2 sm:grid-cols-3 xl:flex xl:flex-col items-stretch justify-end gap-1.5 shrink-0 pt-2 xl:pt-0 border-t xl:border-t-0 border-slate-300">
+                    {/* Right Column: Actions (Contrato, Ficha PDF, Ver 12 Pasos, Borrar) */}
+                    <div className="grid grid-cols-2 sm:grid-cols-2 xl:flex xl:flex-col items-stretch justify-end gap-1.5 shrink-0 pt-2 xl:pt-0 border-t xl:border-t-0 border-slate-300">
                       
                       {/* Export Contract Button */}
                       <button
@@ -1164,15 +1161,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         <span>Contrato</span>
                       </button>
 
-                      {/* PDF Report */}
-                      <button
-                        onClick={() => onOpenReportPrint(project)}
-                        className="min-h-[44px] xl:min-h-0 xl:flex-initial px-3.5 py-2 rounded-xl bg-white hover:bg-emerald-50 active:scale-95 text-slate-900 transition-colors text-xs font-bold flex items-center justify-center gap-1.5 border border-slate-300 shadow-xs cursor-pointer"
-                        title="Exportar Reporte de Auditoría TCT"
-                      >
-                        <Printer className="w-4 h-4 text-emerald-600 shrink-0" />
-                        <span>Informe</span>
-                      </button>
+                      {/* Download/View 12-Step Progress Report PDF */}
+                      {onOpenProgressReport && (
+                        <button
+                          onClick={() => onOpenProgressReport(project)}
+                          className="min-h-[44px] xl:min-h-0 xl:flex-initial px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 active:scale-95 text-amber-300 transition-all text-xs font-black flex items-center justify-center gap-1.5 shadow-xs cursor-pointer border border-slate-700"
+                          title="Descargar Ficha Técnica Oficial de Auditoría (12 Pasos) en PDF"
+                        >
+                          <FileCheck className="w-4 h-4 shrink-0 text-amber-400" />
+                          <span>Ficha PDF</span>
+                        </button>
+                      )}
 
                       {/* Open 12 Steps Modal */}
                       <button

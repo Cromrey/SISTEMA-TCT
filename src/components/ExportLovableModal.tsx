@@ -11,7 +11,6 @@ import {
   FolderTree, 
   ExternalLink,
   Layers,
-  Printer,
   Camera,
   Eye,
   CheckCircle2
@@ -87,12 +86,12 @@ const SCREENS = [
   },
   {
     id: 'scr-8',
-    title: '8. Reporte Oficial Imprimible PDF a Todo Color',
+    title: '8. Exportación de Contratos Oficiales PDF A4',
     category: 'Documentación Oficial',
     badge: 'PDF OFICIAL',
     badgeColor: 'bg-slate-900 text-amber-400 font-bold',
-    description: 'Hoja membretada oficial de Corporación TCT con desglose de los 12 pasos, balances financieros en Soles (S/.), certificación de Ingest y firmas de conformidad.',
-    features: ['Membrete Corporación TCT', 'Código Único y Contrato', 'Firmas Autorizadas', 'Optimizado para Impresión']
+    description: 'Hoja membretada oficial de Corporación TCT con desglose de cláusulas, balances financieros en Soles (S/.) y exportación directa.',
+    features: ['Membrete Corporación TCT', 'Código Único y Contrato', 'Firmas Autorizadas', 'Descarga Vectorial PDF']
   }
 ];
 
@@ -105,10 +104,6 @@ export const ExportLovableModal: React.FC<ExportLovableModalProps> = ({ onClose 
     navigator.clipboard.writeText(promptText);
     setCopied(true);
     setTimeout(() => setCopied(false), 2500);
-  };
-
-  const handlePrintScreenshots = () => {
-    window.print();
   };
 
   return (
@@ -161,16 +156,6 @@ export const ExportLovableModal: React.FC<ExportLovableModalProps> = ({ onClose 
               <span>Capturas & Vistas del Sistema (8)</span>
             </button>
           </div>
-
-          {activeTab === 'screenshots' && (
-            <button
-              onClick={handlePrintScreenshots}
-              className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-amber-400 font-bold text-xs rounded-xl flex items-center gap-1.5 shadow-xs transition-all"
-            >
-              <Printer className="w-4 h-4" />
-              <span>Imprimir / Exportar PDF de Vistas</span>
-            </button>
-          )}
         </div>
 
         {/* Tab 1: Code & Prompt Lovable */}
@@ -225,7 +210,7 @@ export const ExportLovableModal: React.FC<ExportLovableModalProps> = ({ onClose 
                 <li>📄 <strong>src/components/StaffDashboard.tsx:</strong> Portal para técnicos con calendario y estadísticas propias</li>
                 <li>📄 <strong>src/components/CalendarView.tsx:</strong> Calendario integrado Mes / Semana / Año</li>
                 <li>📄 <strong>src/components/ComparativeAnalyticsModal.tsx:</strong> Gráficos Recharts y SLAs</li>
-                <li>📄 <strong>src/components/ReportPrintModal.tsx:</strong> Generador de PDF oficial con sellos y firmas TCT</li>
+                <li>📄 <strong>src/components/ContractExportModal.tsx:</strong> Generador de Contrato PDF oficial con sellos y firmas TCT</li>
               </ul>
             </div>
 

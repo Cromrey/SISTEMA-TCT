@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { ProductionProject, EventType, StepData, PhaseData } from '../types';
-import { printElement, downloadPrintableHtml } from '../utils/printHelper';
+import { exportElementToPdf } from '../utils/printHelper';
 import { 
   Calendar as CalendarIcon, 
   Clock, 
@@ -22,7 +22,6 @@ import {
   CalendarDays, 
   Maximize2, 
   ArrowRight,
-  Printer,
   ChevronLeft,
   Zap,
   Tag,
@@ -35,7 +34,6 @@ import { formatDateDDMMAA } from '../utils/dateFormatter';
 interface TimelineGanttViewProps {
   projects: ProductionProject[];
   onOpenProject: (project: ProductionProject) => void;
-  onOpenReport?: (project: ProductionProject) => void;
   onOpenStepDetail?: (project: ProductionProject, stepNumber: number) => void;
 }
 
@@ -65,7 +63,6 @@ interface GanttTaskItem {
 export const TimelineGanttView: React.FC<TimelineGanttViewProps> = ({
   projects,
   onOpenProject,
-  onOpenReport,
   onOpenStepDetail
 }) => {
   const [timeScale, setTimeScale] = useState<TimeScale>('days');
@@ -1039,30 +1036,19 @@ export const TimelineGanttView: React.FC<TimelineGanttViewProps> = ({
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  downloadPrintableHtml(
+                onClick={async () => {
+                  await exportElementToPdf(
                     'tct-gantt-chart-container',
-                    `Cronograma-Gantt-TCT-${exportScale}.html`,
+                    `Cronograma-Gantt-TCT-${exportScale}.pdf`,
                     `Diagrama Gantt 12 Pasos - Corporación TCT`
                   );
                   setIsExportModalOpen(false);
                 }}
-                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 text-xs font-bold rounded-xl shadow-xs flex items-center gap-2 transition-all cursor-pointer"
-                title="Descargar archivo imprimible directamente al equipo"
+                className="px-5 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-xs font-black rounded-xl shadow-md flex items-center gap-2 transition-all cursor-pointer"
+                title="Descargar diagrama en formato PDF"
               >
-                <Download className="w-4 h-4 text-amber-400" />
-                <span>Descargar HTML / PDF</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  window.print();
-                  setIsExportModalOpen(false);
-                }}
-                className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black rounded-xl shadow-md flex items-center gap-2 transition-all cursor-pointer"
-              >
-                <Printer className="w-4 h-4" />
-                <span>Imprimir / Guardar PDF</span>
+                <Download className="w-4 h-4 text-slate-950" />
+                <span>Descargar Diagrama PDF</span>
               </button>
             </div>
 

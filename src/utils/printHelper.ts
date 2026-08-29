@@ -3,7 +3,7 @@ import html2canvas from 'html2canvas-pro';
 import { ProductionProject } from '../types';
 
 /**
- * High-reliability PDF & Printable Document Handler for Corporación TCT
+ * High-reliability PDF & Document Export Handler for Corporación TCT
  * Strict A4 Vertical format (210mm x 297mm) with multi-page slicing,
  * TCT Watermark, dynamic compagination (1/n páginas), and full signature rendering.
  */
@@ -11,11 +11,11 @@ import { ProductionProject } from '../types';
 export async function exportElementToPdf(
   elementId: string, 
   filename: string = 'TCT-Documento.pdf',
-  docTitle: string = 'Corporación TCT'
+  _docTitle: string = 'Corporación TCT'
 ): Promise<boolean> {
   const targetEl = document.getElementById(elementId);
   if (!targetEl) {
-    printElement(elementId, docTitle);
+    console.error(`Target export element #${elementId} not found in DOM`);
     return false;
   }
 
@@ -62,18 +62,7 @@ export async function exportElementToPdf(
         const imgHeightMm = Math.min(contentHeightMm, (canvas.height * contentWidthMm) / canvas.width);
         pdf.addImage(imgData, 'JPEG', marginX, marginY, contentWidthMm, imgHeightMm);
 
-        // Watermark on background
-        pdf.saveGraphicsState();
-        pdf.setTextColor(240, 243, 248);
-        pdf.setFont('helvetica', 'bold');
-        pdf.setFontSize(70);
-        pdf.text('TCT', pdfWidth / 2, pdfHeight / 2, {
-          align: 'center',
-          angle: 45
-        });
-        pdf.restoreGraphicsState();
-
-        // Footer Compagination (1/n)
+        // Footer Compagination (1/n) - Clean without watermark
         pdf.setFontSize(8);
         pdf.setTextColor(100, 116, 139);
         pdf.setFont('helvetica', 'normal');
@@ -126,18 +115,7 @@ export async function exportElementToPdf(
           pdf.addImage(pageImgData, 'JPEG', marginX, marginY, contentWidthMm, sliceHeightMm);
         }
 
-        // Watermark
-        pdf.saveGraphicsState();
-        pdf.setTextColor(240, 243, 248);
-        pdf.setFont('helvetica', 'bold');
-        pdf.setFontSize(70);
-        pdf.text('TCT', pdfWidth / 2, pdfHeight / 2, {
-          align: 'center',
-          angle: 45
-        });
-        pdf.restoreGraphicsState();
-
-        // Footer Compagination (1/n)
+        // Footer Compagination (1/n) - Clean without watermark
         pdf.setFontSize(8);
         pdf.setTextColor(100, 116, 139);
         pdf.setFont('helvetica', 'normal');
@@ -173,175 +151,8 @@ export async function exportElementToPdf(
 
     return true;
   } catch (error) {
-    console.error('jsPDF/html2canvas export error, executing print fallback:', error);
-    printElement(elementId, docTitle);
+    console.error('jsPDF/html2canvas export error:', error);
     return false;
-  }
-}
-
-export function printElement(elementId: string, docTitle: string = 'Documento Corporación TCT'): void {
-  const targetEl = document.getElementById(elementId);
-  if (!targetEl) {
-    console.error(`Target print element #${elementId} not found in DOM`);
-    window.print();
-    return;
-  }
-
-  try {
-    // 1. Gather all main document stylesheets and Tailwind links
-    const headElements = Array.from(document.querySelectorAll('link[rel="stylesheet"], style'));
-    let stylesHtml = '';
-    headElements.forEach(el => {
-      stylesHtml += el.outerHTML + '\n';
-    });
-
-    // 2. Build isolated print iframe
-    let printIframe = document.getElementById('tct-isolated-print-iframe') as HTMLIFrameElement | null;
-    if (printIframe) {
-      printIframe.remove();
-    }
-
-    printIframe = document.createElement('iframe');
-    printIframe.id = 'tct-isolated-print-iframe';
-    printIframe.style.position = 'fixed';
-    printIframe.style.right = '0';
-    printIframe.style.bottom = '0';
-    printIframe.style.width = '0';
-    printIframe.style.height = '0';
-    printIframe.style.border = 'none';
-    printIframe.style.visibility = 'hidden';
-    document.body.appendChild(printIframe);
-
-    const doc = printIframe.contentWindow?.document || printIframe.contentDocument;
-    if (!doc) {
-      window.print();
-      return;
-    }
-
-    doc.open();
-    doc.write(`
-      <!DOCTYPE html>
-      <html lang="es">
-        <head>
-          <meta charset="utf-8">
-          <title>${docTitle}</title>
-          ${stylesHtml}
-          <style>
-            @page {
-              size: A4 portrait;
-              margin: 8mm 10mm 10mm 10mm;
-            }
-            *, *::before, *::after {
-              -webkit-print-color-adjust: exact !important;
-              print-color-adjust: exact !important;
-              color-adjust: exact !important;
-              box-sizing: border-box !important;
-            }
-            html, body {
-              margin: 0 !important;
-              padding: 0 !important;
-              background: #ffffff !important;
-              color: #0f172a !important;
-              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
-              overflow: visible !important;
-              height: auto !important;
-              min-height: 100% !important;
-            }
-            .print\\:hidden, button, nav, header, .no-print {
-              display: none !important;
-            }
-            .page-break-after, .break-after-page {
-              page-break-after: always !important;
-              break-after: page !important;
-            }
-            .page-break-before, .break-before-page {
-              page-break-before: always !important;
-              break-before: page !important;
-            }
-            .page-break-inside-avoid, .break-inside-avoid {
-              page-break-inside: avoid !important;
-              break-inside: avoid !important;
-            }
-            img {
-              max-width: 100% !important;
-            }
-          </style>
-        </head>
-        <body class="bg-white text-slate-900">
-          <div class="print-container">
-            ${targetEl.outerHTML}
-          </div>
-        </body>
-      </html>
-    `);
-    doc.close();
-
-    // 3. Trigger printing after contents and images load
-    const triggerIframePrint = () => {
-      setTimeout(() => {
-        try {
-          const win = printIframe?.contentWindow;
-          if (win) {
-            win.focus();
-            win.print();
-          } else {
-            window.print();
-          }
-        } catch (e) {
-          console.warn('Iframe print failed, falling back to window.print():', e);
-          window.print();
-        }
-      }, 350);
-    };
-
-    if (doc.readyState === 'complete') {
-      triggerIframePrint();
-    } else {
-      printIframe.onload = triggerIframePrint;
-    }
-
-  } catch (err) {
-    console.error('Direct print execution error, fallback to window.print():', err);
-    window.print();
-  }
-}
-
-function fallbackWindowPrint(contentHtml: string, docTitle: string, styleTags: string): void {
-  try {
-    const printWin = window.open('', '_blank', 'width=900,height=800,menubar=no,toolbar=no,location=no,status=no');
-    if (!printWin) {
-      window.print();
-      return;
-    }
-
-    printWin.document.open();
-    printWin.document.write(`
-      <!DOCTYPE html>
-      <html lang="es">
-      <head>
-        <meta charset="utf-8">
-        <title>${docTitle}</title>
-        ${styleTags}
-        <style>
-          @page { size: A4 portrait; margin: 8mm 10mm 10mm 10mm; }
-          body { background: white !important; color: #0f172a !important; font-size: 11px; }
-          .print\\:hidden, button, .no-print { display: none !important; }
-        </style>
-      </head>
-      <body>
-        ${contentHtml}
-        <script>
-          window.onload = function() {
-            window.focus();
-            window.print();
-          };
-        </script>
-      </body>
-      </html>
-    `);
-    printWin.document.close();
-  } catch (e) {
-    window.print();
   }
 }
 
@@ -378,7 +189,7 @@ export function buildReportWhatsAppText(project: ProductionProject): string {
 
   const percent = Math.round((completedCount / (totalCount || 12)) * 100);
 
-  return `*CORPORACIÓN TCT - INFORME OFICIAL DE AUDITORÍA & ESTADO DE PRODUCCIÓN* 🎬
+  return `*CORPORACIÓN TCT - ESTADO DE PRODUCCIÓN* 🎬
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
 📄 *Expediente:* ${project.uniqueCode}
 📋 *Contrato:* ${project.contractNumber}
@@ -433,54 +244,6 @@ export function buildContractWhatsAppText(project: ProductionProject): string {
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
 🔒 *Firma y Validez:* Contrato formalmente suscrito con Corporación TCT S.A.C.`;
-}
-
-/**
- * Downloads a standalone printable HTML/PDF file directly to the device
- */
-export function downloadPrintableHtml(elementId: string, filename: string = 'TCT-Documento.html', title: string = 'Corporación TCT'): void {
-  const targetEl = document.getElementById(elementId);
-  const contentHtml = targetEl ? targetEl.innerHTML : document.body.innerHTML;
-  const styles = Array.from(document.querySelectorAll('link[rel="stylesheet"], style'))
-    .map(node => node.outerHTML)
-    .join('\n');
-
-  const fullHtml = `<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="utf-8">
-  <title>${title}</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  ${styles}
-  <style>
-    @page { size: A4 portrait; margin: 8mm 10mm; }
-    * { box-sizing: border-box; }
-    body { background: white !important; color: #0f172a !important; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; font-size: 11px; line-height: 1.35; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    .print\\:hidden, button, .no-print { display: none !important; }
-    .page-break-inside-avoid { break-inside: avoid; page-break-inside: avoid; }
-  </style>
-</head>
-<body>
-  <div style="max-width: 820px; margin: 0 auto; padding: 10px;">
-    ${contentHtml}
-  </div>
-  <script>
-    window.onload = function() {
-      setTimeout(function() { window.print(); }, 400);
-    };
-  </script>
-</body>
-</html>`;
-
-  const blob = new Blob([fullHtml], { type: 'text/html;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
 }
 
 /**
@@ -542,7 +305,7 @@ export function downloadEditableDoc(elementId: string, filename: string = 'TCT-C
           text-align: center;
           font-weight: bold;
         }
-        .print\\:hidden, button, .no-print {
+        button, .no-export {
           display: none !important;
         }
       </style>
@@ -606,4 +369,3 @@ export async function exportPdfAndOpenWhatsAppPeru(
     return false;
   }
 }
-

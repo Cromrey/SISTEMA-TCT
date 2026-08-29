@@ -9,7 +9,6 @@ import {
   Clock, 
   MapPin, 
   CheckCircle2, 
-  Printer, 
   Download, 
   Share2, 
   ShieldCheck, 
@@ -44,8 +43,6 @@ export const ProjectQrCheckinModal: React.FC<ProjectQrCheckinModalProps> = ({
   const [copiedLink, setCopiedLink] = useState(false);
   const [isSimulatingScan, setIsSimulatingScan] = useState(false);
   const [justCheckedInStaff, setJustCheckedInStaff] = useState<string | null>(null);
-
-  const printAreaRef = useRef<HTMLDivElement>(null);
 
   // Generate QR payload
   const checkInPayload = useMemo(() => {
@@ -208,11 +205,6 @@ export const ProjectQrCheckinModal: React.FC<ProjectQrCheckinModalProps> = ({
     a.click();
   };
 
-  // Print Lanyard Badge
-  const handlePrintBadge = () => {
-    window.print();
-  };
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-950/80 backdrop-blur-sm overflow-y-auto">
       
@@ -292,7 +284,6 @@ export const ProjectQrCheckinModal: React.FC<ProjectQrCheckinModalProps> = ({
               
               {/* Badge Container */}
               <div 
-                ref={printAreaRef}
                 className="w-full max-w-xs bg-slate-950 text-white rounded-3xl p-5 border-2 border-slate-800 shadow-2xl flex flex-col items-center text-center space-y-3 relative overflow-hidden"
               >
                 {/* Lanyard punch hole simulation */}

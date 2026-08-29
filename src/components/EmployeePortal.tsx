@@ -23,13 +23,11 @@ import {
 interface EmployeePortalProps {
   projects: ProductionProject[];
   onUpdateProject: (updated: ProductionProject) => void;
-  onOpenReportPrint: (project: ProductionProject) => void;
 }
 
 export const EmployeePortal: React.FC<EmployeePortalProps> = ({
   projects,
-  onUpdateProject,
-  onOpenReportPrint
+  onUpdateProject
 }) => {
   // Active non-archived projects
   const activeList = projects.filter(p => !p.isArchived);
@@ -170,13 +168,6 @@ export const EmployeePortal: React.FC<EmployeePortalProps> = ({
               </h2>
             </div>
           </div>
-
-          <button
-            onClick={() => onOpenReportPrint(currentProject)}
-            className="px-3.5 py-2 rounded-xl bg-white/20 hover:bg-white/30 text-white text-xs font-bold backdrop-blur-xs transition-colors flex items-center gap-1.5"
-          >
-            <span>Ver Reporte PDF</span>
-          </button>
         </div>
 
         {/* Project Selector Pills */}

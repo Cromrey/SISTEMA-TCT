@@ -42,7 +42,6 @@ import {
 interface ExecutiveSummaryModuleProps {
   projects: ProductionProject[];
   onOpenProject: (project: ProductionProject) => void;
-  onOpenReportPrint?: (project: ProductionProject) => void;
 }
 
 const STATE_COLORS = {
@@ -56,8 +55,7 @@ const EVENT_COLORS = ['#3B82F6', '#EC4899', '#8B5CF6', '#10B981', '#F59E0B', '#6
 
 export const ExecutiveSummaryModule: React.FC<ExecutiveSummaryModuleProps> = ({
   projects,
-  onOpenProject,
-  onOpenReportPrint
+  onOpenProject
 }) => {
   const [selectedEventType, setSelectedEventType] = useState<EventType | 'all'>('all');
   const [selectedStaffFilter, setSelectedStaffFilter] = useState<string>('all');

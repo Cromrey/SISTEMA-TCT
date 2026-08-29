@@ -2,13 +2,11 @@ import React, { useState } from 'react';
 import { ProductionProject, StaffMember } from '../types';
 import { TCTLogo } from './TCTLogo';
 import { 
-  printElement, 
-  downloadPrintableHtml, 
+  exportElementToPdf,
   downloadEditableDoc,
   exportPdfAndOpenWhatsAppPeru 
 } from '../utils/printHelper';
 import { 
-  Printer, 
   X, 
   FileText, 
   Calendar, 
@@ -22,7 +20,8 @@ import {
   ShieldCheck,
   Clock,
   UserCheck,
-  MessageCircle
+  MessageCircle,
+  Loader2
 } from 'lucide-react';
 
 export type PdfReportType = 
@@ -93,16 +92,15 @@ export const GlobalPdfExportModal: React.FC<GlobalPdfExportModalProps> = ({
     return { percent, currentStepNum, currentStepTitle, done, total: total || 12 };
   };
 
-  const handlePrint = () => {
-    printElement('tct-global-report-canvas', `Reporte-TCT-${selectedReport}`);
-  };
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
 
-  const handleDownloadHtml = () => {
-    downloadPrintableHtml(
-      'tct-global-report-canvas',
-      `Reporte-Oficial-TCT-${selectedReport}.html`,
-      `Reporte Oficial TCT - ${selectedReport}`
-    );
+  const handleDownloadPdf = async () => {
+    setIsExportingPdf(true);
+    try {
+      await exportElementToPdf('tct-global-report-canvas', `Reporte-TCT-${selectedReport}.pdf`);
+    } finally {
+      setIsExportingPdf(false);
+    }
   };
 
   const handleDownloadWordDoc = () => {
@@ -118,7 +116,7 @@ export const GlobalPdfExportModal: React.FC<GlobalPdfExportModalProps> = ({
       <div className="bg-white w-full max-w-5xl rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh]">
         
         {/* Header - Screen only */}
-        <div className="px-3 sm:px-6 py-3 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800 print:hidden flex-wrap gap-2">
+        <div className="px-3 sm:px-6 py-3 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800 flex-wrap gap-2">
           <div className="flex items-center space-x-2.5">
             <TCTLogo size="xs" variant="icon-only" />
             <div>
@@ -132,12 +130,17 @@ export const GlobalPdfExportModal: React.FC<GlobalPdfExportModalProps> = ({
 
           <div className="flex items-center space-x-1.5 sm:space-x-2 flex-wrap gap-1">
             <button
-              onClick={handlePrint}
-              className="px-3 sm:px-4 py-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 text-xs font-black rounded-xl shadow-md flex items-center gap-1.5 transition-all cursor-pointer"
-              title="Abrir cuadro de diálogo de impresión y Guardar como PDF"
+              onClick={handleDownloadPdf}
+              disabled={isExportingPdf}
+              className="px-3 sm:px-4 py-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 text-xs font-black rounded-xl shadow-md flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
+              title="Descargar Reporte en formato PDF Oficial"
             >
-              <Printer className="w-4 h-4" />
-              <span>Imprimir / PDF</span>
+              {isExportingPdf ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Download className="w-4 h-4" />
+              )}
+              <span>{isExportingPdf ? 'Generando PDF...' : 'Descargar PDF'}</span>
             </button>
 
             <button
