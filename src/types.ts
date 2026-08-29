@@ -257,6 +257,8 @@ export interface ProductionProject {
   contractPendingAttachment?: boolean; // Tacha el avance (25.00%) hasta subir adjuntos de pasos 1, 2, 3
   
   // Creator / Commercial Advisor info
+  createdByUserId?: string;
+  createdByUsername?: string;
   createdByName?: string;
   createdByDni?: string;
   contractHolderDni?: string;

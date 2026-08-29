@@ -1,4 +1,4 @@
-import { AuthUser, StaffMember } from '../types';
+import { AuthUser, StaffMember, ProductionProject } from '../types';
 
 export const AUTH_USERS_STORAGE_KEY = 'tct_auth_users_v1';
 export const ACTIVE_SESSION_STORAGE_KEY = 'tct_active_user_session_v1';
@@ -403,3 +403,68 @@ export function getUserProjectAssignments(user: AuthUser, projects: any[]): User
     totalStaffAssignments: staffProductions.length
   };
 }
+
+/**
+ * Checks if a project is visible/accessible to the given user based on corporate role:
+ * - Admin: Full visibility (sees all projects created by Admin and all employees).
+ * - Employee: Strictly scoped visibility (sees ONLY their own created projects).
+ */
+export function isProjectVisibleToUser(project: ProductionProject, user: AuthUser | null): boolean {
+  if (!user) return false;
+  // Admin sees all projects
+  if (user.role === 'admin') return true;
+
+  // Employee sees strictly their own created projects
+  const userId = user.id?.trim().toLowerCase();
+  const username = user.username?.trim().toLowerCase();
+  const fullName = user.fullName?.trim().toLowerCase();
+  const dni = user.dni?.trim();
+
+  // 1. Direct creator user ID
+  if (project.createdByUserId && userId && project.createdByUserId.toLowerCase().trim() === userId) {
+    return true;
+  }
+
+  // 2. Direct creator username
+  if (project.createdByUsername && username && project.createdByUsername.toLowerCase().trim() === username) {
+    return true;
+  }
+
+  // 3. Direct creator DNI
+  if (project.createdByDni && dni && project.createdByDni.trim() === dni) {
+    return true;
+  }
+
+  // 4. Direct creator Full Name
+  if (project.createdByName && fullName && project.createdByName.toLowerCase().trim() === fullName) {
+    return true;
+  }
+
+  // 5. Contract Holder / Advisor
+  if (project.contractHolder && fullName && project.contractHolder.toLowerCase().includes(fullName)) {
+    return true;
+  }
+
+  // 6. Assigned Staff (if user was creator or assigned technician)
+  if (project.assignedStaff && Array.isArray(project.assignedStaff)) {
+    const isStaff = project.assignedStaff.some(s => 
+      (s.id && userId && s.id.toLowerCase().trim() === userId) ||
+      (s.name && fullName && s.name.toLowerCase().trim() === fullName) ||
+      (s.name && fullName && s.name.toLowerCase().includes(fullName))
+    );
+    if (isStaff) return true;
+  }
+
+  return false;
+}
+
+/**
+ * Filters a list of projects so that employees only see their own created projects,
+ * while administrators see all projects.
+ */
+export function filterProjectsForUser(projects: ProductionProject[], user: AuthUser | null): ProductionProject[] {
+  if (!user) return [];
+  if (user.role === 'admin') return projects;
+  return projects.filter(p => isProjectVisibleToUser(p, user));
+}
+

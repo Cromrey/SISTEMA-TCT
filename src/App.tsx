@@ -15,7 +15,9 @@ import {
   getStoredUsers, 
   usersToStaffMembers,
   isSessionSuperceded,
-  getDeviceSessionToken
+  getDeviceSessionToken,
+  filterProjectsForUser,
+  isProjectVisibleToUser
 } from './utils/authStorage';
 import {
   registerLiveSession,
@@ -158,7 +160,7 @@ export default function App() {
   // Handle navigation history: Go Forward (Swipe left-to-right or Header Forward button)
   const handleGoForward = () => {
     if (!selectedProjectForDetail && !selectedProjectForContract && !isNewProjectModalOpen && !isAnalyticsModalOpen && !isRulesModalOpen && !isUsersModalOpen) {
-      const activeProj = projects.find(p => !p.isArchived);
+      const activeProj = userVisibleProjects.find(p => !p.isArchived);
       if (activeProj) {
         setSelectedProjectForDetail(activeProj);
         showToast(`→ Abrir producción: ${activeProj.title}`);
@@ -610,8 +612,11 @@ export default function App() {
     }
   };
 
-  const smartAlerts = generateSmartAlerts(projects);
-  const decisionInsights = generateDecisionInsights(projects);
+  // User-scoped visible projects: Admin sees all projects (created by admin and all employees); Employee sees strictly their own created projects
+  const userVisibleProjects = filterProjectsForUser(projects, currentUser);
+
+  const smartAlerts = generateSmartAlerts(userVisibleProjects);
+  const decisionInsights = generateDecisionInsights(userVisibleProjects);
 
   // If no user is logged in, show the official TCT Login Screen!
   if (!currentUser) {
@@ -661,7 +666,7 @@ export default function App() {
         onResetData={handleResetData}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
-        activeProjectsCount={projects.filter(p => !p.isArchived).length}
+        activeProjectsCount={userVisibleProjects.filter(p => !p.isArchived).length}
         onGoBack={handleGoBack}
         onGoForward={handleGoForward}
       />
@@ -712,7 +717,7 @@ export default function App() {
         {/* View Switch based on Role */}
         {currentRole === 'admin' ? (
           <AdminDashboard
-            projects={projects}
+            projects={userVisibleProjects}
             alerts={smartAlerts}
             insights={decisionInsights}
             searchQuery={searchQuery}
@@ -739,8 +744,9 @@ export default function App() {
           />
         ) : (
           <StaffDashboard
-            projects={projects}
+            projects={userVisibleProjects}
             currentStaff={currentStaff}
+            currentUser={currentUser}
             onOpenProject={(proj) => setSelectedProjectForDetail(proj)}
             onOpenContractExport={(proj) => setSelectedProjectForContract(proj)}
             onOpenProgressReport={(proj) => setSelectedProjectForReport(proj)}
@@ -804,7 +810,7 @@ export default function App() {
       {/* MODAL 3: Comparative Analytics & Role-Based Decision Making */}
       {isAnalyticsModalOpen && (
         <ComparativeAnalyticsModal
-          projects={projects}
+          projects={userVisibleProjects}
           insights={decisionInsights}
           currentStaffId={currentRole === 'employee' ? currentStaff.id : undefined}
           onClose={() => setIsAnalyticsModalOpen(false)}

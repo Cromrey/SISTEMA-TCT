@@ -345,6 +345,8 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
       contractNumber,
       contractHolder: contractHolder.trim(),
       contractHolderDni: advisorDni,
+      createdByUserId: currentUser?.id,
+      createdByUsername: currentUser?.username,
       createdByName: creatorName,
       createdByDni: creatorDni,
       title: title.trim() || `${eventType}: ${clientName || 'Producción Audiovisual'}`,

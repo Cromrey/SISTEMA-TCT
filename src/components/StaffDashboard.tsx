@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ProductionProject, StaffMember, SmartAlert } from '../types';
+import { ProductionProject, StaffMember, SmartAlert, AuthUser } from '../types';
 import { 
   Film, 
   Calendar, 
@@ -17,14 +17,17 @@ import {
   Paperclip,
   FileText,
   FileCheck,
-  Download
+  Download,
+  PlusCircle
 } from 'lucide-react';
 import { CalendarView } from './CalendarView';
 import { getProjectProgressInfo } from '../utils/projectProgress';
+import { isProjectVisibleToUser } from '../utils/authStorage';
 
 interface StaffDashboardProps {
   projects: ProductionProject[];
   currentStaff: StaffMember;
+  currentUser?: AuthUser | null;
   onOpenProject: (project: ProductionProject) => void;
   onOpenContractExport?: (project: ProductionProject) => void;
   onOpenProgressReport?: (project: ProductionProject) => void;
@@ -36,6 +39,7 @@ interface StaffDashboardProps {
 export const StaffDashboard: React.FC<StaffDashboardProps> = ({
   projects,
   currentStaff,
+  currentUser,
   onOpenProject,
   onOpenContractExport,
   onOpenProgressReport,
@@ -58,9 +62,12 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
     };
   }, []);
 
-  // Filter projects strictly for this staff member (assigned staff or contract advisor)
+  // Filter projects strictly for this employee (only their own created projects)
   const myProjects = projects.filter(p => {
     if (p.isArchived) return false;
+    if (currentUser) {
+      return isProjectVisibleToUser(p, currentUser);
+    }
     const staffNameLower = (currentStaff.name || '').toLowerCase().trim();
     const isAssigned = p.assignedStaff && p.assignedStaff.some(s => 
       s.id === currentStaff.id || 
@@ -147,10 +154,24 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
           </div>
 
           {myProjects.length === 0 ? (
-            <div className="bg-white rounded-3xl border border-slate-200 p-12 text-center text-slate-400 text-xs shadow-xs space-y-2">
-              <Film className="w-8 h-8 mx-auto text-slate-300" />
-              <p className="font-bold text-slate-600">No tienes producciones asignadas actualmente.</p>
-              <p className="text-slate-400">El administrador te asignará eventos o puedes registrar uno nuevo.</p>
+            <div className="bg-white rounded-3xl border border-slate-200 p-12 text-center text-slate-400 text-xs shadow-xs space-y-3">
+              <Film className="w-10 h-10 mx-auto text-amber-500/70" />
+              <p className="font-black text-slate-800 text-sm">No tienes producciones propias registradas actualmente.</p>
+              <p className="text-slate-500 max-w-md mx-auto">
+                En tu perfil de empleado solo verás los contratos y expedientes creados bajo tu cuenta. Puedes registrar uno nuevo de inmediato:
+              </p>
+              {onOpenNewProject && (
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={onOpenNewProject}
+                    className="inline-flex items-center space-x-2 px-5 py-2.5 rounded-2xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs shadow-md cursor-pointer transition-all hover:scale-105"
+                  >
+                    <PlusCircle className="w-4 h-4" />
+                    <span>Crear Nueva Producción</span>
+                  </button>
+                </div>
+              )}
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

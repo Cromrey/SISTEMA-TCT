@@ -182,36 +182,44 @@ export const Header: React.FC<HeaderProps> = ({
                 </div>
 
                 <div className="flex items-center space-x-1 sm:space-x-1.5">
-                  <select
-                    id="select-active-system-user"
-                    aria-label="Seleccionar usuario activo"
-                    value={
-                      activeUser?.id || (currentRole === 'admin' 
-                        ? (allUsers.find(u => u.role === 'admin')?.id || 'admin') 
-                        : (currentStaff?.id || allStaff[0]?.id || ''))
-                    }
-                    onChange={(e) => handleSelectUser(e.target.value)}
-                    className="bg-transparent text-xs font-black text-white focus:outline-none cursor-pointer max-w-[130px] sm:max-w-[180px] truncate pr-1"
-                  >
-                    {allUsers.length > 0 ? (
-                      allUsers.map((usr) => (
-                        <option key={usr.id} value={usr.id} className="bg-slate-900 text-white font-bold">
-                          {usr.role === 'admin' ? '🛡️ ' : '🎬 '} {usr.fullName}
-                        </option>
-                      ))
-                    ) : (
-                      <>
-                        <option value="admin" className="bg-slate-900 text-white">
-                          🛡️ Ing. Michael RomeroReyes
-                        </option>
-                        {allStaff.map((st) => (
-                          <option key={st.id} value={st.id} className="bg-slate-900 text-white">
-                            🎬 {st.name}
+                  {currentUser?.role === 'employee' ? (
+                    <div className="flex items-center space-x-1.5 max-w-[140px] sm:max-w-[200px] px-1">
+                      <span className="text-xs font-black text-white truncate" title={currentUser.fullName}>
+                        🎬 {currentUser.fullName}
+                      </span>
+                    </div>
+                  ) : (
+                    <select
+                      id="select-active-system-user"
+                      aria-label="Seleccionar usuario activo"
+                      value={
+                        activeUser?.id || (currentRole === 'admin' 
+                          ? (allUsers.find(u => u.role === 'admin')?.id || 'admin') 
+                          : (currentStaff?.id || allStaff[0]?.id || ''))
+                      }
+                      onChange={(e) => handleSelectUser(e.target.value)}
+                      className="bg-transparent text-xs font-black text-white focus:outline-none cursor-pointer max-w-[130px] sm:max-w-[180px] truncate pr-1"
+                    >
+                      {allUsers.length > 0 ? (
+                        allUsers.map((usr) => (
+                          <option key={usr.id} value={usr.id} className="bg-slate-900 text-white font-bold">
+                            {usr.role === 'admin' ? '🛡️ ' : '🎬 '} {usr.fullName}
                           </option>
-                        ))}
-                      </>
-                    )}
-                  </select>
+                        ))
+                      ) : (
+                        <>
+                          <option value="admin" className="bg-slate-900 text-white">
+                            🛡️ Ing. Michael RomeroReyes
+                          </option>
+                          {allStaff.map((st) => (
+                            <option key={st.id} value={st.id} className="bg-slate-900 text-white">
+                              🎬 {st.name}
+                            </option>
+                          ))}
+                        </>
+                      )}
+                    </select>
+                  )}
 
                   {/* Role / Cargo Badge right beside user */}
                   <span className={`hidden sm:inline-block px-2 py-0.5 rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-wider whitespace-nowrap shadow-xs ${
