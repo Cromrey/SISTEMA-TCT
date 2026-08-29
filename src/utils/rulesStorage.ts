@@ -179,21 +179,21 @@ export const INITIAL_PACKAGES: TCTMasterPackage[] = [
 ];
 
 export const INITIAL_EQUIPMENT_CATALOG: EquipmentItem[] = [
-  { id: 'eq-1', name: 'Cámara Sony FX3 Cinema Line 4K (Cuerpo Principal)', category: 'Cámara', serialNumber: 'SN-FX3-88219', checkedOut: false },
-  { id: 'eq-2', name: 'Cámara Sony A7S III 4K 120fps (Cuerpo Secundario)', category: 'Cámara', serialNumber: 'SN-A7S3-44102', checkedOut: false },
-  { id: 'eq-3', name: 'Cámara Sony A7 IV Full Frame 33MP (Foto / Video)', category: 'Cámara', serialNumber: 'SN-A74-10928', checkedOut: false },
-  { id: 'eq-4', name: 'Lente Sony FE 24-70mm f/2.8 GM II', category: 'Lente', serialNumber: 'SN-GM-2470-91', checkedOut: false },
-  { id: 'eq-5', name: 'Lente Sony FE 70-200mm f/2.8 GM OSS II', category: 'Lente', serialNumber: 'SN-GM-70200-33', checkedOut: false },
-  { id: 'eq-6', name: 'Lente Sony FE 16-35mm f/2.8 GM Gran Angular', category: 'Lente', serialNumber: 'SN-GM-1635-12', checkedOut: false },
-  { id: 'eq-7', name: 'Dron DJI Mavic 3 Pro (Tri-Cámara Hasselblad 4K/5.1K)', category: 'Dron', serialNumber: 'SN-DJI-M3P-77', checkedOut: false },
-  { id: 'eq-8', name: 'Dron DJI Mini 4 Pro (Respaldo / Interiores)', category: 'Dron', serialNumber: 'SN-DJI-M4P-05', checkedOut: false },
-  { id: 'eq-9', name: 'Estabilizador Gimbal DJI Ronin RS3 Pro + Focus Motor', category: 'Estabilizadores / Soportes', serialNumber: 'SN-RS3P-9981', checkedOut: false },
-  { id: 'eq-10', name: 'Set Micrófonos Inalámbricos DJI Mic 2 (2 Tx + 1 Rx 32-bit Float)', category: 'Audio', serialNumber: 'SN-DJIMIC2-40', checkedOut: false },
-  { id: 'eq-11', name: 'Grabadora Profesional Tascam DR-40X 4 Canales XLR', category: 'Audio', serialNumber: 'SN-TASC-8812', checkedOut: false },
-  { id: 'eq-12', name: 'Kit Iluminación LED Amaran 200x Bi-Color + Octabox 90cm', category: 'Iluminación', serialNumber: 'SN-AMARAN-200', checkedOut: false },
-  { id: 'eq-13', name: 'Flash de Estudio Portátil Godox AD200 Pro + Transmisor XPro', category: 'Iluminación', serialNumber: 'SN-GDX-AD200', checkedOut: false },
-  { id: 'eq-14', name: 'Pack 6x Memorias SD Sandisk Extreme Pro V90 128GB UHS-II', category: 'Accesorios / Memorias', serialNumber: 'SN-SD-V90-SET', checkedOut: false },
-  { id: 'eq-15', name: 'Baterías Sony NP-FZ100 Originales (Pack x8) + Cargadores Dual', category: 'Accesorios / Memorias', serialNumber: 'SN-BAT-FZ100-8', checkedOut: false }
+  { id: 'eq-1', code: 'CAM-001', name: 'Cámara Sony FX3 Cinema Line 4K (Cuerpo Principal)', category: 'Cámara', serialNumber: 'SN-FX3-88219', features: 'Sensor Full-Frame 12.1 MP, 4K 120p, S-Cinetone, 10-bit 4:2:2, Dual Base ISO', registrationDate: '2025-01-15', condition: 'Operativo', checkedOut: false },
+  { id: 'eq-2', code: 'CAM-002', name: 'Cámara Sony A7S III 4K 120fps (Cuerpo Secundario)', category: 'Cámara', serialNumber: 'SN-A7S3-44102', features: 'Sensor Full-Frame 12.1 MP, 4K 120p All-Intra, S-Log3, Enfoque al Ojo en Tiempo Real', registrationDate: '2025-02-10', condition: 'Operativo', checkedOut: false },
+  { id: 'eq-3', code: 'CAM-003', name: 'Cámara Sony A7 IV Full Frame 33MP (Foto / Video)', category: 'Cámara', serialNumber: 'SN-A74-10928', features: 'Sensor 33 MP Exmor R CMOS, BIONZ XR, 4K 60p, 10 fps continuo, S-Cinetone', registrationDate: '2025-03-01', condition: 'Operativo', checkedOut: false },
+  { id: 'eq-4', code: 'LEN-001', name: 'Lente Sony FE 24-70mm f/2.8 GM II', category: 'Lente', serialNumber: 'SN-GM-2470-91', features: 'Apertura constante f/2.8, 4 motores lineales XD, Nano AR II, Peso ultraligero', registrationDate: '2025-01-20', condition: 'Operativo', checkedOut: false },
+  { id: 'eq-5', code: 'LEN-002', name: 'Lente Sony FE 70-200mm f/2.8 GM OSS II', category: 'Lente', serialNumber: 'SN-GM-70200-33', features: 'Teleobjetivo profesional f/2.8, Estabilización óptica OSS, 43% más liviano', registrationDate: '2025-02-14', condition: 'Operativo', checkedOut: false },
+  { id: 'eq-6', code: 'LEN-003', name: 'Lente Sony FE 16-35mm f/2.8 GM Gran Angular', category: 'Lente', serialNumber: 'SN-GM-1635-12', features: 'Gran angular f/2.8 serie G Master, 2 elementos XA, Recubrimiento flúor', registrationDate: '2025-03-10', condition: 'Operativo', checkedOut: false },
+  { id: 'eq-7', code: 'DRN-001', name: 'Dron DJI Mavic 3 Pro (Tri-Cámara Hasselblad 4K/5.1K)', category: 'Dron', serialNumber: 'SN-DJI-M3P-77', features: 'Tri-cámara Hasselblad 4/3 CMOS + 70mm + 166mm, Transmisión O3+ 15km, 43 min de vuelo', registrationDate: '2025-01-18', condition: 'Operativo', checkedOut: false },
+  { id: 'eq-8', code: 'DRN-002', name: 'Dron DJI Mini 4 Pro (Respaldo / Interiores)', category: 'Dron', serialNumber: 'SN-DJI-M4P-05', features: 'Peso <249g, Sensor 1/1.3 pulgadas CMOS, Grabación vertical nativa 4K/60fps HDR', registrationDate: '2025-04-05', condition: 'Operativo', checkedOut: false },
+  { id: 'eq-9', code: 'EST-001', name: 'Estabilizador Gimbal DJI Ronin RS3 Pro + Focus Motor', category: 'Estabilizadores / Soportes', serialNumber: 'SN-RS3P-9981', features: 'Brazos de fibra de carbono, Carga máx 4.5kg, Pantalla OLED táctil 1.8 pulgadas', registrationDate: '2025-01-22', condition: 'Operativo', checkedOut: false },
+  { id: 'eq-10', code: 'AUD-001', name: 'Set Micrófonos Inalámbricos DJI Mic 2 (2 Tx + 1 Rx 32-bit Float)', category: 'Audio', serialNumber: 'SN-DJIMIC2-40', features: 'Grabación interna flotante de 32 bits, Cancelación de ruido inteligente, Alcance 250m', registrationDate: '2025-02-18', condition: 'Operativo', checkedOut: false },
+  { id: 'eq-11', code: 'AUD-002', name: 'Grabadora Profesional Tascam DR-40X 4 Canales XLR', category: 'Audio', serialNumber: 'SN-TASC-8812', features: 'Micrófonos estéreo unidireccionales A/B o X/Y, Entradas duales Neutrik XLR/TRS', registrationDate: '2025-03-12', condition: 'Operativo', checkedOut: false },
+  { id: 'eq-12', code: 'ILU-001', name: 'Kit Iluminación LED Amaran 200x Bi-Color + Octabox 90cm', category: 'Iluminación', serialNumber: 'SN-AMARAN-200', features: '200W Potencia puntual, 2700K-6500K CCT, Control inalámbrico Sidus Link, CRI 95+', registrationDate: '2025-02-25', condition: 'Operativo', checkedOut: false },
+  { id: 'eq-13', code: 'ILU-002', name: 'Flash de Estudio Portátil Godox AD200 Pro + Transmisor XPro', category: 'Iluminación', serialNumber: 'SN-GDX-AD200', features: '200Ws Potencia, Batería Litio 2900mAh (500 disparos full), TTL HSS 1/8000s', registrationDate: '2025-03-15', condition: 'Operativo', checkedOut: false },
+  { id: 'eq-14', code: 'ACC-001', name: 'Pack 6x Memorias SD Sandisk Extreme Pro V90 128GB UHS-II', category: 'Accesorios / Memorias', serialNumber: 'SN-SD-V90-SET', features: 'Lectura hasta 300 MB/s, Escritura 260 MB/s, Video Speed Class V90 para 4K/8K', registrationDate: '2025-01-10', condition: 'Operativo', checkedOut: false },
+  { id: 'eq-15', code: 'ACC-002', name: 'Baterías Sony NP-FZ100 Originales (Pack x8) + Cargadores Dual', category: 'Accesorios / Memorias', serialNumber: 'SN-BAT-FZ100-8', features: '2280mAh 7.2V por batería, InfoLITHIUM de Sony, Cargadores rápidos simultáneos', registrationDate: '2025-01-12', condition: 'Operativo', checkedOut: false }
 ];
 
 export const INITIAL_STEP_CHECKLISTS: MasterStepChecklistRule[] = [

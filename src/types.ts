@@ -147,13 +147,18 @@ export type StaffMember = AssignedStaff;
 
 export interface EquipmentItem {
   id: string;
+  code?: string;
   name: string;
-  category: 'Cámara' | 'Lente' | 'Dron' | 'Audio' | 'Iluminación' | 'Accesorios / Memorias' | 'Estabilizadores / Soportes';
+  category: 'Cámara' | 'Lente' | 'Dron' | 'Audio' | 'Iluminación' | 'Accesorios / Memorias' | 'Estabilizadores / Soportes' | 'Almacenamiento' | 'Batería' | 'Accesorio' | string;
   serialNumber?: string;
+  imageUrl?: string;
+  features?: string;
+  registrationDate?: string;
+  condition?: 'Operativo' | 'En Mantenimiento' | 'De Baja' | 'Nuevo' | 'good' | 'fair' | 'maintenance' | string;
   checkedOut: boolean;
   isAvailable?: boolean;
-  condition?: 'good' | 'fair' | 'maintenance' | string;
   maintenanceRequired?: boolean;
+  assignedProjectTitle?: string;
 }
 
 export interface ProductionProject {

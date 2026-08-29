@@ -404,7 +404,23 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
       rescheduleNoticeMonths: Number(rescheduleNoticeMonths) || 1,
       additionalCustomClauseTitle: additionalCustomClauseTitle.trim(),
       additionalCustomClause: additionalCustomClause.trim(),
-      assignedStaff: [],
+      assignedStaff: currentUser ? [
+        {
+          id: currentUser.id || `staff-${Date.now()}`,
+          name: currentUser.fullName || 'Técnico de Producción',
+          role: currentUser.jobTitle || (currentUser.role === 'admin' ? 'Director General de Producción' : 'Técnico de Producción'),
+          phone: currentUser.phone || '+51 990010020',
+          confirmed: true
+        }
+      ] : [
+        {
+          id: `staff-${Date.now()}`,
+          name: contractHolder ? contractHolder.split(' - ')[0] : 'Ing. Michael RomeroReyes',
+          role: 'Director General de Producción',
+          phone: '+51 990010020',
+          confirmed: true
+        }
+      ],
       equipmentList: [],
       phases: initialPhases,
       createdAt: new Date().toISOString().split('T')[0],

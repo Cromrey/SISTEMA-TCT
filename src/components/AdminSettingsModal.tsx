@@ -49,6 +49,7 @@ import {
 import { formatDateDDMMAA } from '../utils/dateFormatter';
 import { SyncStatusIndicator } from './SyncStatusIndicator';
 import { TCTLogo } from './TCTLogo';
+import { exportElementToPdf } from '../utils/printHelper';
 import { 
   getStoredLiveSessions, 
   terminateSessionById, 
@@ -111,6 +112,7 @@ import {
   Type,
   LayoutGrid,
   ArrowLeft,
+  ArrowRight,
   Image as ImageIcon,
   Activity,
   UserX,
@@ -206,6 +208,23 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
   const [newEquipmentCategory, setNewEquipmentCategory] = useState<EquipmentItem['category']>('Cámara');
   const [newEquipmentSerial, setNewEquipmentSerial] = useState('');
   const [equipmentFilterCat, setEquipmentFilterCat] = useState<string>('all');
+  const [inventoryConditionFilter, setInventoryConditionFilter] = useState<string>('all');
+  const [isEquipmentModalOpen, setIsEquipmentModalOpen] = useState(false);
+  const [editingEquipment, setEditingEquipment] = useState<EquipmentItem | null>(null);
+  const [formEqCode, setFormEqCode] = useState('');
+  const [formEqName, setFormEqName] = useState('');
+  const [formEqCategory, setFormEqCategory] = useState<EquipmentItem['category']>('Cámara');
+  const [formEqSerial, setFormEqSerial] = useState('');
+  const [formEqImageUrl, setFormEqImageUrl] = useState('');
+  const [formEqFeatures, setFormEqFeatures] = useState('');
+  const [formEqDate, setFormEqDate] = useState(new Date().toISOString().split('T')[0]);
+  const [formEqCondition, setFormEqCondition] = useState<'Operativo' | 'En Mantenimiento' | 'De Baja' | 'Nuevo'>('Operativo');
+  const [formEqError, setFormEqError] = useState<string | null>(null);
+  const [isExportingInventoryPdf, setIsExportingInventoryPdf] = useState(false);
+
+  // --- Unsaved Changes Tracking State ---
+  const [isDirty, setIsDirty] = useState(false);
+  const [showSaveConfirmDialog, setShowSaveConfirmDialog] = useState(false);
 
   // --- Proforma / Package Management State ---
   const [editingPackage, setEditingPackage] = useState<TCTMasterPackage | null>(rules.packages[0] || null);
@@ -630,6 +649,7 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
     };
     saveMasterRules(updatedRules);
     setRules(updatedRules);
+    setIsDirty(false);
     if (onRulesUpdated) onRulesUpdated();
     notifySuccess('✓ Reglas Maestras TCT guardadas de forma persistente');
   };
@@ -642,6 +662,7 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
       setSelectedFormat(reset.templateFormats[0] || null);
       setStandardExtraHourRate(reset.standardExtraHourRate);
       setMaxDiscountPercentage(reset.maxDiscountPercentageAllowed);
+      setIsDirty(false);
       if (onRulesUpdated) onRulesUpdated();
       notifySuccess('🔄 Configuración de Reglas restablecida a los valores oficiales TCT');
     }
@@ -667,6 +688,7 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
       })
     };
     setRules(updatedRules);
+    setIsDirty(true);
     setNewChecklistText('');
   };
 
@@ -685,6 +707,7 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
       })
     };
     setRules(updatedRules);
+    setIsDirty(true);
   };
 
   const handleSaveEditedChecklistItem = (index: number) => {
@@ -704,52 +727,200 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
       })
     };
     setRules(updatedRules);
+    setIsDirty(true);
     setEditingChecklistIdx(null);
     setEditingChecklistValue('');
   };
 
   // -------------------------------------------------------------
-  // 2. EQUIPMENT MANAGEMENT
+  // 2. EQUIPMENT INVENTORY & EDITING MANAGEMENT
   // -------------------------------------------------------------
-  const handleAddEquipment = () => {
-    if (!newEquipmentName.trim()) return;
-    const newEq: EquipmentItem = {
-      id: `eq-custom-${Date.now()}`,
-      name: newEquipmentName.trim(),
-      category: newEquipmentCategory,
-      serialNumber: newEquipmentSerial.trim() || undefined,
-      checkedOut: false,
-      isAvailable: true,
-      condition: 'good',
-      maintenanceRequired: false
+  const handleOpenAddEquipmentModal = () => {
+    setEditingEquipment(null);
+    const catPrefix = 'EQ';
+    const nextNum = (rules.equipmentCatalog.length + 1).toString().padStart(3, '0');
+    setFormEqCode(`${catPrefix}-${nextNum}`);
+    setFormEqName('');
+    setFormEqCategory('Cámara');
+    setFormEqSerial('');
+    setFormEqImageUrl('');
+    setFormEqFeatures('');
+    setFormEqDate(new Date().toISOString().split('T')[0]);
+    setFormEqCondition('Operativo');
+    setFormEqError(null);
+    setIsEquipmentModalOpen(true);
+  };
+
+  const handleOpenEditEquipmentModal = (eq: EquipmentItem) => {
+    setEditingEquipment(eq);
+    setFormEqCode(eq.code || '');
+    setFormEqName(eq.name || '');
+    setFormEqCategory(eq.category || 'Cámara');
+    setFormEqSerial(eq.serialNumber || '');
+    setFormEqImageUrl(eq.imageUrl || '');
+    setFormEqFeatures(eq.features || '');
+    setFormEqDate(eq.registrationDate || new Date().toISOString().split('T')[0]);
+    setFormEqCondition(
+      (eq.condition === 'Operativo' || eq.condition === 'En Mantenimiento' || eq.condition === 'De Baja' || eq.condition === 'Nuevo')
+        ? eq.condition
+        : 'Operativo'
+    );
+    setFormEqError(null);
+    setIsEquipmentModalOpen(true);
+  };
+
+  const handleEquipmentImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      setFormEqError('La imagen no debe superar los 2MB.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (uploadEvent) => {
+      const base64 = uploadEvent.target?.result as string;
+      if (base64) {
+        setFormEqImageUrl(base64);
+        setFormEqError(null);
+      }
     };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSaveEquipmentForm = () => {
+    setFormEqError(null);
+    const cleanCode = formEqCode.trim().toUpperCase();
+    const cleanName = formEqName.trim();
+    const cleanSerial = formEqSerial.trim();
+
+    if (!cleanCode) {
+      setFormEqError('El código del equipo es obligatorio (ej. CAM-001).');
+      return;
+    }
+    if (!cleanName) {
+      setFormEqError('El nombre del equipo es obligatorio.');
+      return;
+    }
+
+    // Check duplicate code
+    const isDupCode = rules.equipmentCatalog.some(e => 
+      e.id !== editingEquipment?.id && 
+      e.code && 
+      e.code.trim().toUpperCase() === cleanCode
+    );
+    if (isDupCode) {
+      setFormEqError(`⚠️ Ya existe otro equipo registrado con el código "${cleanCode}". Utilice un código único para evitar duplicados.`);
+      return;
+    }
+
+    // Check duplicate serial number (if provided)
+    if (cleanSerial) {
+      const isDupSerial = rules.equipmentCatalog.some(e =>
+        e.id !== editingEquipment?.id &&
+        e.serialNumber &&
+        e.serialNumber.trim().toUpperCase() === cleanSerial.toUpperCase()
+      );
+      if (isDupSerial) {
+        setFormEqError(`⚠️ Ya existe otro equipo registrado con el número de serie "${cleanSerial}".`);
+        return;
+      }
+    }
+
+    let updatedList: EquipmentItem[];
+    if (editingEquipment) {
+      updatedList = rules.equipmentCatalog.map(e => {
+        if (e.id === editingEquipment.id) {
+          return {
+            ...e,
+            code: cleanCode,
+            name: cleanName,
+            category: formEqCategory,
+            serialNumber: cleanSerial || undefined,
+            imageUrl: formEqImageUrl || undefined,
+            features: formEqFeatures.trim() || undefined,
+            registrationDate: formEqDate,
+            condition: formEqCondition,
+            maintenanceRequired: formEqCondition === 'En Mantenimiento' || formEqCondition === 'De Baja',
+            isAvailable: formEqCondition === 'Operativo' || formEqCondition === 'Nuevo'
+          };
+        }
+        return e;
+      });
+      notifySuccess(`✓ Equipo "${cleanName}" (${cleanCode}) actualizado en el inventario`);
+    } else {
+      const newEq: EquipmentItem = {
+        id: `eq-${Date.now()}`,
+        code: cleanCode,
+        name: cleanName,
+        category: formEqCategory,
+        serialNumber: cleanSerial || undefined,
+        imageUrl: formEqImageUrl || undefined,
+        features: formEqFeatures.trim() || undefined,
+        registrationDate: formEqDate,
+        condition: formEqCondition,
+        checkedOut: false,
+        isAvailable: formEqCondition === 'Operativo' || formEqCondition === 'Nuevo',
+        maintenanceRequired: formEqCondition === 'En Mantenimiento' || formEqCondition === 'De Baja'
+      };
+      updatedList = [newEq, ...rules.equipmentCatalog];
+      notifySuccess(`✓ Equipo "${cleanName}" (${cleanCode}) registrado en el inventario`);
+    }
+
     const updatedRules = {
       ...rules,
-      equipmentCatalog: [newEq, ...rules.equipmentCatalog]
+      equipmentCatalog: updatedList
     };
     setRules(updatedRules);
-    setNewEquipmentName('');
-    setNewEquipmentSerial('');
-    notifySuccess(`✓ Equipo "${newEq.name}" agregado al catálogo`);
+    saveMasterRules(updatedRules);
+    if (onRulesUpdated) onRulesUpdated();
+    setIsDirty(true);
+    setIsEquipmentModalOpen(false);
   };
 
   const handleDeleteEquipment = (id: string) => {
-    if (window.confirm('¿Seguro que deseas eliminar este equipo del catálogo institucional?')) {
+    const target = rules.equipmentCatalog.find(e => e.id === id);
+    if (window.confirm(`¿Seguro que deseas eliminar el equipo "${target?.name || 'seleccionado'}" del inventario institucional?`)) {
       const updatedRules = {
         ...rules,
         equipmentCatalog: rules.equipmentCatalog.filter(e => e.id !== id)
       };
       setRules(updatedRules);
+      saveMasterRules(updatedRules);
+      if (onRulesUpdated) onRulesUpdated();
+      setIsDirty(true);
       notifySuccess('Equipo eliminado del catálogo');
+    }
+  };
+
+  const handleExportInventoryPdf = async () => {
+    setIsExportingInventoryPdf(true);
+    try {
+      const ok = await exportElementToPdf(
+        'tct-inventory-printable-document',
+        `TCT-Inventario-Equipos-${new Date().toISOString().split('T')[0]}.pdf`,
+        'Inventario Oficial de Equipos TCT'
+      );
+      if (ok) {
+        notifySuccess('✓ Inventario oficial exportado en PDF exitosamente');
+      }
+    } catch (err) {
+      console.error('Error exporting inventory PDF:', err);
+      notifyError('No se pudo generar el PDF del inventario.');
+    } finally {
+      setIsExportingInventoryPdf(false);
     }
   };
 
   const filteredEquipment = rules.equipmentCatalog.filter(eq => {
     const matchesCat = equipmentFilterCat === 'all' || eq.category === equipmentFilterCat;
-    const matchesSearch = !searchQuery || 
-      eq.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (eq.serialNumber && eq.serialNumber.toLowerCase().includes(searchQuery.toLowerCase()));
-    return matchesCat && matchesSearch;
+    const matchesCond = inventoryConditionFilter === 'all' || eq.condition === inventoryConditionFilter;
+    const q = searchQuery.toLowerCase().trim();
+    const matchesSearch = !q || 
+      eq.name.toLowerCase().includes(q) ||
+      (eq.code && eq.code.toLowerCase().includes(q)) ||
+      (eq.serialNumber && eq.serialNumber.toLowerCase().includes(q)) ||
+      (eq.features && eq.features.toLowerCase().includes(q));
+    return matchesCat && matchesCond && matchesSearch;
   });
 
   // -------------------------------------------------------------
@@ -1335,7 +1506,13 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
             )}
             <SyncStatusIndicator />
             <button
-              onClick={onClose}
+              onClick={() => {
+                if (isDirty) {
+                  setShowSaveConfirmDialog(true);
+                } else {
+                  onClose();
+                }
+              }}
               className="p-2 rounded-full bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white transition-colors cursor-pointer"
               title="Cerrar ventana"
             >
@@ -1362,39 +1539,81 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
           </div>
         )}
 
-        {/* Navigation Bar when inside a section */}
+        {/* Navigation Bar when inside a section (Atrás, Adelante, Guardar) */}
         {!showButtonsMenu && (
-          <div className="bg-slate-100 px-3 sm:px-5 py-2 border-b border-slate-200 flex items-center justify-between overflow-x-auto shrink-0 gap-2">
-            <button
-              onClick={() => setShowButtonsMenu(true)}
-              className="px-3 py-1.5 bg-white hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-black border border-slate-300 flex items-center gap-1.5 shadow-xs transition-all cursor-pointer shrink-0"
-              title="Volver al panel de botones de Reglas"
-            >
-              <ArrowLeft className="w-3.5 h-3.5 text-amber-600" />
-              <span>← REGLAS</span>
-            </button>
+          <div className="bg-slate-100 px-4 py-2 border-b border-slate-200 flex items-center justify-between shrink-0 gap-3">
+            {/* Left: Botón Atrás */}
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => {
+                  const idx = RULES_OPTIONS.findIndex(o => o.id === activeTab);
+                  if (idx > 0) {
+                    setActiveTab(RULES_OPTIONS[idx - 1].id);
+                  } else {
+                    setShowButtonsMenu(true);
+                  }
+                }}
+                className="px-3.5 py-1.5 bg-white hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-black border border-slate-300 flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
+                title="Ir a la sección anterior"
+              >
+                <ArrowLeft className="w-4 h-4 text-amber-600" />
+                <span>Atrás</span>
+              </button>
 
-            {/* Quick jump tab pill buttons */}
-            <div className="flex items-center space-x-1.5 overflow-x-auto scrollbar-none py-0.5">
-              {RULES_OPTIONS.map((opt) => {
-                const Icon = opt.icon;
-                const isActive = activeTab === opt.id;
+              <button
+                onClick={() => setShowButtonsMenu(true)}
+                className="p-1.5 bg-white hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-bold border border-slate-300 flex items-center justify-center shadow-xs transition-all cursor-pointer"
+                title="Volver al Menú Principal de Reglas"
+              >
+                <LayoutGrid className="w-4 h-4 text-slate-600" />
+              </button>
+            </div>
+
+            {/* Center: Current Tab Badge & Name */}
+            <div className="flex items-center space-x-2 truncate">
+              {(() => {
+                const currentOpt = RULES_OPTIONS.find(o => o.id === activeTab);
+                const currentIdx = RULES_OPTIONS.findIndex(o => o.id === activeTab);
+                const Icon = currentOpt?.icon || Sliders;
                 return (
-                  <button
-                    key={opt.id}
-                    onClick={() => setActiveTab(opt.id)}
-                    className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all flex items-center gap-1 whitespace-nowrap cursor-pointer ${
-                      isActive
-                        ? 'bg-slate-900 text-amber-400 shadow-sm'
-                        : 'text-slate-600 hover:bg-slate-200 bg-white/70'
-                    }`}
-                    title={opt.description}
-                  >
-                    <Icon className="w-3.5 h-3.5" />
-                    <span>{opt.title.split('. ')[1] || opt.title}</span>
-                  </button>
+                  <div className="flex items-center space-x-2 bg-white px-3.5 py-1 rounded-xl border border-slate-200 shadow-2xs">
+                    <Icon className="w-4 h-4 text-amber-600 shrink-0" />
+                    <span className="text-xs font-black text-slate-900 truncate">
+                      {currentOpt?.title || 'Sección'}
+                    </span>
+                    <span className="text-[10px] font-black px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-600 border border-slate-200">
+                      {currentIdx + 1}/{RULES_OPTIONS.length}
+                    </span>
+                  </div>
                 );
-              })}
+              })()}
+            </div>
+
+            {/* Right: Botón Adelante & Botón Guardar */}
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => {
+                  const idx = RULES_OPTIONS.findIndex(o => o.id === activeTab);
+                  if (idx < RULES_OPTIONS.length - 1) {
+                    setActiveTab(RULES_OPTIONS[idx + 1].id);
+                  }
+                }}
+                disabled={RULES_OPTIONS.findIndex(o => o.id === activeTab) >= RULES_OPTIONS.length - 1}
+                className="px-3.5 py-1.5 bg-white hover:bg-slate-200 disabled:opacity-40 disabled:pointer-events-none text-slate-800 rounded-xl text-xs font-black border border-slate-300 flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
+                title="Ir a la sección siguiente"
+              >
+                <span>Adelante</span>
+                <ArrowRight className="w-4 h-4 text-amber-600" />
+              </button>
+
+              <button
+                onClick={handleSaveAll}
+                className="px-4 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-xl text-xs font-black flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
+                title="Guardar todos los cambios"
+              >
+                <Save className="w-4 h-4" />
+                <span>Guardar</span>
+              </button>
             </div>
           </div>
         )}
@@ -2557,131 +2776,565 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
           )}
 
           {/* ========================================================= */}
-          {/* TAB 2: INVENTARIO DE EQUIPOS */}
+          {/* TAB 2: INVENTARIO DE EQUIPOS AUDIOVISUALES */}
           {/* ========================================================= */}
           {!showButtonsMenu && activeTab === 'equipment' && (
-            <div className="space-y-5">
-              {/* Add form */}
-              <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-xs space-y-4">
-                <h4 className="text-xs font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-                  <Plus className="w-4 h-4 text-amber-500" />
-                  <span>Dar de Alta Nuevo Equipo Institucional</span>
-                </h4>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div>
-                    <label className="text-[11px] font-bold text-slate-600 block mb-1">Nombre del Equipo</label>
-                    <input
-                      type="text"
-                      value={newEquipmentName}
-                      onChange={(e) => setNewEquipmentName(e.target.value)}
-                      placeholder="Ej: Sony FX3 Cinema Line #3"
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:bg-white focus:ring-2 focus:ring-amber-500 focus:outline-none"
-                    />
+            <div className="space-y-6 animate-in fade-in">
+              {/* Header & Stats Banner */}
+              <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 font-black text-[10px] border border-amber-300">
+                      Activos Fijos TCT
+                    </span>
+                    <span className="text-xs text-slate-500 font-medium">
+                      Control institucional de equipamiento y series
+                    </span>
                   </div>
+                  <h4 className="text-lg font-black text-slate-950 mt-1">
+                    Inventario de Equipos Audiovisuales
+                  </h4>
+                  <p className="text-xs text-slate-500 max-w-xl">
+                    Administre los códigos únicos, números de serie, fotografías, características técnicas y estado operativo de todos los equipos.
+                  </p>
+                </div>
 
-                  <div>
-                    <label className="text-[11px] font-bold text-slate-600 block mb-1">Categoría</label>
-                    <select
-                      value={newEquipmentCategory}
-                      onChange={(e) => setNewEquipmentCategory(e.target.value as any)}
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:bg-white focus:ring-2 focus:ring-amber-500 focus:outline-none"
-                    >
-                      <option value="Cámara">Cámara</option>
-                      <option value="Lente">Lente</option>
-                      <option value="Dron">Dron</option>
-                      <option value="Audio">Audio / Micrófono</option>
-                      <option value="Iluminación">Iluminación</option>
-                      <option value="Estabilizador">Estabilizador / Gimbal</option>
-                      <option value="Soporte">Soporte / Trípode</option>
-                      <option value="Almacenamiento">Almacenamiento / SD Card</option>
-                      <option value="Batería">Batería & Energía</option>
-                      <option value="Accesorio">Accesorio General</option>
-                    </select>
+                <div className="flex items-center space-x-2 shrink-0">
+                  <button
+                    onClick={handleExportInventoryPdf}
+                    disabled={isExportingInventoryPdf}
+                    className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-amber-400 font-black text-xs rounded-2xl flex items-center gap-2 shadow-xs transition-all cursor-pointer"
+                    title="Exportar inventario oficial a formato PDF para control técnico"
+                  >
+                    <Download className="w-4 h-4" />
+                    <span>{isExportingInventoryPdf ? 'Generando PDF...' : 'Exportar PDF'}</span>
+                  </button>
+
+                  <button
+                    onClick={handleOpenAddEquipmentModal}
+                    className="px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs rounded-2xl flex items-center gap-2 shadow-xs transition-all cursor-pointer"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Dar de Alta Equipo</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Stats Counters */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="p-3.5 bg-white rounded-2xl border border-slate-200 shadow-xs">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Total en Inventario</span>
+                  <div className="flex items-baseline space-x-1.5 mt-1">
+                    <span className="text-xl font-black text-slate-950">{rules.equipmentCatalog.length}</span>
+                    <span className="text-xs text-slate-500">equipos</span>
                   </div>
+                </div>
 
-                  <div>
-                    <label className="text-[11px] font-bold text-slate-600 block mb-1">Número de Serie (Opcional)</label>
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="text"
-                        value={newEquipmentSerial}
-                        onChange={(e) => setNewEquipmentSerial(e.target.value)}
-                        placeholder="Ej: SN-998231-TCT"
-                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:bg-white focus:ring-2 focus:ring-amber-500 focus:outline-none"
-                      />
-                      <button
-                        onClick={handleAddEquipment}
-                        className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs rounded-xl flex items-center gap-1 transition-all shrink-0"
-                      >
-                        <Plus className="w-4 h-4" />
-                        <span>Agregar</span>
-                      </button>
-                    </div>
+                <div className="p-3.5 bg-emerald-50 rounded-2xl border border-emerald-200/80 shadow-xs">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700">Operativos / Disponibles</span>
+                  <div className="flex items-baseline space-x-1.5 mt-1">
+                    <span className="text-xl font-black text-emerald-950">
+                      {rules.equipmentCatalog.filter(e => e.condition === 'Operativo' || e.condition === 'Nuevo' || !e.condition).length}
+                    </span>
+                    <span className="text-xs text-emerald-700">activos</span>
+                  </div>
+                </div>
+
+                <div className="p-3.5 bg-amber-50 rounded-2xl border border-amber-200/80 shadow-xs">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-amber-700">En Mantenimiento</span>
+                  <div className="flex items-baseline space-x-1.5 mt-1">
+                    <span className="text-xl font-black text-amber-950">
+                      {rules.equipmentCatalog.filter(e => e.condition === 'En Mantenimiento').length}
+                    </span>
+                    <span className="text-xs text-amber-700">revisión</span>
+                  </div>
+                </div>
+
+                <div className="p-3.5 bg-rose-50 rounded-2xl border border-rose-200/80 shadow-xs">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-rose-700">De Baja / Obsoleto</span>
+                  <div className="flex items-baseline space-x-1.5 mt-1">
+                    <span className="text-xl font-black text-rose-950">
+                      {rules.equipmentCatalog.filter(e => e.condition === 'De Baja').length}
+                    </span>
+                    <span className="text-xs text-rose-700">retirados</span>
                   </div>
                 </div>
               </div>
 
-              {/* Filter bar */}
-              <div className="flex items-center justify-between flex-wrap gap-3">
-                <div className="flex items-center space-x-2 flex-1 max-w-sm">
-                  <Search className="w-4 h-4 text-slate-400" />
+              {/* Filter & Search Bar */}
+              <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+                <div className="flex items-center space-x-2 flex-1">
+                  <Search className="w-4 h-4 text-slate-400 shrink-0" />
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Buscar equipo o serie..."
-                    className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-1 focus:ring-amber-500"
+                    placeholder="Buscar por código, nombre, número de serie o características..."
+                    className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500"
                   />
+                  {searchQuery && (
+                    <button
+                      onClick={() => setSearchQuery('')}
+                      className="p-1 text-slate-400 hover:text-slate-600 rounded-lg text-xs"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                 </div>
 
-                <div className="flex items-center space-x-1.5 overflow-x-auto text-xs">
-                  {['all', 'Cámara', 'Lente', 'Dron', 'Audio', 'Iluminación', 'Estabilizador'].map((cat) => (
-                    <button
-                      key={cat}
-                      onClick={() => setEquipmentFilterCat(cat)}
-                      className={`px-3 py-1 rounded-lg font-bold transition-all ${
-                        equipmentFilterCat === cat
-                          ? 'bg-slate-900 text-amber-400'
-                          : 'bg-white text-slate-600 hover:bg-slate-200 border border-slate-200'
-                      }`}
+                <div className="flex items-center space-x-2 overflow-x-auto pb-1 md:pb-0">
+                  <div className="flex items-center space-x-1 shrink-0">
+                    <label className="text-[10px] font-black uppercase text-slate-400 mr-1">Estado:</label>
+                    <select
+                      value={inventoryConditionFilter}
+                      onChange={(e) => setInventoryConditionFilter(e.target.value)}
+                      className="px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none"
                     >
-                      {cat === 'all' ? 'Todos' : cat}
-                    </button>
-                  ))}
+                      <option value="all">Todos los Estados</option>
+                      <option value="Operativo">Operativo</option>
+                      <option value="Nuevo">Nuevo</option>
+                      <option value="En Mantenimiento">En Mantenimiento</option>
+                      <option value="De Baja">De Baja</option>
+                    </select>
+                  </div>
+
+                  <div className="flex items-center space-x-1 shrink-0">
+                    {['all', 'Cámara', 'Lente', 'Dron', 'Audio', 'Iluminación', 'Estabilizador'].map((cat) => (
+                      <button
+                        key={cat}
+                        onClick={() => setEquipmentFilterCat(cat)}
+                        className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all ${
+                          equipmentFilterCat === cat
+                            ? 'bg-slate-900 text-amber-400 shadow-2xs'
+                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        }`}
+                      >
+                        {cat === 'all' ? 'Todos' : cat}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
 
-              {/* Equipment list */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {/* Equipment Cards List */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
                 {filteredEquipment.map((eq) => (
                   <div
                     key={eq.id}
-                    className="p-3.5 bg-white rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between hover:border-slate-300 transition-all"
+                    className="p-4 bg-white rounded-3xl border border-slate-200 shadow-xs hover:border-amber-300 transition-all flex flex-col justify-between space-y-3 group"
                   >
-                    <div className="space-y-1">
-                      <span className="px-2 py-0.5 rounded-md text-[9px] font-black bg-slate-100 text-slate-700 border border-slate-200">
-                        {eq.category}
-                      </span>
-                      <h5 className="text-xs font-black text-slate-900 leading-tight">
-                        {eq.name}
-                      </h5>
-                      {eq.serialNumber && (
-                        <p className="text-[10px] text-slate-400 font-mono">
-                          SN: {eq.serialNumber}
-                        </p>
-                      )}
+                    <div className="space-y-2.5">
+                      {/* Top Bar with Thumbnail, Code and Condition Badge */}
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center space-x-3 min-w-0">
+                          {eq.imageUrl ? (
+                            <img
+                              src={eq.imageUrl}
+                              alt={eq.name}
+                              referrerPolicy="no-referrer"
+                              className="w-12 h-12 rounded-2xl object-cover border border-slate-200 shrink-0 bg-slate-50"
+                            />
+                          ) : (
+                            <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-200 text-amber-800 flex items-center justify-center font-black text-xs shrink-0">
+                              <Camera className="w-5 h-5 text-amber-600" />
+                            </div>
+                          )}
+
+                          <div className="min-w-0">
+                            <div className="flex items-center space-x-1.5">
+                              <span className="px-2 py-0.5 rounded-md text-[10px] font-black bg-slate-900 text-amber-300 font-mono">
+                                {eq.code || 'S/C'}
+                              </span>
+                              <span className="px-2 py-0.5 rounded-md text-[9px] font-black bg-slate-100 text-slate-700 border border-slate-200">
+                                {eq.category}
+                              </span>
+                            </div>
+                            <h5 className="text-xs font-black text-slate-950 mt-1 leading-snug line-clamp-2">
+                              {eq.name}
+                            </h5>
+                          </div>
+                        </div>
+
+                        {/* Condition Badge */}
+                        <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black shrink-0 ${
+                          eq.condition === 'Operativo' || eq.condition === 'Nuevo' || !eq.condition
+                            ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                            : eq.condition === 'En Mantenimiento'
+                            ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                            : 'bg-rose-100 text-rose-800 border border-rose-200'
+                        }`}>
+                          {eq.condition || 'Operativo'}
+                        </span>
+                      </div>
+
+                      {/* Technical Specs & Details */}
+                      <div className="space-y-1 pt-1 border-t border-slate-100 text-[11px]">
+                        {eq.serialNumber && (
+                          <div className="flex items-center justify-between text-slate-600">
+                            <span className="text-slate-400 font-medium">N° Serie:</span>
+                            <span className="font-mono font-bold text-slate-900">{eq.serialNumber}</span>
+                          </div>
+                        )}
+
+                        {eq.features && (
+                          <p className="text-[10px] text-slate-500 line-clamp-2 italic bg-slate-50 p-2 rounded-xl border border-slate-100">
+                            {eq.features}
+                          </p>
+                        )}
+
+                        <div className="flex items-center justify-between text-[10px] text-slate-400 pt-0.5">
+                          <span>Registrado: {eq.registrationDate || '2025-01-15'}</span>
+                          {eq.checkedOut ? (
+                            <span className="font-bold text-amber-600">En Producción</span>
+                          ) : (
+                            <span className="font-bold text-emerald-600">Disponible</span>
+                          )}
+                        </div>
+                      </div>
                     </div>
 
-                    <button
-                      onClick={() => handleDeleteEquipment(eq.id)}
-                      className="p-2 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors"
-                      title="Eliminar equipo del inventario"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    {/* Actions Bar */}
+                    <div className="flex items-center justify-end space-x-1.5 pt-2 border-t border-slate-100">
+                      <button
+                        onClick={() => handleOpenEditEquipmentModal(eq)}
+                        className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-xl flex items-center gap-1 transition-colors cursor-pointer"
+                        title="Editar datos del equipo"
+                      >
+                        <Edit3 className="w-3.5 h-3.5 text-slate-600" />
+                        <span>Editar</span>
+                      </button>
+
+                      <button
+                        onClick={() => handleDeleteEquipment(eq.id)}
+                        className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors cursor-pointer"
+                        title="Eliminar equipo del inventario"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
                 ))}
+
+                {filteredEquipment.length === 0 && (
+                  <div className="col-span-full bg-white p-12 text-center rounded-3xl border border-dashed border-slate-300 space-y-3">
+                    <Camera className="w-10 h-10 text-slate-300 mx-auto" />
+                    <h5 className="font-black text-slate-800 text-sm">No se encontraron equipos</h5>
+                    <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                      No hay equipos registrados que coincidan con la búsqueda o filtros aplicados.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* ========================================================= */}
+              {/* HIDDEN PRINTABLE CONTAINER FOR PDF EXPORT                 */}
+              {/* ========================================================= */}
+              <div className="hidden">
+                <div
+                  id="tct-inventory-printable-document"
+                  className="bg-white p-8 text-slate-900 font-sans"
+                  style={{ width: '850px', minHeight: '1100px' }}
+                >
+                  {/* Corporate Header */}
+                  <div className="flex items-center justify-between pb-4 border-b-2 border-slate-900 mb-6">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-12 h-12 rounded-xl bg-slate-950 text-amber-400 flex items-center justify-center font-black text-xl">
+                        TCT
+                      </div>
+                      <div>
+                        <h2 className="text-base font-black uppercase tracking-wider text-slate-950">
+                          {companyInfo.legalName || 'CORPORACIÓN TCT S.A.C.'}
+                        </h2>
+                        <p className="text-[10px] text-slate-600 font-bold">
+                          RUC: {companyInfo.ruc} • {companyInfo.address} • Tel: {companyInfo.phone}
+                        </p>
+                        <p className="text-[9px] text-amber-700 font-mono">
+                          DOCUMENTO TÉCNICO OFICIAL DE CONTROL DE ACTIVOS AUDIOVISUALES
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="text-right text-[10px] text-slate-600 font-mono">
+                      <p className="font-black text-slate-950">INFORME DE INVENTARIO</p>
+                      <p>Fecha: {new Date().toLocaleDateString('es-PE')}</p>
+                      <p>Total Items: {rules.equipmentCatalog.length}</p>
+                    </div>
+                  </div>
+
+                  {/* Summary Bar */}
+                  <div className="bg-slate-100 p-3 rounded-xl mb-4 flex justify-between text-xs font-bold border border-slate-300">
+                    <span>Equipos Operativos: {rules.equipmentCatalog.filter(e => e.condition === 'Operativo' || e.condition === 'Nuevo' || !e.condition).length}</span>
+                    <span>En Mantenimiento: {rules.equipmentCatalog.filter(e => e.condition === 'En Mantenimiento').length}</span>
+                    <span>De Baja: {rules.equipmentCatalog.filter(e => e.condition === 'De Baja').length}</span>
+                  </div>
+
+                  {/* Equipment Table */}
+                  <table className="w-full text-left border-collapse text-[10px]">
+                    <thead>
+                      <tr className="bg-slate-900 text-white font-black">
+                        <th className="p-2 border border-slate-800">CÓDIGO</th>
+                        <th className="p-2 border border-slate-800">NOMBRE DEL EQUIPO</th>
+                        <th className="p-2 border border-slate-800">CATEGORÍA</th>
+                        <th className="p-2 border border-slate-800">N° SERIE</th>
+                        <th className="p-2 border border-slate-800">CARACTERÍSTICAS TÉCNICAS</th>
+                        <th className="p-2 border border-slate-800">REGISTRO</th>
+                        <th className="p-2 border border-slate-800">ESTADO</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rules.equipmentCatalog.map((eq, i) => (
+                        <tr key={eq.id} className={i % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
+                          <td className="p-2 border border-slate-300 font-mono font-black text-slate-950">
+                            {eq.code || `EQ-${i + 1}`}
+                          </td>
+                          <td className="p-2 border border-slate-300 font-bold text-slate-900">
+                            {eq.name}
+                          </td>
+                          <td className="p-2 border border-slate-300 text-slate-700">
+                            {eq.category}
+                          </td>
+                          <td className="p-2 border border-slate-300 font-mono text-slate-600">
+                            {eq.serialNumber || '---'}
+                          </td>
+                          <td className="p-2 border border-slate-300 text-slate-600">
+                            {eq.features || 'Estándar institucional'}
+                          </td>
+                          <td className="p-2 border border-slate-300 text-slate-600">
+                            {eq.registrationDate || '2025-01-15'}
+                          </td>
+                          <td className="p-2 border border-slate-300 font-bold">
+                            <span className={
+                              eq.condition === 'Operativo' || eq.condition === 'Nuevo' || !eq.condition
+                                ? 'text-emerald-700'
+                                : eq.condition === 'En Mantenimiento'
+                                ? 'text-amber-700'
+                                : 'text-rose-700'
+                            }>
+                              {eq.condition || 'Operativo'}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+
+                  {/* Signatures & Seal */}
+                  <div className="mt-12 pt-8 border-t border-slate-300 flex justify-between text-center text-xs">
+                    <div className="w-56 border-t border-slate-700 pt-2">
+                      <p className="font-black text-slate-900">ING. MICHAEL ROMEROREYES</p>
+                      <p className="text-[10px] text-slate-500">Director General • Corporación TCT</p>
+                    </div>
+                    <div className="w-56 border-t border-slate-700 pt-2">
+                      <p className="font-black text-slate-900">RESPONSABLE DE LOGÍSTICA</p>
+                      <p className="text-[10px] text-slate-500">Control de Activos & Equipamiento</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          )}
+
+          {/* ========================================================= */}
+          {/* MODAL PARA AGREGAR / EDITAR EQUIPO (EVITAR DUPLICADOS)   */}
+          {/* ========================================================= */}
+          {isEquipmentModalOpen && (
+            <div className="fixed inset-0 z-60 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4">
+              <div className="bg-white rounded-3xl max-w-xl w-full p-6 shadow-2xl border border-slate-300 text-slate-900 space-y-4 animate-in fade-in zoom-in-95 max-h-[90vh] overflow-y-auto">
+                <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center font-black">
+                      <Camera className="w-5 h-5 text-amber-600" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-black text-slate-950">
+                        {editingEquipment ? 'Editar Datos del Equipo Audiovisual' : 'Dar de Alta Nuevo Equipo'}
+                      </h4>
+                      <p className="text-[11px] text-slate-500">
+                        Los códigos y números de serie deben ser únicos para evitar duplicados.
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => setIsEquipmentModalOpen(false)}
+                    className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                {formEqError && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-2xl text-xs font-bold text-red-700 flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 shrink-0" />
+                    <span>{formEqError}</span>
+                  </div>
+                )}
+
+                <div className="space-y-4">
+                  {/* Photo Upload & Preview */}
+                  <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 flex items-center space-x-4">
+                    {formEqImageUrl ? (
+                      <div className="relative">
+                        <img
+                          src={formEqImageUrl}
+                          alt="Preview"
+                          referrerPolicy="no-referrer"
+                          className="w-16 h-16 rounded-2xl object-cover border border-slate-300 bg-white"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setFormEqImageUrl('')}
+                          className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-red-600 text-white flex items-center justify-center text-xs font-bold shadow-xs hover:bg-red-700 cursor-pointer"
+                          title="Eliminar foto"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="w-16 h-16 rounded-2xl bg-white border border-dashed border-slate-300 flex items-center justify-center text-slate-400 shrink-0">
+                        <ImageIcon className="w-6 h-6" />
+                      </div>
+                    )}
+
+                    <div className="flex-1 min-w-0">
+                      <label className="text-xs font-black text-slate-900 block mb-1">
+                        Fotografía del Equipo (Opcional)
+                      </label>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleEquipmentImageUpload}
+                        className="text-xs text-slate-500 file:mr-2 file:py-1 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-black file:bg-amber-500 file:text-slate-950 hover:file:bg-amber-600 cursor-pointer"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Code & Name Row */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                        Código Único <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={formEqCode}
+                        onChange={(e) => setFormEqCode(e.target.value)}
+                        placeholder="Ej: CAM-001"
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-mono font-black text-slate-900 focus:bg-white focus:ring-2 focus:ring-amber-500 focus:outline-none uppercase"
+                      />
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                        Nombre del Equipo <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={formEqName}
+                        onChange={(e) => setFormEqName(e.target.value)}
+                        placeholder="Ej: Sony FX3 Cinema Line 4K #2"
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Category, Serial & Condition */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="text-[11px] font-bold text-slate-700 block mb-1">Categoría</label>
+                      <select
+                        value={formEqCategory}
+                        onChange={(e) => setFormEqCategory(e.target.value as any)}
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                      >
+                        <option value="Cámara">Cámara</option>
+                        <option value="Lente">Lente</option>
+                        <option value="Dron">Dron</option>
+                        <option value="Audio">Audio / Micrófono</option>
+                        <option value="Iluminación">Iluminación</option>
+                        <option value="Estabilizador">Estabilizador / Gimbal</option>
+                        <option value="Soporte">Soporte / Trípode</option>
+                        <option value="Almacenamiento">Almacenamiento / SD Card</option>
+                        <option value="Batería">Batería & Energía</option>
+                        <option value="Accesorio">Accesorio General</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                        Número de Serie (S/N)
+                      </label>
+                      <input
+                        type="text"
+                        value={formEqSerial}
+                        onChange={(e) => setFormEqSerial(e.target.value)}
+                        placeholder="Ej: SN-998210-TCT"
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-mono font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[11px] font-bold text-slate-700 block mb-1">Estado Operativo</label>
+                      <select
+                        value={formEqCondition}
+                        onChange={(e) => setFormEqCondition(e.target.value as any)}
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                      >
+                        <option value="Operativo">Operativo</option>
+                        <option value="Nuevo">Nuevo</option>
+                        <option value="En Mantenimiento">En Mantenimiento</option>
+                        <option value="De Baja">De Baja</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Features & Specs */}
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                      Características Técnicas / Observaciones
+                    </label>
+                    <textarea
+                      rows={2}
+                      value={formEqFeatures}
+                      onChange={(e) => setFormEqFeatures(e.target.value)}
+                      placeholder="Ej: Sensor Full-Frame 12.1 MP, 4K 120p, S-Cinetone, 10-bit 4:2:2, montura E."
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium text-slate-900 focus:bg-white focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                    />
+                  </div>
+
+                  {/* Registration Date */}
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                      Fecha de Registro en Inventario
+                    </label>
+                    <input
+                      type="date"
+                      value={formEqDate}
+                      onChange={(e) => setFormEqDate(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end space-x-2 pt-3 border-t border-slate-200">
+                  <button
+                    type="button"
+                    onClick={() => setIsEquipmentModalOpen(false)}
+                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleSaveEquipmentForm}
+                    className="px-5 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-1.5"
+                  >
+                    <Save className="w-4 h-4" />
+                    <span>{editingEquipment ? 'Guardar Cambios' : 'Registrar Equipo'}</span>
+                  </button>
+                </div>
               </div>
             </div>
           )}
@@ -4194,15 +4847,6 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
             )}
 
             <button
-              onClick={handleResetToDefaults}
-              className="p-2.5 rounded-2xl bg-white hover:bg-slate-200 text-slate-700 border border-slate-300 shadow-xs transition-all flex items-center justify-center cursor-pointer group relative"
-              title="Restablecer reglas a valores de fábrica"
-              aria-label="Restablecer reglas a valores de fábrica"
-            >
-              <RotateCcw className="w-4 h-4 text-slate-600 group-hover:rotate-180 transition-transform" />
-            </button>
-
-            <button
               onClick={handleSaveAll}
               className="p-2.5 px-4 rounded-2xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer group relative"
               title="Guardar todos los cambios en las Reglas Maestras"
@@ -4213,7 +4857,13 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
             </button>
 
             <button
-              onClick={onClose}
+              onClick={() => {
+                if (isDirty) {
+                  setShowSaveConfirmDialog(true);
+                } else {
+                  onClose();
+                }
+              }}
               className="p-2.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white shadow-xs transition-all flex items-center justify-center cursor-pointer group relative"
               title="Cerrar ventana de Reglas"
               aria-label="Cerrar"
@@ -4222,6 +4872,50 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
             </button>
           </div>
         </div>
+
+        {/* Modal de confirmación de cambios pendientes al salir */}
+        {showSaveConfirmDialog && (
+          <div className="fixed inset-0 z-70 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4">
+            <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-300 text-slate-900 space-y-4 animate-in fade-in zoom-in-95">
+              <div className="flex items-start space-x-3">
+                <div className="w-10 h-10 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center font-black shrink-0">
+                  <AlertCircle className="w-6 h-6 text-amber-600" />
+                </div>
+                <div>
+                  <h4 className="text-base font-black text-slate-950">¿Guardar cambios realizados?</h4>
+                  <p className="text-xs text-slate-600 mt-1">
+                    Ha realizado modificaciones en las configuraciones. ¿Desea guardar los cambios antes de salir o descartarlos?
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end space-x-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowSaveConfirmDialog(false);
+                    onClose();
+                  }}
+                  className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors cursor-pointer"
+                >
+                  Descartar y Salir
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleSaveAll();
+                    setShowSaveConfirmDialog(false);
+                    onClose();
+                  }}
+                  className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-1.5"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>Guardar y Salir</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
       </div>
     </div>
