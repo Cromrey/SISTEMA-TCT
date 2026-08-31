@@ -151,30 +151,28 @@ export const LoginPage: React.FC<LoginPageProps> = ({
     setIsLoading(true);
 
     try {
-      // Force sync with server first to guarantee fresh user database
+      // Force sync with server first to guarantee fresh user database across all browsers/devices
       await syncUsersWithServer();
     } catch (err) {
       // ignore network glitch
     }
 
-    setTimeout(() => {
-      const result = authenticateUser(username, password);
-      setIsLoading(false);
+    const result = authenticateUser(username, password);
+    setIsLoading(false);
 
-      if (result.success && result.user) {
-        if (result.user.role === 'admin') {
-          // Admin role REQUIRES 2FA (Sent internally to 990010020)
-          setPendingUser(result.user);
-          generateNewOtpCode();
-          setIs2FAStage(true);
-        } else {
-          // Employee role logs in directly
-          onLoginSuccess(result.user, rememberMe);
-        }
+    if (result.success && result.user) {
+      if (result.user.role === 'admin') {
+        // Admin role REQUIRES 2FA (Sent internally to 990010020)
+        setPendingUser(result.user);
+        generateNewOtpCode();
+        setIs2FAStage(true);
       } else {
-        setErrorMessage(result.error || 'Credenciales inválidas. Verifique su usuario y contraseña.');
+        // Employee role logs in directly
+        onLoginSuccess(result.user, rememberMe);
       }
-    }, 150);
+    } else {
+      setErrorMessage(result.error || 'Credenciales inválidas. Verifique su usuario y contraseña.');
+    }
   };
 
   // Copy code to clipboard

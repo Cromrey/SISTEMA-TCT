@@ -233,19 +233,43 @@ export async function sendSessionHeartbeat(
   return { valid: true };
 }
 
-// Terminate / Kick a session (Admin action)
-export async function terminateSessionById(sessionId: string, reason?: string): Promise<boolean> {
+// Revoked sessions cache in localStorage for instant multi-tab sync
+export function addRevokedSession(sessionId: string): void {
+  try {
+    const raw = localStorage.getItem('tct_revoked_sessions_v1') || '[]';
+    const list: string[] = JSON.parse(raw);
+    if (!list.includes(sessionId)) {
+      list.push(sessionId);
+      localStorage.setItem('tct_revoked_sessions_v1', JSON.stringify(list));
+    }
+  } catch (e) {}
+}
+
+export function isSessionRevoked(sessionId: string): boolean {
+  try {
+    const raw = localStorage.getItem('tct_revoked_sessions_v1') || '[]';
+    const list: string[] = JSON.parse(raw);
+    return list.includes(sessionId);
+  } catch (e) {
+    return false;
+  }
+}
+
+// Terminate / Kick a session (Admin action: closes active session without deleting the user account)
+export async function terminateSessionById(sessionId: string, reason?: string, userId?: string, username?: string): Promise<boolean> {
+  addRevokedSession(sessionId);
+
   try {
     await fetch('/api/sessions/terminate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sessionId, reason })
+      body: JSON.stringify({ sessionId, userId, username, reason: reason || 'Tu sesión fue cerrada remotamente por el Administrador de Corporación TCT.' })
     });
   } catch (e) {}
 
   // Update local cache
   const sessions = getStoredLiveSessions().map(s => {
-    if (s.sessionId === sessionId) {
+    if (s.sessionId === sessionId || (userId && s.userId === userId)) {
       return { ...s, status: 'terminated' as const, terminationReason: 'admin_forced' as const };
     }
     return s;
@@ -254,7 +278,7 @@ export async function terminateSessionById(sessionId: string, reason?: string): 
 
   // Broadcast termination
   window.dispatchEvent(new CustomEvent(SESSION_TERMINATION_EVENT, { 
-    detail: { sessionId, reason: 'admin_forced' } 
+    detail: { sessionId, userId, reason: 'admin_forced' } 
   }));
 
   return true;

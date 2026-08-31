@@ -298,10 +298,10 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
 
   const handleExpelSession = async (session: LiveSession) => {
     if (window.confirm(`🚪 ¿Deseas cerrar únicamente la sesión activa de ${session.fullName} (@${session.username})?\n\nℹ️ NOTA: Su cuenta de usuario y contraseña NO se eliminarán. El usuario podrá volver a ingresar al sistema cuando lo necesite.`)) {
-      await terminateSessionById(session.sessionId);
+      await terminateSessionById(session.sessionId, 'Tu sesión fue cerrada remotamente por el Administrador de Corporación TCT.', session.userId, session.username);
       const updated = await fetchLiveSessionsFromServer();
       setLiveSessionsList(updated);
-      notifySuccess(`✓ Sesión activa de ${session.fullName} cerrada. Su cuenta sigue activa para futuros ingresos.`);
+      notifySuccess(`✓ Sesión activa de ${session.fullName} cerrada remotamente. Su cuenta sigue activa para futuros ingresos.`);
     }
   };
 

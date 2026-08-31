@@ -247,30 +247,26 @@ app.get("/api/sessions/active", (req, res) => {
 // 5. Terminate / Kick a session (Admin action)
 app.post("/api/sessions/terminate", (req, res) => {
   try {
-    const { sessionId, userId, reason } = req.body;
+    const { sessionId, userId, username, reason } = req.body;
     let terminatedCount = 0;
+    const now = Date.now();
+    const message = reason || "Tu sesión fue cerrada remotamente por el Administrador de Corporación TCT.";
 
-    if (sessionId) {
-      const session = activeLiveSessions.get(sessionId);
-      if (session) {
+    for (const session of activeLiveSessions.values()) {
+      const matchesSession = sessionId && session.sessionId === sessionId;
+      const matchesUser = userId && session.userId === userId;
+      const matchesUsername = username && session.username.toLowerCase() === username.toLowerCase();
+
+      if (matchesSession || matchesUser || matchesUsername) {
         session.status = "terminated";
         session.terminationReason = "admin_forced";
-        session.terminationMessage = reason || "Tu sesión fue cerrada remotamente por el Administrador de Corporación TCT.";
-        session.terminatedAt = Date.now();
+        session.terminationMessage = message;
+        session.terminatedAt = now;
         terminatedCount++;
-      }
-    } else if (userId) {
-      for (const session of activeLiveSessions.values()) {
-        if (session.userId === userId) {
-          session.status = "terminated";
-          session.terminationReason = "admin_forced";
-          session.terminationMessage = reason || "Tu sesión fue cerrada remotamente por el Administrador.";
-          session.terminatedAt = Date.now();
-          terminatedCount++;
-        }
       }
     }
 
+    console.log(`[TCT Security] Admin terminated ${terminatedCount} active session(s) for user/session: ${sessionId || userId || username}`);
     res.json({ success: true, terminatedCount });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
@@ -370,14 +366,26 @@ app.post("/api/sync/users", (req, res) => {
   try {
     const { users } = req.body;
     if (Array.isArray(users) && users.length > 0) {
-      // Ensure root TCT admin is always included
-      const hasRootAdmin = users.some(u => u.username?.toUpperCase() === 'TCT');
-      if (!hasRootAdmin) {
-        serverUsers = [DEFAULT_SERVER_USERS[0], ...users];
-      } else {
-        serverUsers = users;
-      }
-      console.log(`[TCT Sync] Synchronized ${serverUsers.length} user accounts with server.`);
+      const userMap = new Map<string, any>();
+      // 1. Keep existing server users
+      serverUsers.forEach(u => {
+        const key = (u.username || u.id || '').toLowerCase().trim();
+        if (key) userMap.set(key, u);
+      });
+      // 2. Merge incoming users
+      users.forEach(u => {
+        const key = (u.username || u.id || '').toLowerCase().trim();
+        if (key) {
+          const existing = userMap.get(key) || {};
+          userMap.set(key, { ...existing, ...u });
+        }
+      });
+      // 3. Ensure root TCT is always present and active
+      const rootAdmin = DEFAULT_SERVER_USERS[0];
+      userMap.set('tct', { ...rootAdmin, ...(userMap.get('tct') || {}), username: 'TCT', role: 'admin', isActive: true });
+
+      serverUsers = Array.from(userMap.values());
+      console.log(`[TCT Sync] Merged ${serverUsers.length} total user accounts on server.`);
     }
     res.json({ success: true, count: serverUsers.length, users: serverUsers });
   } catch (err: any) {
@@ -442,4 +450,9 @@ async function startServer() {
   });
 }
 
-startServer();
+// Only start the standalone listener if executed directly (e.g. node / tsx)
+if (process.env.VERCEL !== "1") {
+  startServer();
+}
+
+export default app;

@@ -25,6 +25,7 @@ import {
   getCurrentSessionId,
   setCurrentSessionId,
   logoutLiveSession,
+  isSessionRevoked,
   SESSION_TERMINATION_EVENT
 } from './utils/sessionMonitor';
 import { LoginPage } from './components/LoginPage';
@@ -218,12 +219,21 @@ export default function App() {
   useEffect(() => {
     if (!currentUser) return;
 
-    const recordUserActivity = () => {
+    const recordUserActivity = (e?: Event) => {
+      // If synthetic mousemove with no delta, ignore to prevent false activity
+      if (e && e.type === 'mousemove') {
+        const me = e as MouseEvent;
+        if (Math.abs(me.movementX) < 1 && Math.abs(me.movementY) < 1) {
+          return;
+        }
+      }
       lastActiveTimestampRef.current = Date.now();
+      try {
+        sessionStorage.setItem('tct_last_active_ts', String(Date.now()));
+      } catch (err) {}
     };
 
     const activityEvents: (keyof WindowEventMap)[] = [
-      'mousemove',
       'mousedown',
       'keydown',
       'touchstart',
@@ -239,28 +249,41 @@ export default function App() {
 
     let isChecking = false;
 
-    // Check every 2 seconds: Inactivity limit + Concurrency token check with server
+    // Check every 1 second: Inactivity limit + Server Heartbeat + Local Revocation
     const checkInterval = setInterval(async () => {
       if (isChecking) return;
       isChecking = true;
 
       try {
-        // 1. Inactivity auto-logout check (3 minutes = 180s of complete desuso)
-        const elapsed = Date.now() - lastActiveTimestampRef.current;
+        const now = Date.now();
+        const storedTs = Number(sessionStorage.getItem('tct_last_active_ts')) || lastActiveTimestampRef.current;
+        const actualLastActivity = Math.max(lastActiveTimestampRef.current, storedTs);
+        const elapsed = now - actualLastActivity;
+
+        // 1. Inactivity auto-logout check (EXACTLY 3 minutes = 180,000ms = 180s of continuous idle)
         if (elapsed >= INACTIVITY_TIMEOUT_MS) {
           handleLogout(false, {
             type: 'inactivity',
-            message: '⚠️ El aplicativo se cerró automáticamente por inactividad (más de 3 minutos sin uso). Ingrese nuevamente sus credenciales para acceder.'
+            message: '⚠️ El aplicativo se cerró automáticamente por inactividad (más de 3 minutos de desuso continuo). Ingrese nuevamente sus credenciales para acceder.'
           });
           return;
         }
 
-        const isIdle = elapsed > 2 * 60 * 1000;
         const sessionId = getCurrentSessionId();
         const token = getDeviceSessionToken();
 
-        // 2. Server Heartbeat ping (Enforces single active device across all phones/PCs)
+        // 2. Immediate check if this session was revoked / expelled by admin locally
+        if (sessionId && isSessionRevoked(sessionId)) {
+          handleLogout(false, {
+            type: 'admin_forced',
+            message: 'Tu sesión fue cerrada remotamente por el Administrador de Corporación TCT.'
+          });
+          return;
+        }
+
+        // 3. Server Heartbeat ping (Enforces single active device across all phones/PCs)
         if (sessionId && token) {
+          const isIdle = elapsed > 2 * 60 * 1000;
           const res = await sendSessionHeartbeat(sessionId, token, isIdle);
           if (!res.valid) {
             if (res.reason === 'concurrent_login') {
@@ -288,7 +311,7 @@ export default function App() {
           }
         }
 
-        // 3. Client Storage fallback concurrency check
+        // 4. Client Storage fallback concurrency check
         if (currentUser && isSessionSuperceded(currentUser)) {
           handleLogout(false, {
             type: 'concurrent_login',
@@ -300,7 +323,7 @@ export default function App() {
       } finally {
         isChecking = false;
       }
-    }, 2000);
+    }, 1000);
 
     // Tab visibility change (when returning from minimized/background app on mobile)
     const handleVisibilityChange = async () => {

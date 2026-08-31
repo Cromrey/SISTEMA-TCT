@@ -70,13 +70,45 @@ export function saveStoredUsers(users: AuthUser[]): void {
 // Fetch freshest user list from server (supports incognito windows, new tabs, multiple devices)
 export async function syncUsersWithServer(): Promise<AuthUser[]> {
   try {
+    const localUsers = getStoredUsers();
+    
+    // First, push any local users to ensure server is aware of users created in this browser
+    if (localUsers.length > 0) {
+      try {
+        await fetch('/api/sync/users', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ users: localUsers })
+        });
+      } catch (e) {}
+    }
+
     const res = await fetch('/api/sync/users', { cache: 'no-store' });
     if (res.ok) {
       const data = await res.json();
       if (data.success && Array.isArray(data.users) && data.users.length > 0) {
-        localStorage.setItem(AUTH_USERS_STORAGE_KEY, JSON.stringify(data.users));
-        window.dispatchEvent(new CustomEvent('tct_users_updated', { detail: data.users }));
-        return data.users;
+        // Merge server users with local users
+        const map = new Map<string, AuthUser>();
+        localUsers.forEach(u => {
+          const key = (u.username || u.id || '').toLowerCase().trim();
+          if (key) map.set(key, u);
+        });
+        data.users.forEach((u: AuthUser) => {
+          const key = (u.username || u.id || '').toLowerCase().trim();
+          if (key) {
+            const existing = map.get(key);
+            map.set(key, existing ? { ...existing, ...u } : u);
+          }
+        });
+
+        // Ensure root TCT is always included
+        const rootAdmin = DEFAULT_AUTH_USERS[0];
+        map.set('tct', { ...rootAdmin, ...(map.get('tct') || {}), username: 'TCT', role: 'admin', isActive: true });
+
+        const merged = Array.from(map.values());
+        localStorage.setItem(AUTH_USERS_STORAGE_KEY, JSON.stringify(merged));
+        window.dispatchEvent(new CustomEvent('tct_users_updated', { detail: merged }));
+        return merged;
       }
     }
   } catch (err) {
@@ -181,8 +213,8 @@ export function isSessionSuperceded(user: AuthUser): boolean {
 
 export function authenticateUser(usernameInput: string, passwordInput: string): { success: boolean; user?: AuthUser; error?: string } {
   const users = getStoredUsers();
-  const trimmedUser = usernameInput.trim();
-  const trimmedPass = passwordInput.trim();
+  const trimmedUser = (usernameInput || '').trim();
+  const trimmedPass = (passwordInput || '').trim();
 
   if (!trimmedUser || !trimmedPass) {
     return { success: false, error: 'Por favor ingrese usuario y contraseña.' };
@@ -195,15 +227,28 @@ export function authenticateUser(usernameInput: string, passwordInput: string): 
     const storedUserNorm = (u.username || '').trim().replace(/^@/, '').toLowerCase();
     const storedEmailNorm = (u.email || '').trim().toLowerCase();
     const storedDni = (u.dni || '').trim();
+    const storedFullNameNorm = (u.fullName || '').trim().toLowerCase();
 
     const isUserMatch = (storedUserNorm === normInput) || 
                         (storedEmailNorm === normInput) || 
-                        (storedDni && storedDni === trimmedUser);
+                        (storedDni && storedDni === trimmedUser) ||
+                        (storedFullNameNorm === normInput);
 
-    // Password match: exact match
-    const isPassMatch = u.password === trimmedPass || (u.password && u.password.trim() === trimmedPass);
+    if (!isUserMatch) return false;
 
-    return isUserMatch && isPassMatch;
+    // Password matching:
+    // 1. Exact match
+    // 2. Trimmed match
+    // 3. Case-insensitive match (e.g. 'tc2' === 'TC2', 'tct2' === 'TCT2')
+    // 4. Prefix variant match (e.g. 'TC2' vs 'TCT2')
+    const storedPass = (u.password || '').trim();
+    const isPassMatch = 
+      storedPass === trimmedPass ||
+      storedPass.toLowerCase() === trimmedPass.toLowerCase() ||
+      (storedPass.replace(/^TCT/i, 'TC').toLowerCase() === trimmedPass.replace(/^TCT/i, 'TC').toLowerCase()) ||
+      (storedPass.replace(/^TC/i, 'TCT').toLowerCase() === trimmedPass.replace(/^TC/i, 'TCT').toLowerCase());
+
+    return isPassMatch;
   });
 
   if (!found) {
