@@ -1,7 +1,18 @@
-import { TCTMasterRules, TCTMasterPackage, EquipmentItem, MasterStepChecklistRule, TemplateDocumentFormat, TCTCompanyInfo, TCTContractDesign } from '../types';
+import { TCTMasterRules, TCTMasterPackage, EquipmentItem, MasterStepChecklistRule, TemplateDocumentFormat, TCTCompanyInfo, TCTContractDesign, TCTLoginLogoConfig } from '../types';
 import { getIdbItem, setIdbItem, STORES } from './indexedDb';
 
 const RULES_STORAGE_KEY = 'tct_master_rules_v1';
+export const LOGIN_LOGO_STORAGE_KEY = 'tct_login_logo_config_v1';
+
+export const DEFAULT_LOGIN_LOGO_CONFIG: TCTLoginLogoConfig = {
+  logoUrl: '', // empty means official default /assets/tct-logo.png
+  shape: 'circle',
+  fit: 'cover',
+  scale: 100,
+  hasGoldenRing: true,
+  hasGlowHalo: true,
+  customBorderColor: '#f59e0b'
+};
 
 export const INITIAL_CONTRACT_DESIGN: TCTContractDesign = {
   headerTitle: 'CORPORACIÓN TCT',
@@ -61,7 +72,8 @@ export const INITIAL_COMPANY_INFO: TCTCompanyInfo = {
       holderName: 'CORPORACION TCT S.A.C.',
       currency: 'PEN'
     }
-  ]
+  ],
+  loginLogoConfig: DEFAULT_LOGIN_LOGO_CONFIG
 };
 
 export const INITIAL_PACKAGES: TCTMasterPackage[] = [
@@ -640,3 +652,37 @@ export const resetMasterRulesToDefault = (): TCTMasterRules => {
   saveMasterRules(INITIAL_RULES);
   return INITIAL_RULES;
 };
+
+export const getStoredLoginLogoConfig = (): TCTLoginLogoConfig => {
+  try {
+    const raw = localStorage.getItem(LOGIN_LOGO_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      return { ...DEFAULT_LOGIN_LOGO_CONFIG, ...parsed };
+    }
+  } catch (e) {}
+
+  const rules = getStoredRules();
+  if (rules.companyInfo?.loginLogoConfig) {
+    return { ...DEFAULT_LOGIN_LOGO_CONFIG, ...rules.companyInfo.loginLogoConfig };
+  }
+  return DEFAULT_LOGIN_LOGO_CONFIG;
+};
+
+export const saveLoginLogoConfig = (config: TCTLoginLogoConfig): void => {
+  try {
+    localStorage.setItem(LOGIN_LOGO_STORAGE_KEY, JSON.stringify(config));
+  } catch (e) {}
+
+  const rules = getStoredRules();
+  const updatedRules: TCTMasterRules = {
+    ...rules,
+    companyInfo: {
+      ...(rules.companyInfo || INITIAL_COMPANY_INFO),
+      loginLogoConfig: config
+    }
+  };
+  saveMasterRules(updatedRules);
+  window.dispatchEvent(new CustomEvent('tct_login_logo_updated', { detail: config }));
+};
+

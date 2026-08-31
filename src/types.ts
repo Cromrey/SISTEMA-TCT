@@ -411,6 +411,17 @@ export interface TCTCompanyInfo {
   website?: string;
   bankAccounts: TCTCompanyBankAccount[];
   contractMasterStorageDays: number; // default 5 days
+  loginLogoConfig?: TCTLoginLogoConfig;
+}
+
+export interface TCTLoginLogoConfig {
+  logoUrl?: string; // custom image url, uploaded file base64 data, or empty for official default
+  shape: 'circle' | 'rounded-square' | 'flat'; // 'circle' = Circular TCT emblem, 'rounded-square' = Rounded square box, 'flat' = No border/flat
+  fit: 'cover' | 'contain' | 'fill'; // Object fit for logo image
+  scale: number; // 70 to 140 (% scale, 100 is default)
+  hasGoldenRing: boolean; // Golden neon aura and border (default true)
+  hasGlowHalo: boolean; // Ambient background golden/emerald glow (default true)
+  customBorderColor?: string; // Custom border accent
 }
 
 export interface TCTContractDesign {

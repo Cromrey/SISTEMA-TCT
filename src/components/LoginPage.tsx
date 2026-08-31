@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { AuthUser, UserRole } from '../types';
+import { AuthUser, UserRole, TCTLoginLogoConfig } from '../types';
 import { authenticateUser, syncUsersWithServer } from '../utils/authStorage';
+import { getStoredLoginLogoConfig, DEFAULT_LOGIN_LOGO_CONFIG } from '../utils/rulesStorage';
 import { TCTLogo } from './TCTLogo';
 import { WhatsAppAssistantBot } from './WhatsAppAssistantBot';
 import { 
@@ -65,6 +66,26 @@ export const LoginPage: React.FC<LoginPageProps> = ({
   const [twoFaError, setTwoFaError] = useState<string | null>(null);
   const [isVerifyingCode, setIsVerifyingCode] = useState<boolean>(false);
   const [dispatchStatusMessage, setDispatchStatusMessage] = useState<string | null>(null);
+
+  // Dynamic Login Logo Configuration (Customizable via Admin Rules)
+  const [logoConfig, setLogoConfig] = useState<TCTLoginLogoConfig>(() => getStoredLoginLogoConfig());
+
+  // Listen to live updates from Admin Rules
+  useEffect(() => {
+    const handleLogoUpdate = (e: any) => {
+      if (e?.detail) {
+        setLogoConfig(e.detail);
+      } else {
+        setLogoConfig(getStoredLoginLogoConfig());
+      }
+    };
+    window.addEventListener('tct_login_logo_updated', handleLogoUpdate);
+    window.addEventListener('tct_rules_updated', handleLogoUpdate);
+    return () => {
+      window.removeEventListener('tct_login_logo_updated', handleLogoUpdate);
+      window.removeEventListener('tct_rules_updated', handleLogoUpdate);
+    };
+  }, []);
 
   // Auto-sync users on mount to ensure users created in other windows/devices/incognito tabs are present
   useEffect(() => {
@@ -276,17 +297,52 @@ export const LoginPage: React.FC<LoginPageProps> = ({
       {/* Main Login Card (Matching Screenshot Image 1) */}
       <div className="w-full max-w-sm relative z-10 space-y-5 my-auto">
         
-        {/* TCT Official Circular Emblem Logo (Matching User Uploaded 4 TCT REDONDO.png) */}
+        {/* TCT Dynamic & Customizable Login Logo */}
         <div className="text-center space-y-2">
           <div className="relative inline-flex items-center justify-center">
-            {/* Ambient golden halo */}
-            <div className="absolute -inset-2 bg-amber-500/20 rounded-full blur-xl pointer-events-none" />
-            <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full overflow-hidden relative z-10 bg-slate-950 flex items-center justify-center border-2 border-amber-400/40 shadow-[0_10px_25px_rgba(0,0,0,0.85)] transition-transform duration-300 hover:scale-105">
+            {/* Ambient golden/emerald halo */}
+            {logoConfig.hasGlowHalo && (
+              <div className="absolute -inset-2 bg-amber-500/25 rounded-full blur-xl pointer-events-none transition-all duration-300" />
+            )}
+            
+            <div 
+              style={{
+                width: `${Math.max(80, Math.min(180, Math.round(120 * ((logoConfig.scale || 100) / 100))))}px`,
+                height: `${Math.max(80, Math.min(180, Math.round(120 * ((logoConfig.scale || 100) / 100))))}px`,
+              }}
+              className={`overflow-hidden relative z-10 flex items-center justify-center transition-all duration-300 hover:scale-105 ${
+                logoConfig.shape === 'circle'
+                  ? 'rounded-full'
+                  : logoConfig.shape === 'rounded-square'
+                  ? 'rounded-3xl'
+                  : 'rounded-xl'
+              } ${
+                logoConfig.shape === 'flat'
+                  ? 'bg-transparent shadow-none border-0'
+                  : 'bg-slate-950 shadow-[0_10px_25px_rgba(0,0,0,0.85)]'
+              } ${
+                logoConfig.hasGoldenRing && logoConfig.shape !== 'flat'
+                  ? 'border-2 border-amber-400/50 shadow-[0_0_15px_rgba(245,158,11,0.35)]'
+                  : logoConfig.shape !== 'flat'
+                  ? 'border border-slate-800'
+                  : ''
+              }`}
+            >
               <img
-                src="/assets/tct-logo.png"
-                alt="Corporación TCT Logo Redondo Oficial"
+                src={logoConfig.logoUrl || '/assets/tct-logo.png'}
+                alt="Corporación TCT Logo de Login"
                 referrerPolicy="no-referrer"
-                className="w-full h-full object-cover select-none"
+                className={`w-full h-full select-none transition-all duration-200 ${
+                  logoConfig.fit === 'contain'
+                    ? 'object-contain p-1.5'
+                    : logoConfig.fit === 'fill'
+                    ? 'object-fill'
+                    : 'object-cover'
+                }`}
+                onError={(e) => {
+                  // Fallback safely if custom URL fails to load
+                  (e.currentTarget as HTMLImageElement).src = '/assets/tct-logo.png';
+                }}
               />
             </div>
           </div>

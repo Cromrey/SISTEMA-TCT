@@ -82,10 +82,23 @@ export const Header: React.FC<HeaderProps> = ({
       onLogout(true);
     }
   };
-  // Accurate active user resolution directly from authenticated session
-  const displayName = currentUser?.fullName || (currentRole === 'admin' ? 'Ing. Michael Romero' : (currentStaff?.name || 'Usuario TCT'));
-  const displayRole = currentUser?.role || currentRole;
-  const displayJobTitle = currentUser?.jobTitle || (displayRole === 'admin' ? 'Administrador General' : (currentStaff?.role || 'Asesor / Técnico'));
+  // Identity resolution strictly tied to current authenticated user
+  const isEmployee = (currentUser?.role === 'employee') || (currentRole === 'employee');
+  const isAdmin = !isEmployee && ((currentUser?.role === 'admin') || (currentRole === 'admin'));
+
+  // Clean admin name if it contains bracketed suffix
+  const adminCleanName = currentUser?.fullName 
+    ? currentUser.fullName.replace(/\s*\(Administrador.*?\)/i, '')
+    : 'Michael Romero';
+
+  const displayName = isEmployee 
+    ? (currentUser?.fullName || currentStaff?.name || 'Elim Zucira')
+    : adminCleanName;
+
+  const displayRole: UserRole = isEmployee ? 'employee' : 'admin';
+  const displayJobTitle = isEmployee
+    ? (currentUser?.jobTitle || currentStaff?.role || 'Asesor Comercial / Técnico de Producción')
+    : 'Administrador General';
 
   const handleSelectUser = (userId: string) => {
     const selectedUser = allUsers.find(u => u.id === userId);
