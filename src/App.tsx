@@ -40,6 +40,7 @@ import { ContractExportModal } from './components/ContractExportModal';
 import { ProjectProgressReportModal } from './components/ProjectProgressReportModal';
 import { AdminSettingsModal } from './components/AdminSettingsModal';
 import { DeleteProjectConfirmModal } from './components/DeleteProjectConfirmModal';
+import { VideoclipModal } from './components/videoclip/VideoclipModal';
 import { useSwipeGesture } from './hooks/useSwipeGesture';
 import { RotateCcw, Sparkles, CheckCircle2, ShieldCheck, UserCheck, AlertTriangle, X, Trash2 } from 'lucide-react';
 
@@ -91,6 +92,7 @@ export default function App() {
   const [isRulesModalOpen, setIsRulesModalOpen] = useState(false);
   const [rulesInitialTab, setRulesInitialTab] = useState<'checklists' | 'equipment' | 'packages' | 'services' | 'formats' | 'users' | 'system' | 'contract_design' | 'company' | 'staff_assignment' | 'shortcuts'>('checklists');
   const [isUsersModalOpen, setIsUsersModalOpen] = useState(false);
+  const [isVideoclipModalOpen, setIsVideoclipModalOpen] = useState(false);
 
   // Deletion modal and one-time broadcast notification state
   const [projectToDelete, setProjectToDelete] = useState<ProductionProject | null>(null);
@@ -676,6 +678,7 @@ export default function App() {
           setCurrentUser(usr);
         }}
         onOpenNewProject={() => setIsNewProjectModalOpen(true)}
+        onOpenVideoclip={() => setIsVideoclipModalOpen(true)}
         onOpenAnalytics={() => setIsAnalyticsModalOpen(true)}
         onOpenRulesModal={() => {
           setRulesInitialTab('company');
@@ -892,6 +895,15 @@ export default function App() {
           project={projectToDelete}
           onClose={() => setProjectToDelete(null)}
           onConfirmDelete={handleConfirmDeleteProject}
+        />
+      )}
+
+      {/* MODAL 9: Videoclip Production & Shot Tracking System */}
+      {isVideoclipModalOpen && (
+        <VideoclipModal
+          isOpen={isVideoclipModalOpen}
+          onClose={() => setIsVideoclipModalOpen(false)}
+          currentUser={currentUser}
         />
       )}
 

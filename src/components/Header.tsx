@@ -6,7 +6,8 @@ import {
   LogOut,
   Sliders,
   ArrowLeft,
-  ArrowRight
+  ArrowRight,
+  Film
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -19,6 +20,7 @@ interface HeaderProps {
   onStaffChange: (staff: StaffMember) => void;
   onUserSelect?: (user: AuthUser) => void;
   onOpenNewProject: () => void;
+  onOpenVideoclip?: () => void;
   onOpenAnalytics?: () => void;
   onOpenRulesModal?: () => void;
   onOpenUsersManagement?: () => void;
@@ -44,6 +46,7 @@ export const Header: React.FC<HeaderProps> = ({
   onStaffChange,
   onUserSelect,
   onOpenNewProject,
+  onOpenVideoclip,
   onOpenRulesModal,
   onLogout,
   onGoBack,
@@ -204,6 +207,21 @@ export const Header: React.FC<HeaderProps> = ({
                 </div>
               </div>
             </div>
+
+            {/* Videoclip / Tomas en Vivo Button (Available for Admin and Employee) */}
+            {onOpenVideoclip && (
+              <button
+                id="btn-header-videoclip"
+                onClick={onOpenVideoclip}
+                className="relative p-2 sm:px-3.5 sm:py-2.5 bg-gradient-to-r from-purple-900/90 via-slate-900 to-amber-950/80 hover:from-purple-800 hover:to-amber-900 active:scale-95 text-amber-300 hover:text-amber-200 rounded-xl border border-amber-500/50 hover:border-amber-400 shadow-md shadow-purple-950/40 transition-all shrink-0 cursor-pointer flex items-center justify-center gap-1.5 font-black text-xs group"
+                title="Módulo Videoclip: Registro y Gestión de Tomas en Vivo"
+                aria-label="Videoclip y Tomas"
+              >
+                <Film className="w-4 h-4 text-amber-400 group-hover:scale-110 transition-transform" />
+                <span className="hidden sm:inline font-mono">🎬 Videoclip</span>
+                <span className="sm:hidden text-[10px] font-mono">🎬</span>
+              </button>
+            )}
 
             {/* Reglas Maestras & Configuración Button (Admin Only) */}
             {currentRole === 'admin' && onOpenRulesModal && (
